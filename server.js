@@ -7,6 +7,7 @@ const path = require('path');
 const zlib = require('zlib');
 const AdmZip = require('adm-zip');
 const crypto = require('crypto');
+const forge = require('node-forge');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -360,6 +361,147 @@ function getCertificateBuffer(cert) {
   }
 
   return null;
+}
+
+function getCertificateDisplayName(cert) {
+  const cn = cert.subject && cert.subject.getField('CN');
+  return cn && cn.value ? cn.value : 'certificado sem CN';
+}
+
+function extractCertificateCnpj(cert) {
+  const candidates = [];
+
+  for (const attr of cert.subject.attributes || []) {
+    if (attr.value) candidates.push(String(attr.value));
+  }
+
+  for (const ext of cert.extensions || []) {
+    if (Array.isArray(ext.altNames)) {
+      for (const altName of ext.altNames) {
+        if (altName.value) candidates.push(String(altName.value));
+      }
+    }
+  }
+
+  const joined = candidates.join(' ');
+  const match = joined.match(/\b\d{14}\b/);
+  return match ? match[0] : null;
+}
+
+function validateCertificateForNationalApi(pfxBuffer, passphrase) {
+  let p12;
+  try {
+    const der = forge.util.createBuffer(pfxBuffer.toString('binary'));
+    const asn1 = forge.asn1.fromDer(der);
+    p12 = forge.pkcs12.pkcs12FromAsn1(asn1, false, passphrase);
+  } catch (err) {
+    return {
+      valid: false,
+      error: `Senha ou certificado invalido. Nao foi possivel abrir o PFX/P12: ${err.message}`
+    };
+  }
+
+  const certBags = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag] || [];
+  const keyBags = [
+    ...(p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[forge.pki.oids.pkcs8ShroudedKeyBag] || []),
+    ...(p12.getBags({ bagType: forge.pki.oids.keyBag })[forge.pki.oids.keyBag] || [])
+  ];
+
+  if (certBags.length === 0) {
+    return {
+      valid: false,
+      error: 'O arquivo PFX/P12 nao contem certificado digital.'
+    };
+  }
+
+  if (keyBags.length === 0) {
+    return {
+      valid: false,
+      error: 'O arquivo PFX/P12 nao contem chave privada. Exporte o certificado A1 incluindo a chave privada.'
+    };
+  }
+
+  const certificates = certBags.map(bag => bag.cert).filter(Boolean);
+  const leaf = certificates.find(cert => {
+    const basicConstraints = cert.getExtension('basicConstraints');
+    return !basicConstraints || basicConstraints.cA !== true;
+  }) || certificates[0];
+
+  const now = new Date();
+  if (leaf.validity.notBefore > now) {
+    return {
+      valid: false,
+      error: `Certificado ainda nao esta valido. Inicio da validade: ${leaf.validity.notBefore.toISOString()}`
+    };
+  }
+
+  if (leaf.validity.notAfter < now) {
+    return {
+      valid: false,
+      error: `Certificado expirado em ${leaf.validity.notAfter.toISOString()}. Envie um certificado A1 valido.`
+    };
+  }
+
+  const basicConstraints = leaf.getExtension('basicConstraints');
+  if (basicConstraints && basicConstraints.cA === true) {
+    return {
+      valid: false,
+      error: 'O certificado selecionado e de Autoridade Certificadora, nao de transmissao. Envie o certificado A1 da empresa.'
+    };
+  }
+
+  if (certificates.length < 2) {
+    return {
+      valid: false,
+      error: 'O PFX/P12 nao contem a cadeia de certificacao completa. Reexporte o A1 incluindo todos os certificados no caminho de certificacao e envie novamente.'
+    };
+  }
+
+  const extKeyUsage = leaf.getExtension('extKeyUsage');
+  if (extKeyUsage && !extKeyUsage.clientAuth) {
+    return {
+      valid: false,
+      error: 'O certificado nao possui uso de Autenticacao Cliente. A API Nacional exige certificado A1/e-CNPJ apto para mTLS.'
+    };
+  }
+
+  return {
+    valid: true,
+    subject: getCertificateDisplayName(leaf),
+    cnpj: extractCertificateCnpj(leaf),
+    certificatesInPfx: certificates.length,
+    validUntil: leaf.validity.notAfter.toISOString()
+  };
+}
+
+function extractNationalApiErrors(responseData) {
+  if (!responseData || !Array.isArray(responseData.Erros)) {
+    return [];
+  }
+
+  return responseData.Erros
+    .map(err => ({
+      code: String(err.Codigo || err.codigo || '').trim(),
+      description: String(err.Descricao || err.descricao || '').trim()
+    }))
+    .filter(err => err.code || err.description);
+}
+
+function formatNationalApiRejection(responseData) {
+  const errors = extractNationalApiErrors(responseData);
+  if (errors.length === 0) {
+    return null;
+  }
+
+  const rawMessage = errors
+    .map(err => `${err.code}: ${err.description}`.trim())
+    .join(' | ');
+
+  if (errors.some(err => err.code === 'E2214' || /cadeia de certifica/i.test(err.description))) {
+    return `Rejeicao da API Nacional: ${rawMessage}. O certificado de transmissao foi recusado por cadeia de certificacao. Reexporte ou reemita o A1 com a cadeia completa ICP-Brasil e envie novamente.`;
+  }
+
+  return `Rejeicao da API Nacional: ${rawMessage}`;
 }
 
 function useRemoteCertificateStorage() {
@@ -858,11 +1000,21 @@ app.post('/api/upload-certificate', upload.single('pfx'), async (req, res) => {
       return res.status(400).json({ success: false, error: 'Senha ou Certificado inválidos. Detalhes: ' + err.message });
     }
 
+    const certificateValidation = validateCertificateForNationalApi(pfxBuffer, passphrase);
+    if (!certificateValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: certificateValidation.error
+      });
+    }
+
+    const resolvedCnpj = cnpj || certificateValidation.cnpj || '';
+
     if (useRemoteCertificateStorage()) {
       const cert = {
         id: crypto.randomUUID(),
         originalName: req.file.originalname || 'certificado.pfx',
-        cnpj,
+        cnpj: resolvedCnpj,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -870,7 +1022,7 @@ app.post('/api/upload-certificate', upload.single('pfx'), async (req, res) => {
       const saved = await upsertRemoteCertificateSecret({
         id: cert.id,
         filename: cert.originalName,
-        cnpj,
+        cnpj: resolvedCnpj,
         active: true,
         pfxBuffer,
         passphrase
@@ -899,7 +1051,7 @@ app.post('/api/upload-certificate', upload.single('pfx'), async (req, res) => {
       originalName: req.file.originalname || 'certificado.pfx',
       storedName,
       passphrase,
-      cnpj,
+      cnpj: resolvedCnpj,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -1074,6 +1226,11 @@ app.post('/api/fetch-batch', async (req, res) => {
     const pfxBuffer = getCertificateBuffer(selectedCertificate);
     if (!pfxBuffer) {
       return res.status(400).json({ success: false, error: 'Arquivo ou variável do certificado não encontrada.' });
+    }
+
+    const certificateValidation = validateCertificateForNationalApi(pfxBuffer, selectedCertificate.passphrase);
+    if (!certificateValidation.valid) {
+      return res.status(400).json({ success: false, error: certificateValidation.error });
     }
 
     // Configurar o Agent HTTPS com o certificado digital
@@ -1347,7 +1504,10 @@ app.post('/api/fetch-batch', async (req, res) => {
 
     let errorMsg = e.message;
     if (e.response) {
-      if (e.response.status === 496) {
+      const nationalApiRejection = formatNationalApiRejection(e.response.data);
+      if (nationalApiRejection) {
+        errorMsg = nationalApiRejection;
+      } else if (e.response.status === 496) {
         errorMsg = 'Erro 496: Certificado não fornecido ou inválido para o mTLS da Receita Federal.';
       } else if (e.response.status === 403) {
         errorMsg = 'Erro 403: Acesso Proibido. O certificado não tem permissão para este CNPJ ou o ambiente bloqueou a conexão.';
@@ -1404,6 +1564,11 @@ app.post('/api/discover-nsu', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Arquivo ou variável do certificado não encontrada.' });
     }
 
+    const certificateValidation = validateCertificateForNationalApi(pfxBuffer, selectedCertificate.passphrase);
+    if (!certificateValidation.valid) {
+      return res.status(400).json({ success: false, error: certificateValidation.error });
+    }
+
     const httpsAgent = new https.Agent({
       pfx: pfxBuffer,
       passphrase: selectedCertificate.passphrase,
@@ -1451,6 +1616,11 @@ app.post('/api/discover-nsu', async (req, res) => {
     if (e.response) {
       if (e.response.status === 404) {
         return res.json({ success: true, maxNSU: 0 });
+      }
+
+      const nationalApiRejection = formatNationalApiRejection(e.response.data);
+      if (nationalApiRejection) {
+        return res.status(500).json({ success: false, error: nationalApiRejection });
       }
       
       const data = e.response.data;
