@@ -2,7 +2,8 @@ const express = require('express');
 const {
   useRemoteCertificateStorage,
   listRemoteCertificates,
-  setRemoteActiveCertificate
+  setRemoteActiveCertificate,
+  syncSupabaseCertificate
 } = require('../services/supabase');
 const {
   getCertificatesIndex,

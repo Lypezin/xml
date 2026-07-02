@@ -1,98 +1,22 @@
-const axios = require('axios');
-const fs = require('fs');
-const { IS_VERCEL, SUPABASE_CONFIG_FILE } = require('../config/constants');
+const { IS_VERCEL } = require('../config/constants');
 const { encryptCertificateValue, decryptCertificateValue } = require('../utils/crypto');
 const { getEnvCertificate } = require('../utils/cert');
+const {
+  getSupabaseConfig,
+  getSupabaseUserFromToken,
+  supabaseRpc
+} = require('./supabaseClient');
 
-// normalizeEnvironment is simple and helper
 function normalizeEnvironment(environment) {
   return environment === 'homologacao' ? 'homologacao' : 'producao';
-}
-
-function getSupabaseConfig() {
-  const envUrl = process.env.SUPABASE_URL;
-  const envKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
-  const envSecret = process.env.SUPABASE_APP_SECRET;
-
-  if (envUrl && envKey && envSecret) {
-    return {
-      url: String(envUrl).replace(/\/+$/, ''),
-      key: envKey,
-      appSecret: envSecret
-    };
-  }
-
-  if (!fs.existsSync(SUPABASE_CONFIG_FILE)) {
-    return null;
-  }
-
-  try {
-    const config = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_FILE, 'utf8').replace(/^\uFEFF/, ''));
-    const key = config.publishableKey || config.anonKey;
-    if (!config.enabled || !config.url || !key || !config.appSecret) {
-      return null;
-    }
-
-    return {
-      url: String(config.url).replace(/\/+$/, ''),
-      key,
-      appSecret: config.appSecret
-    };
-  } catch (e) {
-    console.error('Erro ao ler supabase.json:', e.message);
-    return null;
-  }
 }
 
 function useRemoteCertificateStorage() {
   return IS_VERCEL || process.env.CERT_STORAGE_MODE === 'supabase';
 }
 
-async function getSupabaseUserFromToken(token) {
-  const config = getSupabaseConfig();
-  if (!config || !token) return null;
-
-  const response = await axios.get(`${config.url}/auth/v1/user`, {
-    timeout: 10000,
-    headers: {
-      apikey: config.key,
-      Authorization: `Bearer ${token}`
-    }
-  });
-
-  return response.data;
-}
-
-async function supabaseRpc(functionName, payload) {
-  const config = getSupabaseConfig();
-  if (!config) {
-    return null;
-  }
-
-  try {
-    const response = await axios.post(
-      `${config.url}/rest/v1/rpc/${functionName}`,
-      { p_secret: config.appSecret, ...payload },
-      {
-        timeout: 15000,
-        headers: {
-          apikey: config.key,
-          Authorization: `Bearer ${config.key}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    return response.data;
-  } catch (e) {
-    const details = e.response ? JSON.stringify(e.response.data || {}) : e.message;
-    console.warn(`Supabase RPC ${functionName} falhou: ${details}`);
-    return null;
-  }
-}
-
 async function syncSupabaseCertificate(cert, active = true) {
   if (!cert) return null;
-
   return supabaseRpc('xml_nfse_upsert_certificate', {
     p_certificate_id: cert.id,
     p_filename: cert.originalName || cert.filename || 'certificado.pfx',
@@ -125,7 +49,6 @@ async function startSupabaseRun({ certificateId, environment, cnpjConsulta, star
 
 async function finishSupabaseRun({ runId, status, endNsu = null, maxNsuSeen = null, documentsFound = 0, errorMessage = null }) {
   if (!runId) return null;
-
   return supabaseRpc('xml_nfse_finish_run', {
     p_run_id: runId,
     p_status: status,
@@ -173,9 +96,7 @@ async function storeSupabaseXmlPayload({ token, certificateId, environment, nsu,
 }
 
 async function getSupabaseXmlPayload(token) {
-  return supabaseRpc('xml_nfse_get_xml_payload', {
-    p_token: token
-  });
+  return supabaseRpc('xml_nfse_get_xml_payload', { p_token: token });
 }
 
 async function listSupabaseXmlPayloads() {
@@ -188,21 +109,16 @@ async function listRemoteCertificates() {
 }
 
 async function setRemoteActiveCertificate(certificateId) {
-  return supabaseRpc('xml_nfse_set_active_certificate', {
-    p_certificate_id: certificateId
-  });
+  return supabaseRpc('xml_nfse_set_active_certificate', { p_certificate_id: certificateId });
 }
 
 async function deleteRemoteCertificate(certificateId) {
-  return supabaseRpc('xml_nfse_delete_certificate', {
-    p_certificate_id: certificateId
-  });
+  return supabaseRpc('xml_nfse_delete_certificate', { p_certificate_id: certificateId });
 }
 
 async function upsertRemoteCertificateSecret({ id, filename, cnpj, active, pfxBuffer, passphrase }) {
   const encryptedPfx = encryptCertificateValue(pfxBuffer);
   const encryptedPassphrase = encryptCertificateValue(Buffer.from(passphrase, 'utf8'));
-
   return supabaseRpc('xml_nfse_upsert_certificate_secret', {
     p_certificate_id: id,
     p_filename: filename,
@@ -224,21 +140,15 @@ async function resolveRemoteCertificate(certificateId) {
     const active = certificates.find(cert => cert.active) || certificates[0];
     id = active ? active.id : null;
   }
-
   if (!id) {
     const envCert = getEnvCertificate();
     return envCert || null;
   }
-
-  const row = await supabaseRpc('xml_nfse_get_certificate_secret', {
-    p_certificate_id: id
-  });
-
+  const row = await supabaseRpc('xml_nfse_get_certificate_secret', { p_certificate_id: id });
   if (!row || !row.pfx_ciphertext || !row.passphrase_ciphertext) {
     const envCert = getEnvCertificate();
     return envCert && envCert.id === id ? envCert : null;
   }
-
   return {
     id: row.id,
     originalName: row.filename,

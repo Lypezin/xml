@@ -157,7 +157,7 @@ router.post('/remove-certificate', async (req, res) => {
 
     const index = getCertificatesIndex();
     const idToRemove = certificateId || index.activeCertificateId;
-    const cert = index.certificates.find(item => item.id !== idToRemove);
+    const cert = index.certificates.find(item => item.id === idToRemove);
 
     if (!cert) {
       return res.status(404).json({ success: false, error: 'Certificado não encontrado.' });
