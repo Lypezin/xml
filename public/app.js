@@ -152,7 +152,7 @@ async function loginWithPassword(email, password) {
 
 function showAuthenticatedApp(user) {
   if (authScreen) authScreen.style.display = 'none';
-  if (appLayout) appLayout.style.display = 'grid';
+  if (appLayout) appLayout.style.display = 'flex';
   if (authUserEmail) authUserEmail.textContent = user?.email || 'Sessão ativa';
 }
 
@@ -165,7 +165,7 @@ async function initializeAuthenticatedApp() {
   await loadAuthConfig();
 
   if (!authConfig.authRequired) {
-    if (appLayout) appLayout.style.display = 'grid';
+    if (appLayout) appLayout.style.display = 'flex';
     if (authScreen) authScreen.style.display = 'none';
     checkCertStatus();
     updateProgress(0, 0);

@@ -367,8 +367,24 @@ function useRemoteCertificateStorage() {
 }
 
 function getCertificateEncryptionKey() {
-  const raw = process.env.CERT_ENCRYPTION_KEY;
+  let raw = process.env.CERT_ENCRYPTION_KEY;
+
+  // Se não estiver nas variáveis de ambiente e não for Vercel, tenta ler do arquivo local
+  if (!raw && !IS_VERCEL) {
+    const keyPath = path.join(CONFIG_DIR, 'cert-encryption-key.txt');
+    if (fs.existsSync(keyPath)) {
+      try {
+        raw = fs.readFileSync(keyPath, 'utf8');
+      } catch (e) {
+        console.error('Erro ao ler cert-encryption-key.txt:', e.message);
+      }
+    }
+  }
+
   if (!raw) return null;
+
+  // Limpa possíveis espaços nas extremidades e aspas decorrentes de cópia/cola
+  raw = raw.trim().replace(/^["']|["']$/g, '');
 
   let key;
   if (/^[0-9a-f]{64}$/i.test(raw)) {
