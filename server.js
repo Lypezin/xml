@@ -368,24 +368,74 @@ function getCertificateDisplayName(cert) {
   return cn && cn.value ? cn.value : 'certificado sem CN';
 }
 
-function extractCertificateCnpj(cert) {
-  const candidates = [];
+function extractCnpjFromText(value) {
+  const text = String(value || '');
+  const colonMatch = text.match(/[:=]\s*(\d{14})\b/);
+  if (colonMatch) return colonMatch[1];
 
-  for (const attr of cert.subject.attributes || []) {
-    if (attr.value) candidates.push(String(attr.value));
+  const matches = text.match(/\b\d{14}\b/g) || [];
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function extractCnpjFromAsn1Value(value) {
+  if (!value) return null;
+
+  if (typeof value === 'string') {
+    const direct = extractCnpjFromText(value);
+    if (direct) return direct;
+
+    try {
+      return extractCnpjFromAsn1Value(forge.asn1.fromDer(forge.util.createBuffer(value)));
+    } catch (err) {
+      return null;
+    }
+  }
+
+  if (Array.isArray(value.value)) {
+    for (const child of value.value) {
+      const childCnpj = extractCnpjFromAsn1Value(child);
+      if (childCnpj) return childCnpj;
+    }
+    return null;
+  }
+
+  if (typeof value.value === 'string') {
+    return extractCnpjFromText(value.value);
+  }
+
+  return null;
+}
+
+function extractCertificateCnpj(cert) {
+  const subjectAttrs = cert.subject && cert.subject.attributes ? cert.subject.attributes : [];
+
+  for (const attr of subjectAttrs) {
+    const attrId = String(attr.type || attr.name || attr.shortName || '').toLowerCase();
+    if (attrId === '2.16.76.1.3.3' || attrId.includes('cnpj')) {
+      const cnpj = extractCnpjFromText(attr.value);
+      if (cnpj) return cnpj;
+    }
+  }
+
+  const cn = cert.subject && cert.subject.getField('CN');
+  if (cn && cn.value) {
+    const cnpj = extractCnpjFromText(cn.value);
+    if (cnpj) return cnpj;
   }
 
   for (const ext of cert.extensions || []) {
     if (Array.isArray(ext.altNames)) {
       for (const altName of ext.altNames) {
-        if (altName.value) candidates.push(String(altName.value));
+        const oid = String(altName.oid || altName.type || '').toLowerCase();
+        if (oid === '2.16.76.1.3.3' || oid.includes('2.16.76.1.3.3')) {
+          const cnpj = extractCnpjFromAsn1Value(altName.value) || extractCnpjFromText(altName.value);
+          if (cnpj) return cnpj;
+        }
       }
     }
   }
 
-  const joined = candidates.join(' ');
-  const match = joined.match(/\b\d{14}\b/);
-  return match ? match[0] : null;
+  return null;
 }
 
 function onlyDigits(value) {
@@ -405,6 +455,36 @@ function validateCnpjConsultaRoot(cnpjConsulta, certificateCnpj) {
   }
 
   return null;
+}
+
+function getBagLocalKeyId(bag) {
+  const values = bag && bag.attributes ? bag.attributes.localKeyId : null;
+  const value = Array.isArray(values) ? values[0] : values;
+  if (!value) return null;
+
+  if (typeof value === 'string') {
+    return forge.util.bytesToHex(value);
+  }
+
+  if (Buffer.isBuffer(value)) {
+    return value.toString('hex');
+  }
+
+  return String(value);
+}
+
+function selectLeafCertificateBag(certBags, keyBags) {
+  const keyLocalIds = new Set(keyBags.map(getBagLocalKeyId).filter(Boolean));
+  const matchingKeyBag = certBags.find(bag => keyLocalIds.has(getBagLocalKeyId(bag)));
+  if (matchingKeyBag && matchingKeyBag.cert) {
+    return matchingKeyBag;
+  }
+
+  return certBags.find(bag => {
+    if (!bag.cert) return false;
+    const basicConstraints = bag.cert.getExtension('basicConstraints');
+    return !basicConstraints || basicConstraints.cA !== true;
+  }) || certBags.find(bag => bag.cert);
 }
 
 function validateCertificateForNationalApi(pfxBuffer, passphrase) {
@@ -441,10 +521,14 @@ function validateCertificateForNationalApi(pfxBuffer, passphrase) {
   }
 
   const certificates = certBags.map(bag => bag.cert).filter(Boolean);
-  const leaf = certificates.find(cert => {
-    const basicConstraints = cert.getExtension('basicConstraints');
-    return !basicConstraints || basicConstraints.cA !== true;
-  }) || certificates[0];
+  const leafBag = selectLeafCertificateBag(certBags, keyBags);
+  const leaf = leafBag && leafBag.cert;
+  if (!leaf) {
+    return {
+      valid: false,
+      error: 'O arquivo PFX/P12 nao contem certificado digital utilizavel.'
+    };
+  }
 
   const now = new Date();
   if (leaf.validity.notBefore > now) {
@@ -1027,7 +1111,21 @@ app.post('/api/upload-certificate', upload.single('pfx'), async (req, res) => {
       });
     }
 
-    const resolvedCnpj = cnpj || certificateValidation.cnpj || '';
+    const requestCnpj = onlyDigits(cnpj);
+    if (cnpj && requestCnpj.length !== 14) {
+      return res.status(400).json({
+        success: false,
+        error: 'CNPJ informado no cadastro do certificado deve conter 14 digitos.'
+      });
+    }
+
+    const resolvedCnpj = requestCnpj || certificateValidation.cnpj || '';
+    if (!resolvedCnpj) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nao foi possivel identificar com seguranca o CNPJ do titular no certificado. Informe manualmente o CNPJ da empresa ao cadastrar o A1.'
+      });
+    }
 
     if (useRemoteCertificateStorage()) {
       const cert = {
