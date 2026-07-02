@@ -1,61 +1,64 @@
 /* Variables & Styling System Design Tokens */
 :root {
-  /* Dark Mode Color Palette (Default) */
-  --bg-color: #07090e;
-  --sidebar-bg: #0c0f17;
-  --card-bg: #111520;
-  --card-border: #1e2538;
-  --input-bg: #07090d;
-  --table-header-bg: rgba(255, 255, 255, 0.01);
-  --code-bg: #030406;
+  /* Ultra Premium Dark Mode Color Palette */
+  --bg-color: #0b0f19;
+  --sidebar-bg: #111827;
+  --card-bg: rgba(17, 24, 39, 0.7);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --input-bg: rgba(15, 23, 42, 0.6);
+  --table-header-bg: rgba(255, 255, 255, 0.02);
+  --code-bg: #0f172a;
   
-  --primary: #0284c7;
-  --primary-hover: #38bdf8;
-  --primary-glow: rgba(56, 189, 248, 0.1);
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-glow: rgba(59, 130, 246, 0.25);
   
-  --secondary: #4f46e5;
-  --secondary-hover: #6366f1;
+  --secondary: #8b5cf6;
+  --secondary-hover: #a78bfa;
   
   --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.06);
-  --success-border: rgba(16, 185, 129, 0.15);
+  --success-bg: rgba(16, 185, 129, 0.1);
+  --success-border: rgba(16, 185, 129, 0.2);
   
   --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.06);
-  --warning-border: rgba(245, 158, 11, 0.15);
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --warning-border: rgba(245, 158, 11, 0.2);
   
   --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.06);
-  --danger-border: rgba(239, 68, 68, 0.15);
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --danger-border: rgba(239, 68, 68, 0.2);
   
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
   
-  --border-radius: 6px;
-  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --border-radius: 12px;
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
 
 body.light-mode {
-  /* Light Mode Color Palette */
-  --bg-color: #f8fafc;
+  /* Ultra Premium Light Mode Color Palette */
+  --bg-color: #f1f5f9;
   --sidebar-bg: #ffffff;
-  --card-bg: #ffffff;
-  --card-border: #e2e8f0;
-  --input-bg: #f1f5f9;
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-border: rgba(0, 0, 0, 0.06);
+  --input-bg: #ffffff;
   --table-header-bg: #f8fafc;
-  --code-bg: #0f172a;
+  --code-bg: #f1f5f9;
   
-  --primary: #0284c7;
-  --primary-hover: #0369a1;
-  --primary-glow: rgba(2, 132, 199, 0.15);
+  --primary: #2563eb;
+  --primary-hover: #3b82f6;
+  --primary-glow: rgba(37, 99, 235, 0.2);
   
-  --secondary: #4f46e5;
-  --secondary-hover: #3730a3;
+  --secondary: #7c3aed;
+  --secondary-hover: #8b5cf6;
   
-  --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.08);
-  --success-border: rgba(16, 185, 129, 0.2);
+  --success: #059669;
+  --success-bg: rgba(5, 150, 105, 0.08);
+  --success-border: rgba(5, 150, 105, 0.2);
   
   --text-primary: #0f172a;
   --text-secondary: #475569;
@@ -69,38 +72,42 @@ body.light-mode {
 }
 
 body {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Outfit', 'Inter', sans-serif;
   background-color: var(--bg-color);
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
-  line-height: 1.5;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Background layout light glow - only visible in dark mode */
+/* Background layout light glow - highly aesthetic */
 .glass-bg {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   z-index: -1;
   background-image: 
-    radial-gradient(circle at 5% 5%, rgba(99, 102, 241, 0.04) 0%, transparent 35%),
-    radial-gradient(circle at 95% 95%, rgba(56, 189, 248, 0.03) 0%, transparent 35%);
+    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
   background-size: cover;
   pointer-events: none;
 }
 
 body.light-mode .glass-bg {
-  display: none;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.04) 0%, transparent 40%);
 }
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -109,7 +116,7 @@ body.light-mode .glass-bg {
 
 ::-webkit-scrollbar-thumb {
   background: var(--card-border);
-  border-radius: 4px;
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
