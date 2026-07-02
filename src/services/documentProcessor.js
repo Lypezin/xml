@@ -52,7 +52,9 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
         createdAt: Date.now(),
         certificateId: selectedCertificate.id,
         environment: requestEnvironment,
-        nsu: docNsu
+        nsu: docNsu,
+        chave: chaveAcesso,
+        tipo: docTipo
       });
 
       await storeSupabaseXmlPayload({

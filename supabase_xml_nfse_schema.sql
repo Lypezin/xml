@@ -881,9 +881,22 @@ begin
       and (p_start_date is null or d.effective_data_emissao >= p_start_date)
       and (p_end_date is null or d.effective_data_emissao <= p_end_date)
       and (coalesce(p_cnpj_consulta, '') = '' or d.effective_prestador_cnpj = p_cnpj_consulta or d.effective_tomador_cnpj = p_cnpj_consulta)
+  ),
+  ranked as (
+    select
+      filtered.*,
+      row_number() over (
+        partition by case
+          when nullif(filtered.chave, '') is not null and filtered.chave <> 'N/A' then filtered.chave
+          else filtered.id::text
+        end
+        order by case when filtered.tipo = 'EVENTO' then 1 else 0 end, filtered.nsu desc
+      ) as dedupe_rank
+    from filtered
   )
   select count(*) into total_count
-  from filtered;
+  from ranked
+  where dedupe_rank = 1;
 
   with enriched as (
     select
@@ -945,13 +958,50 @@ begin
       and (p_start_date is null or d.effective_data_emissao >= p_start_date)
       and (p_end_date is null or d.effective_data_emissao <= p_end_date)
       and (coalesce(p_cnpj_consulta, '') = '' or d.effective_prestador_cnpj = p_cnpj_consulta or d.effective_tomador_cnpj = p_cnpj_consulta)
-    order by d.nsu desc
+  ),
+  ranked as (
+    select
+      filtered.*,
+      row_number() over (
+        partition by case
+          when nullif(filtered.chave, '') is not null and filtered.chave <> 'N/A' then filtered.chave
+          else filtered.id::text
+        end
+        order by case when filtered.tipo = 'EVENTO' then 1 else 0 end, filtered.nsu desc
+      ) as dedupe_rank
+    from filtered
+  ),
+  page_rows as (
+    select
+      id,
+      certificate_id,
+      environment,
+      nsu,
+      tipo,
+      chave,
+      numero_nfse,
+      data_emissao,
+      prestador_cnpj,
+      prestador_nome,
+      tomador_cnpj,
+      tomador_nome,
+      valor_servico,
+      municipio_prestacao,
+      codigo_tributacao,
+      file_name,
+      xml_sha256,
+      metadata,
+      first_seen_at,
+      last_seen_at
+    from ranked
+    where dedupe_rank = 1
+    order by nsu desc
     limit coalesce(p_limit, 100000)
     offset coalesce(p_offset, 0)
   )
   select coalesce(jsonb_agg(to_jsonb(filtered.*)), '[]'::jsonb)
   into rows_data
-  from filtered;
+  from page_rows filtered;
 
   return jsonb_build_object('documents', rows_data, 'total', total_count);
 end;

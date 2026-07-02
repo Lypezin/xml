@@ -36,8 +36,30 @@ window.AppUiTable = {
     };
   },
 
+  getDedupKey(doc) {
+    const chave = String(doc.chave || '').trim();
+    if (chave && chave !== 'N/A' && !chave.startsWith('NSU_')) {
+      return `CHAVE:${chave}`;
+    }
+    return `NSU:${doc.nsu || doc.token || doc.arquivo || doc.xmlSha256 || 'SEM_CHAVE'}`;
+  },
+
+  dedupeDocuments(docs) {
+    const byKey = new Map();
+    const ordered = [...(docs || [])].sort((a, b) => {
+      const aEvento = String(a.tipo || '').toUpperCase() === 'EVENTO';
+      const bEvento = String(b.tipo || '').toUpperCase() === 'EVENTO';
+      return Number(aEvento) - Number(bEvento);
+    });
+    ordered.forEach(doc => {
+      const key = this.getDedupKey(doc);
+      if (!byKey.has(key)) byKey.set(key, doc);
+    });
+    return Array.from(byKey.values());
+  },
+
   setDocuments(docs, total = null, page = 1) {
-    this.documents = (docs || []).map(doc => this.normalizeDocument(doc));
+    this.documents = this.dedupeDocuments((docs || []).map(doc => this.normalizeDocument(doc)));
     this.remoteTotal = total === null ? this.documents.length : Number(total || 0);
     this.remoteMode = total !== null;
     this.currentPage = page;
@@ -47,9 +69,20 @@ window.AppUiTable = {
   appendDocumentsToTable(docs) {
     this.remoteMode = false;
     const normalized = (docs || []).map(doc => this.normalizeDocument(doc));
-    const byNsu = new Map(this.documents.map(doc => [String(doc.nsu), doc]));
-    normalized.forEach(doc => byNsu.set(String(doc.nsu), doc));
-    this.documents = Array.from(byNsu.values());
+    const byKey = new Map(this.documents.map(doc => [this.getDedupKey(doc), doc]));
+    const ordered = [...normalized].sort((a, b) => {
+      const aEvento = String(a.tipo || '').toUpperCase() === 'EVENTO';
+      const bEvento = String(b.tipo || '').toUpperCase() === 'EVENTO';
+      return Number(aEvento) - Number(bEvento);
+    });
+    ordered.forEach(doc => {
+      const key = this.getDedupKey(doc);
+      const current = byKey.get(key);
+      const currentIsEvento = String(current?.tipo || '').toUpperCase() === 'EVENTO';
+      const nextIsEvento = String(doc.tipo || '').toUpperCase() === 'EVENTO';
+      if (!current || (currentIsEvento && !nextIsEvento)) byKey.set(key, doc);
+    });
+    this.documents = Array.from(byKey.values());
     this.currentPage = Math.max(1, Math.ceil(this.documents.length / this.pageSize));
     this.renderCurrentPage();
   },

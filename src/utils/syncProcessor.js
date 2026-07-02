@@ -21,6 +21,28 @@ const {
 } = require('../services/supabase');
 const { processBatchDocuments } = require('../services/documentProcessor');
 
+function getDocumentDedupKey(doc) {
+  const chave = String(doc.chave || '').trim();
+  if (chave && chave !== 'N/A' && !chave.startsWith('NSU_')) {
+    return `CHAVE:${chave}`;
+  }
+  return `NSU:${doc.nsu || doc.token || doc.arquivo || doc.xmlSha256 || 'SEM_CHAVE'}`;
+}
+
+function dedupeProcessedDocuments(docs) {
+  const byKey = new Map();
+  const ordered = [...(docs || [])].sort((a, b) => {
+    const aEvento = String(a.tipo || '').toUpperCase() === 'EVENTO';
+    const bEvento = String(b.tipo || '').toUpperCase() === 'EVENTO';
+    return Number(aEvento) - Number(bEvento);
+  });
+  for (const doc of ordered) {
+    const key = getDocumentDedupKey(doc);
+    if (!byKey.has(key)) byKey.set(key, doc);
+  }
+  return Array.from(byKey.values());
+}
+
 async function executeSyncBatch({ selectedCertificate, requestEnvironment, requestStartNsu, requestCnpjConsulta, sortOrder, supabaseRunId }) {
   const pfxBuffer = getCertificateBuffer(selectedCertificate);
   if (!pfxBuffer) {
@@ -102,12 +124,12 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
 
   console.log(`Documentos encontrados: ${documentsList.length} | ultNSU: ${ultNSU} | maxNSU: ${maxNSU}`);
 
-  const processedDocs = await processBatchDocuments({
+  const processedDocs = dedupeProcessedDocuments(await processBatchDocuments({
     documentsList,
     selectedCertificate,
     requestEnvironment,
     xmlCache
-  });
+  }));
 
   let menorDataLote = null;
   let maiorDataLote = null;

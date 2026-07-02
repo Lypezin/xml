@@ -87,12 +87,8 @@ window.AppEvents = {
         window.AppUi.setBtnStartActive(true);
         btnPause.disabled = false;
         
-        if (!wasPaused && window.totalDownloaded > 0) {
+        if (!wasPaused) {
           window.totalDownloaded = 0;
-          statTotalNotas.innerText = '0';
-        }
-
-        if (window.totalDownloaded === 0) {
           const mode = selectSearchMode ? selectSearchMode.value : 'asc';
           window.currentNsu = parseInt(inputStartNsu.value) || 0;
           window.isCrawlerActive = false;
@@ -200,8 +196,16 @@ window.AppEvents = {
             certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId
           });
           const lastNsu = Number(data.state?.last_nsu || 0);
-          inputStartNsu.value = lastNsu;
-          window.AppUi.log(`NSU inicial ajustado para o ultimo salvo: ${lastNsu}.`, 'success');
+          const maxSeenNsu = Number(data.state?.max_nsu_seen || 0);
+          const savedNsu = Math.max(lastNsu, maxSeenNsu);
+          inputStartNsu.value = savedNsu;
+          window.currentNsu = savedNsu;
+          window.maxNsu = Math.max(window.maxNsu || 0, savedNsu);
+          statNsuAtual.innerText = String(savedNsu);
+          statNsuMax.innerText = String(window.maxNsu || savedNsu);
+          window.totalDownloaded = 0;
+          window.isPaused = false;
+          window.AppUi.log(`NSU inicial ajustado para o ultimo salvo: ${savedNsu}.`, 'success');
         } catch (err) {
           window.AppUi.log(`Erro ao buscar ultimo NSU salvo: ${err.message}`, 'error');
         } finally {
@@ -221,8 +225,15 @@ window.AppEvents = {
             certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId
           });
           if (!data.success) throw new Error(data.error || 'Nao foi possivel descobrir o ultimo NSU.');
-          inputStartNsu.value = Number(data.maxNSU || 0);
-          window.AppUi.log(`NSU inicial ajustado para o ultimo nacional: ${Number(data.maxNSU || 0)}.`, 'success');
+          const nationalNsu = Number(data.maxNSU || 0);
+          inputStartNsu.value = nationalNsu;
+          window.currentNsu = nationalNsu;
+          window.maxNsu = Math.max(window.maxNsu || 0, nationalNsu);
+          statNsuAtual.innerText = String(nationalNsu);
+          statNsuMax.innerText = String(window.maxNsu || nationalNsu);
+          window.totalDownloaded = 0;
+          window.isPaused = false;
+          window.AppUi.log(`NSU inicial ajustado para o ultimo nacional: ${nationalNsu}.`, 'success');
         } catch (err) {
           window.AppUi.log(`Erro ao descobrir ultimo NSU nacional: ${err.message}`, 'error');
         } finally {

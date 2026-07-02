@@ -14,6 +14,29 @@ const { resolveCertificateForRequest } = require('../services/localCertificates'
 
 const router = express.Router();
 
+function getUniqueXmlKey(item) {
+  const metadata = item.metadata || {};
+  const chave = String(item.chave || metadata.chave || '').trim();
+  if (chave && chave !== 'N/A' && !chave.startsWith('NSU_')) {
+    return `CHAVE:${chave}`;
+  }
+  return `FILE:${item.token || metadata.token || item.fileName || item.file_name || item.arquivo || item.nsu || 'SEM_CHAVE'}`;
+}
+
+function dedupeXmlItems(items) {
+  const byKey = new Map();
+  const sorted = [...(items || [])].sort((a, b) => {
+    const aEvento = String(a.tipo || a.metadata?.tipo || '').toUpperCase() === 'EVENTO';
+    const bEvento = String(b.tipo || b.metadata?.tipo || '').toUpperCase() === 'EVENTO';
+    return Number(aEvento) - Number(bEvento);
+  });
+  for (const item of sorted) {
+    const key = getUniqueXmlKey(item);
+    if (!byKey.has(key)) byKey.set(key, item);
+  }
+  return Array.from(byKey.values());
+}
+
 router.get('/download-xml/:token', async (req, res) => {
   let cached = xmlCache.get(req.params.token);
   if (!cached) {
@@ -67,7 +90,7 @@ router.get('/download-zip', async (req, res) => {
     }
 
     const zip = new AdmZip();
-    for (const cached of payloads) {
+    for (const cached of dedupeXmlItems(payloads)) {
       zip.addFile(cached.fileName, Buffer.from(cached.xmlString, 'utf8'));
     }
 
@@ -121,7 +144,7 @@ router.post('/download-period-zip', async (req, res) => {
       endDate: endDate || null,
       cnpj: cnpj || ''
     });
-    const documents = result.documents || [];
+    const documents = dedupeXmlItems(result.documents || []);
 
     if (!documents || documents.length === 0) {
       return res.status(400).json({ success: false, error: 'Nenhum documento no período.' });
