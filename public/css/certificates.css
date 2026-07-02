@@ -1,0 +1,70 @@
+/* Certificate Drop Zone & Active State Styles */
+
+.cert-state {
+  display: none;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.cert-state.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.drop-zone {
+  border: 2px dashed var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 36px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.01);
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: 24px;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+}
+
+.drop-zone-icon-svg {
+  width: 36px;
+  height: 36px;
+  color: var(--text-secondary);
+  transition: var(--transition);
+}
+
+.drop-zone:hover .drop-zone-icon-svg,
+.drop-zone.dragover .drop-zone-icon-svg {
+  transform: translateY(-4px);
+  color: var(--primary-hover);
+}
+
+body.light-mode .drop-zone:hover .drop-zone-icon-svg,
+body.light-mode .drop-zone.dragover .drop-zone-icon-svg {
+  color: var(--primary);
+}
+
+.drop-zone-text {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.drop-zone-text strong {
+  color: var(--primary-hover);
+  font-weight: 700;
+}
+
+body.light-mode .drop-zone-text strong {
+  color: var(--primary);
+}
