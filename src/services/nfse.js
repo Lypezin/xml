@@ -113,6 +113,10 @@ function buildNationalApiContext(response, url, environment, cnpjConsulta) {
   };
 }
 
+function normalizeEnvironment(environment) {
+  return environment === 'homologacao' ? 'homologacao' : 'producao';
+}
+
 module.exports = {
   getNationalApiBaseUrl,
   extractNationalApiErrors,
@@ -123,5 +127,6 @@ module.exports = {
   resolveCnpjConsulta,
   buildDfeUrl,
   isNationalApiFiscalStatus,
-  buildNationalApiContext
+  buildNationalApiContext,
+  normalizeEnvironment
 };
