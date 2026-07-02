@@ -1,0 +1,426 @@
+create schema if not exists xml_nfse;
+create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists xml_nfse.settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
+insert into xml_nfse.settings (key, value)
+values ('app_secret_sha256', '4a566d34c43e975e16796070f90078b27781e4f60180c0d497b37d169375f1ed')
+on conflict (key) do update
+set value = excluded.value,
+    updated_at = now();
+
+create table if not exists xml_nfse.certificates (
+  id text primary key,
+  filename text not null,
+  cnpj text,
+  active boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists xml_nfse.sync_state (
+  id uuid primary key default gen_random_uuid(),
+  certificate_id text not null references xml_nfse.certificates(id) on delete cascade,
+  environment text not null check (environment in ('producao', 'homologacao')),
+  cnpj_consulta text not null default '',
+  last_nsu bigint not null default 0,
+  max_nsu_seen bigint not null default 0,
+  status text not null default 'idle',
+  last_success_at timestamptz,
+  last_error text,
+  next_allowed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (certificate_id, environment, cnpj_consulta)
+);
+
+create table if not exists xml_nfse.sync_runs (
+  id uuid primary key default gen_random_uuid(),
+  certificate_id text not null references xml_nfse.certificates(id) on delete cascade,
+  environment text not null check (environment in ('producao', 'homologacao')),
+  cnpj_consulta text not null default '',
+  status text not null default 'running',
+  start_nsu bigint not null default 0,
+  end_nsu bigint,
+  max_nsu_seen bigint,
+  documents_found integer not null default 0,
+  error_message text,
+  started_at timestamptz not null default now(),
+  finished_at timestamptz
+);
+
+create table if not exists xml_nfse.documents (
+  id uuid primary key default gen_random_uuid(),
+  certificate_id text not null references xml_nfse.certificates(id) on delete cascade,
+  environment text not null check (environment in ('producao', 'homologacao')),
+  nsu bigint not null,
+  tipo text not null default 'NFSE',
+  chave text,
+  numero_nfse text,
+  data_emissao date,
+  prestador_cnpj text,
+  prestador_nome text,
+  tomador_cnpj text,
+  tomador_nome text,
+  valor_servico numeric(15,2),
+  municipio_prestacao text,
+  codigo_tributacao text,
+  file_name text,
+  xml_sha256 text,
+  metadata jsonb not null default '{}'::jsonb,
+  first_seen_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  unique (certificate_id, environment, nsu)
+);
+
+create table if not exists xml_nfse.download_events (
+  id uuid primary key default gen_random_uuid(),
+  certificate_id text references xml_nfse.certificates(id) on delete set null,
+  document_id uuid references xml_nfse.documents(id) on delete set null,
+  environment text,
+  nsu bigint,
+  file_name text,
+  downloaded_at timestamptz not null default now()
+);
+
+create index if not exists sync_state_lookup_idx
+  on xml_nfse.sync_state (certificate_id, environment, cnpj_consulta);
+
+create index if not exists documents_certificate_environment_nsu_desc_idx
+  on xml_nfse.documents (certificate_id, environment, nsu desc);
+
+create index if not exists documents_chave_idx
+  on xml_nfse.documents (chave);
+
+alter table xml_nfse.settings enable row level security;
+alter table xml_nfse.certificates enable row level security;
+alter table xml_nfse.sync_state enable row level security;
+alter table xml_nfse.sync_runs enable row level security;
+alter table xml_nfse.documents enable row level security;
+alter table xml_nfse.download_events enable row level security;
+
+revoke all on schema xml_nfse from anon, authenticated;
+revoke all on all tables in schema xml_nfse from anon, authenticated;
+revoke all on all sequences in schema xml_nfse from anon, authenticated;
+
+create or replace function xml_nfse.assert_app_secret(p_secret text)
+returns void
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  expected_hash text;
+  provided_hash text;
+begin
+  select value into expected_hash
+  from xml_nfse.settings
+  where key = 'app_secret_sha256';
+
+  provided_hash := encode(extensions.digest(coalesce(p_secret, ''), 'sha256'), 'hex');
+
+  if expected_hash is null or provided_hash <> expected_hash then
+    raise exception 'invalid xml_nfse app secret' using errcode = '28000';
+  end if;
+end;
+$$;
+
+create or replace function public.xml_nfse_upsert_certificate(
+  p_secret text,
+  p_certificate_id text,
+  p_filename text,
+  p_cnpj text,
+  p_active boolean default true
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  if p_active then
+    update xml_nfse.certificates set active = false where active = true;
+  end if;
+
+  insert into xml_nfse.certificates (id, filename, cnpj, active)
+  values (p_certificate_id, p_filename, nullif(p_cnpj, ''), coalesce(p_active, false))
+  on conflict (id) do update
+  set filename = excluded.filename,
+      cnpj = excluded.cnpj,
+      active = excluded.active,
+      updated_at = now();
+
+  return jsonb_build_object('success', true, 'certificate_id', p_certificate_id);
+end;
+$$;
+
+create or replace function public.xml_nfse_get_sync_state(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_cnpj_consulta text default ''
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  row_data jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  insert into xml_nfse.sync_state (certificate_id, environment, cnpj_consulta)
+  values (p_certificate_id, p_environment, coalesce(p_cnpj_consulta, ''))
+  on conflict (certificate_id, environment, cnpj_consulta) do nothing;
+
+  select to_jsonb(s.*) into row_data
+  from xml_nfse.sync_state s
+  where s.certificate_id = p_certificate_id
+    and s.environment = p_environment
+    and s.cnpj_consulta = coalesce(p_cnpj_consulta, '');
+
+  return row_data;
+end;
+$$;
+
+create or replace function public.xml_nfse_update_sync_state(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_cnpj_consulta text,
+  p_last_nsu bigint,
+  p_max_nsu_seen bigint,
+  p_status text,
+  p_next_allowed_at timestamptz default null,
+  p_last_error text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  insert into xml_nfse.sync_state (
+    certificate_id,
+    environment,
+    cnpj_consulta,
+    last_nsu,
+    max_nsu_seen,
+    status,
+    last_success_at,
+    next_allowed_at,
+    last_error,
+    updated_at
+  )
+  values (
+    p_certificate_id,
+    p_environment,
+    coalesce(p_cnpj_consulta, ''),
+    greatest(coalesce(p_last_nsu, 0), 0),
+    greatest(coalesce(p_max_nsu_seen, 0), 0),
+    coalesce(p_status, 'idle'),
+    case when p_last_error is null then now() else null end,
+    p_next_allowed_at,
+    p_last_error,
+    now()
+  )
+  on conflict (certificate_id, environment, cnpj_consulta) do update
+  set last_nsu = excluded.last_nsu,
+      max_nsu_seen = greatest(xml_nfse.sync_state.max_nsu_seen, excluded.max_nsu_seen),
+      status = excluded.status,
+      last_success_at = coalesce(excluded.last_success_at, xml_nfse.sync_state.last_success_at),
+      next_allowed_at = excluded.next_allowed_at,
+      last_error = excluded.last_error,
+      updated_at = now();
+
+  return jsonb_build_object('success', true);
+end;
+$$;
+
+create or replace function public.xml_nfse_start_run(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_cnpj_consulta text,
+  p_start_nsu bigint
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  run_id uuid;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  insert into xml_nfse.sync_runs (certificate_id, environment, cnpj_consulta, start_nsu)
+  values (p_certificate_id, p_environment, coalesce(p_cnpj_consulta, ''), coalesce(p_start_nsu, 0))
+  returning id into run_id;
+
+  return run_id;
+end;
+$$;
+
+create or replace function public.xml_nfse_finish_run(
+  p_secret text,
+  p_run_id uuid,
+  p_status text,
+  p_end_nsu bigint default null,
+  p_max_nsu_seen bigint default null,
+  p_documents_found integer default 0,
+  p_error_message text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  update xml_nfse.sync_runs
+  set status = coalesce(p_status, status),
+      end_nsu = p_end_nsu,
+      max_nsu_seen = p_max_nsu_seen,
+      documents_found = coalesce(p_documents_found, documents_found),
+      error_message = p_error_message,
+      finished_at = now()
+  where id = p_run_id;
+
+  return jsonb_build_object('success', found);
+end;
+$$;
+
+create or replace function public.xml_nfse_upsert_document(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_nsu bigint,
+  p_tipo text,
+  p_chave text,
+  p_file_name text,
+  p_xml_sha256 text,
+  p_metadata jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  doc_id uuid;
+  metadata_data_emissao text;
+  metadata_valor_servico text;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  metadata_data_emissao := nullif(nullif(coalesce(p_metadata ->> 'dataEmissao', ''), ''), 'N/A');
+  metadata_valor_servico := nullif(nullif(replace(coalesce(p_metadata ->> 'valorServico', ''), ',', '.'), ''), 'N/A');
+
+  insert into xml_nfse.documents (
+    certificate_id,
+    environment,
+    nsu,
+    tipo,
+    chave,
+    numero_nfse,
+    data_emissao,
+    prestador_cnpj,
+    prestador_nome,
+    tomador_cnpj,
+    tomador_nome,
+    valor_servico,
+    municipio_prestacao,
+    codigo_tributacao,
+    file_name,
+    xml_sha256,
+    metadata
+  )
+  values (
+    p_certificate_id,
+    p_environment,
+    p_nsu,
+    coalesce(p_tipo, 'NFSE'),
+    nullif(p_chave, ''),
+    nullif(p_metadata ->> 'numeroNfse', ''),
+    case when metadata_data_emissao ~ '^\d{4}-\d{2}-\d{2}$' then metadata_data_emissao::date else null end,
+    nullif(nullif(p_metadata ->> 'prestadorCnpj', ''), 'N/A'),
+    nullif(nullif(p_metadata ->> 'prestadorNome', ''), 'N/A'),
+    nullif(nullif(p_metadata ->> 'tomadorCnpj', ''), 'N/A'),
+    nullif(nullif(p_metadata ->> 'tomadorNome', ''), 'N/A'),
+    case when metadata_valor_servico ~ '^-?\d+(\.\d+)?$' then metadata_valor_servico::numeric else null end,
+    nullif(nullif(p_metadata ->> 'municipioPrestacao', ''), 'N/A'),
+    nullif(nullif(p_metadata ->> 'codigoTributacao', ''), 'N/A'),
+    p_file_name,
+    p_xml_sha256,
+    coalesce(p_metadata, '{}'::jsonb)
+  )
+  on conflict (certificate_id, environment, nsu) do update
+  set tipo = excluded.tipo,
+      chave = excluded.chave,
+      numero_nfse = excluded.numero_nfse,
+      data_emissao = excluded.data_emissao,
+      prestador_cnpj = excluded.prestador_cnpj,
+      prestador_nome = excluded.prestador_nome,
+      tomador_cnpj = excluded.tomador_cnpj,
+      tomador_nome = excluded.tomador_nome,
+      valor_servico = excluded.valor_servico,
+      municipio_prestacao = excluded.municipio_prestacao,
+      codigo_tributacao = excluded.codigo_tributacao,
+      file_name = excluded.file_name,
+      xml_sha256 = excluded.xml_sha256,
+      metadata = excluded.metadata,
+      last_seen_at = now()
+  returning id into doc_id;
+
+  return jsonb_build_object('success', true, 'document_id', doc_id);
+end;
+$$;
+
+create or replace function public.xml_nfse_register_download(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_nsu bigint,
+  p_file_name text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  doc_id uuid;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select id into doc_id
+  from xml_nfse.documents
+  where certificate_id = p_certificate_id
+    and environment = p_environment
+    and nsu = p_nsu;
+
+  insert into xml_nfse.download_events (certificate_id, document_id, environment, nsu, file_name)
+  values (p_certificate_id, doc_id, p_environment, p_nsu, p_file_name);
+
+  return jsonb_build_object('success', true);
+end;
+$$;
+
+grant execute on function public.xml_nfse_upsert_certificate(text, text, text, text, boolean) to anon, authenticated;
+grant execute on function public.xml_nfse_get_sync_state(text, text, text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_update_sync_state(text, text, text, text, bigint, bigint, text, timestamptz, text) to anon, authenticated;
+grant execute on function public.xml_nfse_start_run(text, text, text, text, bigint) to anon, authenticated;
+grant execute on function public.xml_nfse_finish_run(text, uuid, text, bigint, bigint, integer, text) to anon, authenticated;
+grant execute on function public.xml_nfse_upsert_document(text, text, text, bigint, text, text, text, text, jsonb) to anon, authenticated;
+grant execute on function public.xml_nfse_register_download(text, text, text, bigint, text) to anon, authenticated;

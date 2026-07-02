@@ -1,0 +1,26 @@
+{
+  "name": "programa-xml-em-lote-nfse",
+  "version": "1.0.0",
+  "description": "Ferramenta local para download em lote de XMLs de NFS-e Nacional via mTLS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "nfse",
+    "xml",
+    "lote",
+    "nsu",
+    "mtls",
+    "download"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "axios": "^1.6.8",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "url": "https://SEU_PROJECT_REF.supabase.co",
+  "publishableKey": "sb_publishable_...",
+  "appSecret": "segredo-local-da-aplicacao"
+}
