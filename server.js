@@ -234,7 +234,7 @@ async function supabaseRpc(functionName, payload) {
 }
 
 function normalizeEnvironment(environment) {
-  return environment === 'homologacao' ? 'homologacao' : 'producao';
+  return 'producao';
 }
 
 async function syncSupabaseCertificate(cert, active = true) {
