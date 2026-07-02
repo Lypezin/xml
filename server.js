@@ -67,17 +67,7 @@ if (require.main === module) {
     console.log(`Pasta de downloads XML: ${DOWNLOADS_DIR}`);
     console.log(`==================================================`);
 
-    // Inicializar agendador em background se ativo
-    try {
-      const { loadSchedulerSettings } = require('./src/services/schedulerSettings');
-      const scheduler = require('./src/services/scheduler');
-      const settings = await loadSchedulerSettings();
-      if (settings && settings.autoSyncEnabled) {
-        scheduler.start();
-      }
-    } catch (e) {
-      console.error('Erro ao inicializar o scheduler no boot:', e.message);
-    }
+    // Atualizacoes de NSU ficam manuais para evitar chamadas automaticas ao barramento.
   });
 }
 

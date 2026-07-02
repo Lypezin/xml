@@ -69,7 +69,7 @@ async function checkAndRun(options = {}) {
 
   try {
     const environment = settings.autoSyncEnvironment === 'homologacao' ? 'homologacao' : 'producao';
-    const maxBatches = Math.max(1, Math.min(Number(settings.autoSyncMaxBatchesPerRun) || 3, 20));
+    const maxBatches = Math.max(1, Math.min(Number(settings.autoSyncMaxBatchesPerRun) || 1, 5));
     const selectedCertificate = await resolveActiveCertificate();
 
     if (!selectedCertificate) {

@@ -10,11 +10,5 @@
     "api/index.js": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/scheduler-cron",
-      "schedule": "0 9,21 * * *"
-    }
-  ]
+  }
 }

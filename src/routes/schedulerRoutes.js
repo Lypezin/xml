@@ -22,14 +22,8 @@ router.post('/scheduler-settings', async (req, res) => {
     const settings = normalizeSchedulerSettings(req.body);
     await persistSchedulerSettings(settings);
 
-    if (settings.autoSyncEnabled) {
-      console.log('[Scheduler] Configuracoes alteradas: ativando varredura agendada.');
-      scheduler.start();
-      scheduler.checkAndRun();
-    } else {
-      console.log('[Scheduler] Configuracoes alteradas: desativando varredura.');
-      scheduler.stop();
-    }
+    scheduler.stop();
+    console.log('[Scheduler] Configuracoes manuais salvas. Nenhuma varredura automatica foi iniciada.');
 
     return res.json({ success: true, settings });
   } catch (err) {

@@ -200,8 +200,9 @@ window.AppSyncController = {
         inputStartNsu.value = window.currentNsu;
       }
 
-      window.AppUi.log('Aguardando 10 segundos antes do próximo bloco...');
-      setTimeout(() => this.runQueryLoop(), 10000);
+      const safeDelayMs = 65000;
+      window.AppUi.log('Aguardando 65 segundos antes do proximo bloco para reduzir risco de bloqueio...', 'warning');
+      setTimeout(() => this.runQueryLoop(), safeDelayMs);
 
     } catch (err) {
       window.AppUi.log(`Erro crítico: ${err.message}`, 'error');

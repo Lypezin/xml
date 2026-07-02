@@ -25,6 +25,10 @@ async function loadSchedulerSettings() {
   }
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 window.AppEvents = {
   bindEvents() {
     window.AppEventsCert.bindCertEvents();
@@ -208,10 +212,11 @@ window.AppEvents = {
         btnSaveScheduler.disabled = true;
         try {
           const settings = {
-            autoSyncEnabled: Boolean(schedulerEnabled?.checked),
+            autoSyncEnabled: false,
             autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
             autoSyncEnvironment: schedulerEnv?.value || 'producao',
-            autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 3)
+            autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
+            autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 65)
           };
           const data = await window.AppApi.saveSchedulerSettings(settings);
           if (!data.success) throw new Error(data.error || 'Nao foi possivel salvar o agendamento.');
@@ -228,18 +233,52 @@ window.AppEvents = {
     if (btnRunSchedulerNow) {
       btnRunSchedulerNow.addEventListener('click', async () => {
         btnRunSchedulerNow.disabled = true;
-        window.AppUi.log('Disparando varredura automatica agora...');
+        if (btnSaveScheduler) btnSaveScheduler.disabled = true;
+        window.AppUi.log('Iniciando atualizacao manual segura...');
         try {
-          const data = await window.AppApi.runSchedulerNow();
-          if (!data.success) throw new Error(data.error || 'Nao foi possivel executar a varredura.');
-          const result = data.result || {};
-          if (result.error) throw new Error(result.error);
-          window.AppUi.log(`Varredura executada: ${result.batches || 0} lote(s), ${result.documentsFound || 0} XML(s).`, 'success');
+          const settings = {
+            autoSyncEnabled: false,
+            autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
+            autoSyncEnvironment: schedulerEnv?.value || 'producao',
+            autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
+            autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 65)
+          };
+          await window.AppApi.saveSchedulerSettings(settings);
+
+          const delaySeconds = Math.max(30, Number(settings.autoSyncDelaySeconds || 65));
+          let finished = false;
+          let cycles = 0;
+
+          while (!finished) {
+            cycles += 1;
+            const data = await window.AppApi.runSchedulerNow();
+            if (!data.success) throw new Error(data.error || 'Nao foi possivel executar a atualizacao.');
+
+            const result = data.result || {};
+            if (result.error) throw new Error(result.error);
+
+            window.AppUi.updateManualSyncProgress(
+              result.lastNsu || 0,
+              result.maxNsuSeen || 0,
+              result.maxNsuSeen ? `NSU ${result.lastNsu || 0} de ${result.maxNsuSeen}` : 'Consultando primeiro lote...'
+            );
+            window.AppUi.updateProgress(result.lastNsu || 0, result.maxNsuSeen || 0);
+            window.AppUi.log(`Ciclo ${cycles}: ${result.batches || 0} lote(s), ${result.documentsFound || 0} XML(s).`, 'success');
+
+            finished = Boolean(result.finished || result.started === false);
+            if (!finished) {
+              window.AppUi.log(`Pausa segura de ${delaySeconds}s antes do proximo lote para reduzir risco de bloqueio...`, 'warning');
+              await sleep(delaySeconds * 1000);
+            }
+          }
+
+          window.AppUi.log('Atualizacao manual concluida.', 'success');
           loadSchedulerSettings();
         } catch (err) {
-          window.AppUi.log(`Erro na varredura automatica: ${err.message}`, 'error');
+          window.AppUi.log(`Erro na atualizacao manual: ${err.message}`, 'error');
         } finally {
           btnRunSchedulerNow.disabled = false;
+          if (btnSaveScheduler) btnSaveScheduler.disabled = false;
         }
       });
     }

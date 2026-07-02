@@ -168,9 +168,20 @@ window.AppUi = {
     schedulerEnabled.checked = settings.autoSyncEnabled;
     schedulerInterval.value = settings.autoSyncIntervalHours || 12;
     schedulerEnv.value = settings.autoSyncEnvironment || 'producao';
-    if (schedulerMaxBatches) schedulerMaxBatches.value = settings.autoSyncMaxBatchesPerRun || 3;
+    if (schedulerMaxBatches) schedulerMaxBatches.value = settings.autoSyncMaxBatchesPerRun || 1;
+    if (schedulerDelaySeconds) schedulerDelaySeconds.value = settings.autoSyncDelaySeconds || 65;
     schedulerLastRun.innerText = settings.lastRunAt ? new Date(settings.lastRunAt).toLocaleString() : 'Nunca';
-    schedulerStatus.innerText = settings.autoSyncEnabled ? 'Ativo' : 'Inativo';
-    schedulerStatus.className = settings.autoSyncEnabled ? 'metric-value text-success' : 'metric-value text-primary';
+    schedulerStatus.innerText = 'Manual';
+    schedulerStatus.className = 'metric-value text-primary';
+  },
+
+  updateManualSyncProgress(current, max, message) {
+    if (!manualSyncProgressBar || !manualSyncProgressPercentage || !manualSyncProgressText) return;
+    const safeCurrent = Number(current || 0);
+    const safeMax = Number(max || 0);
+    const percentage = safeMax > 0 ? Math.min(Math.round((safeCurrent / safeMax) * 100), 100) : 0;
+    manualSyncProgressBar.style.width = `${percentage}%`;
+    manualSyncProgressPercentage.innerText = `${percentage}%`;
+    manualSyncProgressText.innerText = message || (safeMax > 0 ? `NSU ${safeCurrent} de ${safeMax}` : 'Aguardando atualizacao manual...');
   }
 };
