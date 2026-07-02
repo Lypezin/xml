@@ -1,68 +1,40 @@
 <div id="view-download-content" class="tab-content active">
   <section class="metrics-row">
-    <div class="metric-card">
-      <div class="metric-data">
-        <span class="metric-label">Cursor NSU</span>
-        <h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3>
-      </div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-data">
-        <span class="metric-label">Historico salvo</span>
-        <h3 class="metric-value" id="stat-total-notas">0</h3>
-      </div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-data">
-        <span class="metric-label">Ambiente</span>
-        <h3 class="metric-value text-primary" id="stat-ambiente">Producao</h3>
-      </div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-data">
-        <span class="metric-label">Formato</span>
-        <h3 class="metric-value text-success" style="font-size: 14px;">XML NFS-e</h3>
-      </div>
-    </div>
+    <div class="metric-card"><div class="metric-data"><span class="metric-label">Cursor NSU</span><h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3></div></div>
+    <div class="metric-card"><div class="metric-data"><span class="metric-label">Historico salvo</span><h3 class="metric-value" id="stat-total-notas">0</h3></div></div>
+    <div class="metric-card"><div class="metric-data"><span class="metric-label">Ambiente</span><h3 class="metric-value text-primary" id="stat-ambiente">Producao</h3></div></div>
+    <div class="metric-card"><div class="metric-data"><span class="metric-label">Formato</span><h3 class="metric-value text-success" style="font-size: 14px;">XML NFS-e</h3></div></div>
   </section>
 
   <section class="card">
-    <div class="card-header"><h2>Configuracao da consulta</h2></div>
+    <div class="card-header"><h2>Filtros e parametros</h2></div>
     <div class="input-row">
-      <div class="input-group">
-        <label for="certificate-select">Certificado</label>
-        <select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select>
-      </div>
-      <div class="input-group">
-        <label for="environment">Ambiente</label>
-        <select id="environment"><option value="producao" selected>Producao</option><option value="homologacao">Homologacao</option></select>
-      </div>
-      <div class="input-group">
-        <label for="cnpj-consulta">CNPJ opcional</label>
-        <input type="text" id="cnpj-consulta" placeholder="Vazio = CNPJ do certificado">
-      </div>
+      <div class="input-group"><label for="certificate-select">Certificado</label><select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select></div>
+      <div class="input-group"><label for="environment">Ambiente</label><select id="environment"><option value="producao" selected>Producao</option><option value="homologacao">Homologacao</option></select></div>
+      <div class="input-group"><label for="cnpj-consulta">CNPJ opcional</label><input type="text" id="cnpj-consulta" placeholder="Vazio = CNPJ do certificado"></div>
     </div>
+    <div class="input-row" style="margin-top: 12px;">
+      <div class="input-group"><label for="search-mode">Ordem da varredura</label><select id="search-mode"><option value="asc" selected>Inicial completa</option><option value="desc">Mais recentes primeiro</option></select></div>
+      <div class="input-group"><label for="start-nsu">NSU inicial</label><input type="number" id="start-nsu" value="0" min="0"></div>
+      <div class="input-group"><label for="limite-notas">Limite opcional</label><input type="number" id="limite-notas" min="1" placeholder="Sem limite"></div>
+      <div class="input-group"><label for="scheduler-delay-seconds">Pausa entre lotes (s)</label><input type="number" id="scheduler-delay-seconds" value="5" min="2" max="3600"></div>
+      <div class="input-group"><label for="scheduler-max-batches">Lotes por ciclo</label><input type="number" id="scheduler-max-batches" value="1" min="1" max="5"></div>
+    </div>
+    <div class="input-row" style="margin-top: 12px;">
+      <div class="input-group"><label for="download-start-date">Data inicial para ZIP</label><input type="date" id="download-start-date"></div>
+      <div class="input-group"><label for="download-end-date">Data final para ZIP</label><input type="date" id="download-end-date"></div>
+      <div class="input-group" style="justify-content: flex-end;"><button class="btn btn-success" id="btn-download-period" style="width: 100%; margin-top: 20px;"><span>Baixar periodo (ZIP)</span></button></div>
+    </div>
+    <input type="checkbox" id="scheduler-enabled" style="display: none;">
+    <input type="number" id="scheduler-interval" value="12" min="1" max="168" style="display: none;">
+    <select id="scheduler-env" style="display: none;"><option value="producao" selected>Producao</option><option value="homologacao">Homologacao</option></select>
   </section>
 
   <div class="split-grid">
     <div class="split-col-left">
       <section class="card">
         <div class="card-header"><h2>1. Varredura inicial completa</h2></div>
-        <p class="results-subtitle">Use uma vez por certificado/CNPJ para montar o historico completo. Pode demorar bastante, e cada lote aparece na tabela quando termina.</p>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="search-mode">Ordem da varredura</label>
-            <select id="search-mode"><option value="asc" selected>Completa desde o NSU inicial</option><option value="desc">Mais recentes primeiro</option></select>
-          </div>
-          <div class="input-group">
-            <label for="start-nsu">NSU inicial</label>
-            <input type="number" id="start-nsu" value="0" min="0">
-          </div>
-          <div class="input-group">
-            <label for="limite-notas">Limite opcional</label>
-            <input type="number" id="limite-notas" min="1" placeholder="Sem limite">
-          </div>
-        </div>
+        <p class="results-subtitle">Use uma vez por certificado/CNPJ para montar o historico. Cada lote aparece na tabela quando termina.</p>
         <div class="action-buttons" style="display: flex; gap: 12px;">
           <button class="btn btn-success" id="btn-start" disabled style="flex: 1;"><span>Iniciar Varredura</span></button>
           <button class="btn btn-warning" id="btn-pause" disabled style="flex: 1;"><span>Pausar</span></button>
@@ -71,74 +43,41 @@
 
       <section class="card" style="margin-top: 16px;">
         <div class="card-header"><h2>2. Atualizar novos XMLs</h2></div>
-        <p class="results-subtitle">Depois da varredura inicial, use este botao quando quiser buscar apenas novidades a partir do ultimo NSU salvo.</p>
-        <input type="checkbox" id="scheduler-enabled" style="display: none;">
-        <input type="number" id="scheduler-interval" value="12" min="1" max="168" style="display: none;">
-        <select id="scheduler-env" style="display: none;"><option value="producao" selected>Producao</option><option value="homologacao">Homologacao</option></select>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="scheduler-delay-seconds">Pausa segura entre lotes (s)</label>
-            <input type="number" id="scheduler-delay-seconds" value="65" min="30" max="3600">
-          </div>
-          <div class="input-group">
-            <label for="scheduler-max-batches">Lotes por ciclo</label>
-            <input type="number" id="scheduler-max-batches" value="1" min="1" max="5">
-          </div>
-        </div>
+        <p class="results-subtitle">Depois da varredura inicial, busca apenas novidades a partir do ultimo NSU salvo.</p>
         <div class="progress-container" style="margin-top: 12px;">
           <div class="progress-bar-wrapper"><div class="progress-bar" id="manual-sync-progress-bar" style="width: 0%;"></div></div>
           <div class="progress-labels"><span id="manual-sync-progress-text">Aguardando atualizacao manual...</span><span id="manual-sync-progress-percentage">0%</span></div>
         </div>
-        <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 8px;">
-          Ultima atualizacao completa: <strong id="scheduler-last-run">-</strong> | Status: <strong id="scheduler-status" class="text-primary">Manual</strong>
-        </div>
+        <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 8px;">Ultima atualizacao completa: <strong id="scheduler-last-run">-</strong> | Status: <strong id="scheduler-status" class="text-primary">Manual</strong></div>
         <div class="action-buttons" style="display: flex; gap: 12px; margin-top: 12px;">
           <button class="btn btn-primary btn-sm" id="btn-save-scheduler" style="flex: 1;">Salvar Config.</button>
           <button class="btn btn-secondary btn-sm" id="btn-run-scheduler-now" style="flex: 1;">Atualizar Agora</button>
         </div>
       </section>
-
-      <section class="card" style="margin-top: 16px;">
-        <div class="card-header"><h2>Baixar por periodo</h2></div>
-        <div class="input-row">
-          <div class="input-group"><label for="download-start-date">Data inicial</label><input type="date" id="download-start-date"></div>
-          <div class="input-group"><label for="download-end-date">Data final</label><input type="date" id="download-end-date"></div>
-        </div>
-        <button class="btn btn-success" id="btn-download-period" style="width: 100%; margin-top: 12px;"><span>Baixar Periodo (ZIP)</span></button>
-      </section>
     </div>
 
     <div class="split-col-right">
       <section class="card">
-        <div class="card-header"><h2>Progresso da sincronizacao</h2></div>
+        <div class="card-header"><h2>Progresso</h2></div>
         <div class="progress-container">
           <div class="progress-bar-wrapper"><div class="progress-bar" id="progress-bar" style="width: 0%;"></div></div>
           <div class="progress-labels"><span id="progress-text">Aguardando comando...</span><span id="progress-percentage">0%</span></div>
         </div>
         <div class="alert-box success" id="alert-sync-success" style="display: none;"><strong>Concluido:</strong> todas as notas foram sincronizadas.</div>
         <div class="alert-box danger" id="alert-rate-limit" style="display: none;"><strong>Consumo indevido:</strong> API bloqueou temporariamente este CNPJ.</div>
-        <div class="crawler-status" id="crawler-status-container" style="display: none;">
-          <span id="crawler-current-cnpj">-</span>
-          <span id="crawler-visited-count">0</span>
-          <span id="crawler-queue-count">0</span>
-        </div>
+        <div class="crawler-status" id="crawler-status-container" style="display: none;"><span id="crawler-current-cnpj">-</span><span id="crawler-visited-count">0</span><span id="crawler-queue-count">0</span></div>
       </section>
 
       <section class="card console-card">
         <div class="card-header"><h2>Log</h2></div>
-        <div class="console-log" id="console-log">
-          <div class="log-line system">[Sistema] Pronto. A tabela abaixo carrega o historico salvo.</div>
-        </div>
+        <div class="console-log" id="console-log"><div class="log-line system">[Sistema] Pronto. A tabela abaixo carrega o historico salvo.</div></div>
       </section>
     </div>
   </div>
 
   <section class="card data-grid-card">
     <div class="results-header">
-      <div>
-        <h2>XMLs sincronizados</h2>
-        <p class="results-subtitle">A tabela mostra o historico salvo no Supabase. Cada pagina carrega ate 100 XMLs.</p>
-      </div>
+      <div><h2>XMLs sincronizados</h2><p class="results-subtitle">Historico salvo no Supabase. Cada pagina carrega ate 100 XMLs.</p></div>
       <div class="results-actions">
         <button class="btn btn-secondary btn-sm text-danger" id="btn-clear-downloads"><span>Limpar sessao</span></button>
         <button class="btn btn-success" id="btn-download-zip" disabled><span>Baixar ZIP da sessao</span></button>
@@ -146,29 +85,13 @@
     </div>
     <div class="table-wrapper">
       <table class="results-table" id="results-table">
-        <thead>
-          <tr>
-            <th width="110">NSU</th>
-            <th width="145">Documento</th>
-            <th>Chave de acesso</th>
-            <th>Participantes</th>
-            <th>Servico e local</th>
-            <th width="170">Valores e datas</th>
-            <th width="110">Download</th>
-          </tr>
-        </thead>
-        <tbody id="table-body">
-          <tr id="empty-row"><td colspan="7" class="text-center">Nenhum documento sincronizado ainda.</td></tr>
-        </tbody>
+        <thead><tr><th width="110">NSU</th><th width="145">Documento</th><th>Chave de acesso</th><th>Participantes</th><th>Servico e local</th><th width="170">Valores e datas</th><th width="110">Download</th></tr></thead>
+        <tbody id="table-body"><tr id="empty-row"><td colspan="7" class="text-center">Nenhum documento sincronizado ainda.</td></tr></tbody>
       </table>
     </div>
     <div class="results-actions" style="justify-content: space-between; margin-top: 12px;">
       <span class="results-subtitle" id="history-count-label">0 XMLs sincronizados</span>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button class="btn btn-secondary btn-sm" id="btn-history-prev" disabled>Anterior</button>
-        <span class="helper-text" id="history-page-info">0 de 0</span>
-        <button class="btn btn-secondary btn-sm" id="btn-history-next" disabled>Proxima</button>
-      </div>
+      <div style="display: flex; align-items: center; gap: 8px;"><button class="btn btn-secondary btn-sm" id="btn-history-prev" disabled>Anterior</button><span class="helper-text" id="history-page-info">0 de 0</span><button class="btn btn-secondary btn-sm" id="btn-history-next" disabled>Proxima</button></div>
     </div>
   </section>
 </div>

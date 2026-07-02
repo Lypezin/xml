@@ -228,8 +228,9 @@ window.AppSyncController = {
         inputStartNsu.value = window.currentNsu;
       }
 
-      const safeDelayMs = 65000;
-      window.AppUi.log('Aguardando 65 segundos antes do proximo bloco para reduzir risco de bloqueio...', 'warning');
+      const safeDelaySeconds = Math.max(2, Number(schedulerDelaySeconds?.value || 5));
+      const safeDelayMs = safeDelaySeconds * 1000;
+      window.AppUi.log(`Aguardando ${safeDelaySeconds}s antes do proximo bloco...`, 'warning');
       setTimeout(() => this.runQueryLoop(), safeDelayMs);
 
     } catch (err) {

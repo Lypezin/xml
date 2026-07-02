@@ -236,7 +236,7 @@ window.AppEvents = {
             autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
             autoSyncEnvironment: selectEnvironment?.value || schedulerEnv?.value || 'producao',
             autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
-            autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 65)
+            autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 5)
           };
           const data = await window.AppApi.saveSchedulerSettings(settings);
           if (!data.success) throw new Error(data.error || 'Nao foi possivel salvar o agendamento.');
@@ -261,11 +261,11 @@ window.AppEvents = {
             autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
             autoSyncEnvironment: selectEnvironment?.value || schedulerEnv?.value || 'producao',
             autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
-            autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 65)
+            autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 5)
           };
           await window.AppApi.saveSchedulerSettings(settings);
 
-          const delaySeconds = Math.max(30, Number(settings.autoSyncDelaySeconds || 65));
+          const delaySeconds = Math.max(2, Number(settings.autoSyncDelaySeconds || 5));
           let finished = false;
           let cycles = 0;
 
