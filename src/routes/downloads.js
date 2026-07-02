@@ -1,11 +1,16 @@
 const express = require('express');
 const AdmZip = require('adm-zip');
+const fs = require('fs');
+const path = require('path');
 const xmlCache = require('../utils/xmlCache');
+const { DOWNLOADS_DIR, IS_VERCEL } = require('../config/constants');
 const {
   supabaseRpc,
   getSupabaseXmlPayload,
-  listSupabaseXmlPayloads
+  listSupabaseXmlPayloads,
+  listRemoteDocuments
 } = require('../services/supabase');
+const { resolveCertificateForRequest } = require('../services/localCertificates');
 
 const router = express.Router();
 
@@ -23,6 +28,7 @@ router.get('/download-xml/:token', async (req, res) => {
       };
     }
   }
+  
   if (!cached) {
     return res.status(404).json({ error: 'XML não encontrado nesta sessão. Faça a consulta novamente.' });
   }
@@ -66,13 +72,92 @@ router.get('/download-zip', async (req, res) => {
     }
 
     const zipBuffer = zip.toBuffer();
-    
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_XMLs_Baixados.zip');
     return res.send(zipBuffer);
   } catch (e) {
     console.error('Erro ao gerar arquivo ZIP:', e);
     return res.status(500).json({ error: 'Erro ao gerar arquivo ZIP: ' + e.message });
+  }
+});
+
+router.get('/list-documents', async (req, res) => {
+  try {
+    const { certificateId, environment = 'producao', startDate, endDate, cnpj } = req.query;
+    const cert = await resolveCertificateForRequest(certificateId);
+    if (!cert) {
+      return res.status(400).json({ success: false, error: 'Certificado não configurado.' });
+    }
+
+    const documents = await listRemoteDocuments({
+      certificateId: cert.id,
+      environment,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      cnpj: cnpj || ''
+    });
+
+    return res.json({ success: true, documents });
+  } catch (err) {
+    console.error('Erro ao listar documentos:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/download-period-zip', async (req, res) => {
+  try {
+    const { certificateId, environment = 'producao', startDate, endDate, cnpj } = req.body;
+    const cert = await resolveCertificateForRequest(certificateId);
+    if (!cert) {
+      return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
+    }
+
+    const documents = await listRemoteDocuments({
+      certificateId: cert.id,
+      environment,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      cnpj: cnpj || ''
+    });
+
+    if (!documents || documents.length === 0) {
+      return res.status(400).json({ success: false, error: 'Nenhum documento no período.' });
+    }
+
+    const zip = new AdmZip();
+    let addedCount = 0;
+
+    for (const doc of documents) {
+      const fileName = doc.file_name || doc.arquivo;
+      if (!fileName) continue;
+
+      const localPath = path.join(DOWNLOADS_DIR, fileName);
+      if (!IS_VERCEL && fs.existsSync(localPath)) {
+        zip.addLocalFile(localPath);
+        addedCount++;
+      } else {
+        const token = doc.metadata?.token || doc.token;
+        if (token) {
+          const payload = await getSupabaseXmlPayload(token);
+          if (payload && payload.xml_content) {
+            zip.addFile(fileName, Buffer.from(payload.xml_content, 'utf8'));
+            addedCount++;
+          }
+        }
+      }
+    }
+
+    if (addedCount === 0) {
+      return res.status(400).json({ success: false, error: 'Sem conteúdo XML local/remoto disponível.' });
+    }
+
+    const zipBuffer = zip.toBuffer();
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_Periodo_XMLs.zip');
+    return res.send(zipBuffer);
+  } catch (err) {
+    console.error('Erro ao gerar ZIP:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 

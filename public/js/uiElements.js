@@ -71,5 +71,17 @@ window.AppUiElements = {
     window.themeText = document.getElementById('theme-text');
     window.sunIcon = document.querySelector('.sun-icon');
     window.moonIcon = document.querySelector('.moon-icon');
+
+    window.schedulerEnabled = document.getElementById('scheduler-enabled');
+    window.schedulerInterval = document.getElementById('scheduler-interval');
+    window.schedulerEnv = document.getElementById('scheduler-env');
+    window.schedulerMaxBatches = document.getElementById('scheduler-max-batches');
+    window.schedulerLastRun = document.getElementById('scheduler-last-run');
+    window.schedulerStatus = document.getElementById('scheduler-status');
+    window.btnSaveScheduler = document.getElementById('btn-save-scheduler');
+    window.btnRunSchedulerNow = document.getElementById('btn-run-scheduler-now');
+    window.downloadStartDate = document.getElementById('download-start-date');
+    window.downloadEndDate = document.getElementById('download-end-date');
+    window.btnDownloadPeriod = document.getElementById('btn-download-period');
   }
 };

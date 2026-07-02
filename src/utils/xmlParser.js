@@ -19,6 +19,19 @@ function buildXmlToken() {
   return crypto.randomBytes(16).toString('hex');
 }
 
+function buildStableXmlToken({ certificateId, environment, nsu, xmlSha256, chave }) {
+  return crypto
+    .createHash('sha256')
+    .update([
+      certificateId || '',
+      environment || '',
+      nsu === undefined || nsu === null ? '' : String(nsu),
+      xmlSha256 || '',
+      chave || ''
+    ].join('|'))
+    .digest('hex');
+}
+
 function parseXmlMetadata(xmlString, nsu) {
   const metadata = {
     nsu: nsu || 'N/A',
@@ -123,5 +136,6 @@ module.exports = {
   extractSection,
   normalizeDate,
   buildXmlToken,
+  buildStableXmlToken,
   parseXmlMetadata
 };

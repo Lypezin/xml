@@ -79,7 +79,10 @@ async function syncSupabaseDocument({ certificateId, environment, doc }) {
       municipioPrestacao: doc.municipioPrestacao,
       codigoTributacao: doc.codigoTributacao,
       competencia: doc.competencia,
-      status: doc.status
+      status: doc.status,
+      token: doc.token,
+      arquivo: doc.arquivo,
+      xmlSha256: doc.xmlSha256
     }
   });
 }
@@ -103,8 +106,30 @@ async function listSupabaseXmlPayloads() {
   return supabaseRpc('xml_nfse_list_xml_payloads', {});
 }
 
+async function getSupabaseSetting(key) {
+  return supabaseRpc('xml_nfse_get_setting', { p_key: key });
+}
+
+async function setSupabaseSetting(key, value) {
+  return supabaseRpc('xml_nfse_set_setting', {
+    p_key: key,
+    p_value: value
+  });
+}
+
 async function listRemoteCertificates() {
   const result = await supabaseRpc('xml_nfse_list_certificates', {});
+  return Array.isArray(result) ? result : [];
+}
+
+async function listRemoteDocuments({ certificateId, environment, startDate, endDate, cnpj }) {
+  const result = await supabaseRpc('xml_nfse_list_documents', {
+    p_certificate_id: certificateId,
+    p_environment: normalizeEnvironment(environment),
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+    p_cnpj_consulta: cnpj || ''
+  });
   return Array.isArray(result) ? result : [];
 }
 
@@ -182,7 +207,10 @@ module.exports = {
   storeSupabaseXmlPayload,
   getSupabaseXmlPayload,
   listSupabaseXmlPayloads,
+  getSupabaseSetting,
+  setSupabaseSetting,
   listRemoteCertificates,
+  listRemoteDocuments,
   setRemoteActiveCertificate,
   deleteRemoteCertificate,
   upsertRemoteCertificateSecret,

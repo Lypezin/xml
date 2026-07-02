@@ -1,6 +1,6 @@
 const zlib = require('zlib');
 const crypto = require('crypto');
-const { parseXmlMetadata, buildXmlToken } = require('../utils/xmlParser');
+const { parseXmlMetadata, buildStableXmlToken } = require('../utils/xmlParser');
 const { storeSupabaseXmlPayload } = require('./supabase');
 
 async function processBatchDocuments({ documentsList, selectedCertificate, requestEnvironment, xmlCache }) {
@@ -37,8 +37,14 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
       const chaveAcesso = docChave || meta.chave;
       const safeChave = chaveAcesso !== 'N/A' ? chaveAcesso : `NSU_${docNsu}`;
       const fileName = `${docTipo}_NSU_${docNsu}_${safeChave}.xml`;
-      const token = buildXmlToken();
       const xmlSha256 = crypto.createHash('sha256').update(xmlString, 'utf8').digest('hex');
+      const token = buildStableXmlToken({
+        certificateId: selectedCertificate.id,
+        environment: requestEnvironment,
+        nsu: docNsu,
+        xmlSha256,
+        chave: chaveAcesso
+      });
       
       xmlCache.set(token, {
         fileName,
@@ -57,6 +63,16 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
         fileName,
         xmlString
       });
+
+      const { IS_VERCEL, DOWNLOADS_DIR } = require('../config/constants');
+      if (!IS_VERCEL) {
+        const fs = require('fs');
+        const path = require('path');
+        if (!fs.existsSync(DOWNLOADS_DIR)) {
+          fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
+        }
+        fs.writeFileSync(path.join(DOWNLOADS_DIR, fileName), xmlString, 'utf8');
+      }
 
       console.log(`[OK] NSU ${docNsu} | ${docTipo} | Chave: ${chaveAcesso} | XML pronto para download.`);
 

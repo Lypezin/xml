@@ -13,6 +13,18 @@ function handleFileSelection(file) {
   window.AppUi.log(`Arquivo selecionado: ${file.name}`);
 }
 
+async function loadSchedulerSettings() {
+  if (!window.AppApi?.fetchSchedulerSettings || !window.AppUi?.updateSchedulerUI) return;
+  try {
+    const data = await window.AppApi.fetchSchedulerSettings();
+    if (data.success) {
+      window.AppUi.updateSchedulerUI(data.settings || {});
+    }
+  } catch (err) {
+    window.AppUi.log(`Erro ao carregar agendamento: ${err.message}`, 'warning');
+  }
+}
+
 window.AppEvents = {
   bindEvents() {
     window.AppEventsCert.bindCertEvents();
@@ -28,6 +40,7 @@ window.AppEvents = {
           window.AppUi.setAuthMessage('Acesso liberado.', 'success');
           window.AppUi.showAuthenticatedApp(user);
           window.AppSyncController.checkCertStatus();
+          loadSchedulerSettings();
           window.AppUi.updateProgress(0, 0);
           selectEnvironment.dispatchEvent(new Event('change'));
         } catch (err) {
@@ -189,5 +202,76 @@ window.AppEvents = {
         window.AppUi.log(`Tema alternado para o modo ${newTheme === 'light' ? 'claro' : 'escuro'}.`);
       });
     }
+
+    if (btnSaveScheduler) {
+      btnSaveScheduler.addEventListener('click', async () => {
+        btnSaveScheduler.disabled = true;
+        try {
+          const settings = {
+            autoSyncEnabled: Boolean(schedulerEnabled?.checked),
+            autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
+            autoSyncEnvironment: schedulerEnv?.value || 'producao',
+            autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 3)
+          };
+          const data = await window.AppApi.saveSchedulerSettings(settings);
+          if (!data.success) throw new Error(data.error || 'Nao foi possivel salvar o agendamento.');
+          window.AppUi.updateSchedulerUI(data.settings);
+          window.AppUi.log('Agendamento salvo com sucesso.', 'success');
+        } catch (err) {
+          window.AppUi.log(`Erro ao salvar agendamento: ${err.message}`, 'error');
+        } finally {
+          btnSaveScheduler.disabled = false;
+        }
+      });
+    }
+
+    if (btnRunSchedulerNow) {
+      btnRunSchedulerNow.addEventListener('click', async () => {
+        btnRunSchedulerNow.disabled = true;
+        window.AppUi.log('Disparando varredura automatica agora...');
+        try {
+          const data = await window.AppApi.runSchedulerNow();
+          if (!data.success) throw new Error(data.error || 'Nao foi possivel executar a varredura.');
+          const result = data.result || {};
+          if (result.error) throw new Error(result.error);
+          window.AppUi.log(`Varredura executada: ${result.batches || 0} lote(s), ${result.documentsFound || 0} XML(s).`, 'success');
+          loadSchedulerSettings();
+        } catch (err) {
+          window.AppUi.log(`Erro na varredura automatica: ${err.message}`, 'error');
+        } finally {
+          btnRunSchedulerNow.disabled = false;
+        }
+      });
+    }
+
+    if (btnDownloadPeriod) {
+      btnDownloadPeriod.addEventListener('click', async () => {
+        const startDate = downloadStartDate?.value;
+        const endDate = downloadEndDate?.value;
+        if (!startDate || !endDate) {
+          window.AppUi.log('Informe data inicial e data final para baixar o periodo.', 'warning');
+          return;
+        }
+
+        btnDownloadPeriod.disabled = true;
+        window.AppUi.log(`Gerando ZIP do periodo ${startDate} a ${endDate}...`);
+        try {
+          await window.AppApi.downloadPeriodZip({
+            certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId,
+            environment: selectEnvironment ? selectEnvironment.value : 'producao',
+            startDate,
+            endDate,
+            cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : ''
+          });
+          window.AppUi.log('ZIP do periodo baixado com sucesso.', 'success');
+        } catch (err) {
+          window.AppUi.log(`Erro ao baixar periodo: ${err.message}`, 'error');
+        } finally {
+          btnDownloadPeriod.disabled = false;
+        }
+      });
+    }
   }
 };
+
+window.loadSchedulerSettings = loadSchedulerSettings;

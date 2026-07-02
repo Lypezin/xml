@@ -151,5 +151,46 @@ window.AppApi = {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(objectUrl);
+  },
+
+  async fetchSchedulerSettings() {
+    return (await fetch('/api/scheduler-settings')).json();
+  },
+
+  async saveSchedulerSettings(settings) {
+    return (await fetch('/api/scheduler-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    })).json();
+  },
+
+  async runSchedulerNow() {
+    return (await fetch('/api/scheduler-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })).json();
+  },
+
+  async listDocuments(params) {
+    return (await fetch(`/api/list-documents?${new URLSearchParams(params)}`)).json();
+  },
+
+  async downloadPeriodZip(params) {
+    const res = await fetch('/api/download-period-zip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Erro no ZIP.');
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = `NFS-e_Periodo_${params.startDate}_a_${params.endDate}.zip`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
   }
 };

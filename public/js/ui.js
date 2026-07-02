@@ -161,5 +161,16 @@ window.AppUi = {
     if (activeContent) activeContent.style.display = 'block';
     if (pageTitle) pageTitle.innerText = title;
     if (pageSubtitle) pageSubtitle.innerText = subtitle;
+  },
+
+  updateSchedulerUI(settings) {
+    if (!schedulerEnabled) return;
+    schedulerEnabled.checked = settings.autoSyncEnabled;
+    schedulerInterval.value = settings.autoSyncIntervalHours || 12;
+    schedulerEnv.value = settings.autoSyncEnvironment || 'producao';
+    if (schedulerMaxBatches) schedulerMaxBatches.value = settings.autoSyncMaxBatchesPerRun || 3;
+    schedulerLastRun.innerText = settings.lastRunAt ? new Date(settings.lastRunAt).toLocaleString() : 'Nunca';
+    schedulerStatus.innerText = settings.autoSyncEnabled ? 'Ativo' : 'Inativo';
+    schedulerStatus.className = settings.autoSyncEnabled ? 'metric-value text-success' : 'metric-value text-primary';
   }
 };

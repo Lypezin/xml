@@ -41,6 +41,19 @@ function isUserAllowed(email) {
   return allowedDomains.some(domain => normalizedEmail.endsWith(`@${domain}`));
 }
 
+function isSchedulerCronRequest(req) {
+  if (req.path !== '/scheduler-cron') return false;
+
+  const secret = process.env.SCHEDULER_SECRET || process.env.CRON_SECRET;
+  if (!secret) return false;
+
+  const header = req.headers.authorization || '';
+  const [type, token] = header.split(' ');
+  const querySecret = req.query?.secret;
+
+  return (type === 'Bearer' && token === secret) || querySecret === secret;
+}
+
 function basicAuthMiddleware(req, res, next) {
   if (!isAccessAuthEnabled()) {
     return next();
@@ -60,6 +73,14 @@ function basicAuthMiddleware(req, res, next) {
 }
 
 async function requireSupabaseAuth(req, res, next) {
+  if (isSchedulerCronRequest(req)) {
+    req.authUser = {
+      id: 'scheduler-cron',
+      email: 'scheduler-cron'
+    };
+    return next();
+  }
+
   if (req.path === '/auth-config' || !isSupabaseAuthRequired()) {
     return next();
   }

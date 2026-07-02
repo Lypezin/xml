@@ -106,7 +106,7 @@ create table if not exists xml_nfse.xml_payloads (
   file_name text not null,
   xml_content text not null,
   created_at timestamptz not null default now(),
-  expires_at timestamptz not null default now() + interval '12 hours'
+  expires_at timestamptz
 );
 
 create index if not exists sync_state_lookup_idx
@@ -120,6 +120,22 @@ create index if not exists documents_chave_idx
 
 create index if not exists xml_payloads_expires_at_idx
   on xml_nfse.xml_payloads (expires_at);
+
+create index if not exists xml_payloads_certificate_environment_nsu_idx
+  on xml_nfse.xml_payloads (certificate_id, environment, nsu);
+
+create index if not exists sync_runs_certificate_environment_started_idx
+  on xml_nfse.sync_runs (certificate_id, environment, started_at desc);
+
+create index if not exists download_events_certificate_id_idx
+  on xml_nfse.download_events (certificate_id);
+
+create index if not exists download_events_document_id_idx
+  on xml_nfse.download_events (document_id);
+
+alter table xml_nfse.xml_payloads
+  alter column expires_at drop not null,
+  alter column expires_at drop default;
 
 alter table xml_nfse.settings enable row level security;
 alter table xml_nfse.certificates enable row level security;
@@ -184,6 +200,55 @@ begin
       updated_at = now();
 
   return jsonb_build_object('success', true, 'certificate_id', p_certificate_id);
+end;
+$$;
+
+create or replace function public.xml_nfse_get_setting(
+  p_secret text,
+  p_key text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  setting_value text;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select value into setting_value
+  from xml_nfse.settings
+  where key = p_key;
+
+  if setting_value is null then
+    return null;
+  end if;
+
+  return setting_value::jsonb;
+end;
+$$;
+
+create or replace function public.xml_nfse_set_setting(
+  p_secret text,
+  p_key text,
+  p_value jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  insert into xml_nfse.settings (key, value)
+  values (p_key, p_value::text)
+  on conflict (key) do update
+  set value = excluded.value,
+      updated_at = now();
+
+  return jsonb_build_object('success', true, 'key', p_key, 'value', p_value);
 end;
 $$;
 
@@ -661,8 +726,6 @@ as $$
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  delete from xml_nfse.xml_payloads where expires_at < now();
-
   insert into xml_nfse.xml_payloads (
     token,
     certificate_id,
@@ -679,7 +742,7 @@ begin
     p_nsu,
     p_file_name,
     p_xml_content,
-    now() + interval '12 hours'
+    null
   )
   on conflict (token) do update
   set certificate_id = excluded.certificate_id,
@@ -687,7 +750,7 @@ begin
       nsu = excluded.nsu,
       file_name = excluded.file_name,
       xml_content = excluded.xml_content,
-      expires_at = excluded.expires_at;
+      expires_at = null;
 
   return jsonb_build_object('success', true, 'token', p_token);
 end;
@@ -707,12 +770,10 @@ declare
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  delete from xml_nfse.xml_payloads where expires_at < now();
-
   select to_jsonb(p.*) into row_data
   from xml_nfse.xml_payloads p
   where p.token = p_token
-    and p.expires_at >= now();
+    and (p.expires_at is null or p.expires_at >= now());
 
   return row_data;
 end;
@@ -731,12 +792,10 @@ declare
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  delete from xml_nfse.xml_payloads where expires_at < now();
-
   select coalesce(jsonb_agg(to_jsonb(p.*) order by p.created_at desc), '[]'::jsonb)
   into rows_data
   from xml_nfse.xml_payloads p
-  where p.expires_at >= now()
+  where p.expires_at is null or p.expires_at >= now()
   limit 500;
 
   return rows_data;
@@ -744,6 +803,8 @@ end;
 $$;
 
 grant execute on function public.xml_nfse_upsert_certificate(text, text, text, text, boolean) to anon, authenticated;
+grant execute on function public.xml_nfse_get_setting(text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_set_setting(text, text, jsonb) to anon, authenticated;
 grant execute on function public.xml_nfse_upsert_certificate_secret(text, text, text, text, boolean, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_list_certificates(text) to anon, authenticated;
 grant execute on function public.xml_nfse_set_active_certificate(text, text) to anon, authenticated;
@@ -758,3 +819,37 @@ grant execute on function public.xml_nfse_register_download(text, text, text, bi
 grant execute on function public.xml_nfse_upsert_xml_payload(text, text, text, text, bigint, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_xml_payload(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authenticated;
+
+create or replace function public.xml_nfse_list_documents(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_start_date date default null,
+  p_end_date date default null,
+  p_cnpj_consulta text default ''
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  rows_data jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select coalesce(jsonb_agg(to_jsonb(d.*) order by d.nsu desc), '[]'::jsonb)
+  into rows_data
+  from xml_nfse.documents d
+  where d.certificate_id = p_certificate_id
+    and d.environment = p_environment
+    and (p_start_date is null or d.data_emissao >= p_start_date)
+    and (p_end_date is null or d.data_emissao <= p_end_date)
+    and (coalesce(p_cnpj_consulta, '') = '' or d.prestador_cnpj = p_cnpj_consulta or d.tomador_cnpj = p_cnpj_consulta);
+
+  return rows_data;
+end;
+$$;
+
+grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text) to anon, authenticated;
+

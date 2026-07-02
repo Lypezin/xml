@@ -23,6 +23,7 @@ async function initializeAuthenticatedApp() {
     if (window.appLayout) window.appLayout.style.display = 'flex';
     if (window.authScreen) window.authScreen.style.display = 'none';
     window.AppSyncController.checkCertStatus();
+    if (window.loadSchedulerSettings) window.loadSchedulerSettings();
     window.AppUi.updateProgress(0, 0);
     window.selectEnvironment.dispatchEvent(new Event('change'));
     return;
@@ -39,6 +40,7 @@ async function initializeAuthenticatedApp() {
   window.authSession = storedSession;
   window.AppUi.showAuthenticatedApp(user);
   window.AppSyncController.checkCertStatus();
+  if (window.loadSchedulerSettings) window.loadSchedulerSettings();
   window.AppUi.updateProgress(0, 0);
   window.selectEnvironment.dispatchEvent(new Event('change'));
 }

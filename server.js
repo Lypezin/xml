@@ -50,6 +50,7 @@ app.use('/api', require('./src/routes/certificatesDiagnostics'));
 app.use('/api', require('./src/routes/certificatesManage'));
 app.use('/api', require('./src/routes/sync'));
 app.use('/api', require('./src/routes/downloads'));
+app.use('/api', require('./src/routes/schedulerRoutes'));
 
 // Servir arquivos estáticos do frontend
 app.use(express.static(path.join(__dirname, 'public')));
@@ -59,12 +60,24 @@ if (!IS_VERCEL) {
 
 // Iniciar Servidor (somente se executado diretamente, não em serverless Vercel)
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`==================================================`);
     console.log(`Servidor local da NFS-e rodando na porta ${PORT}`);
     console.log(`Acesse no navegador: http://localhost:${PORT}`);
     console.log(`Pasta de downloads XML: ${DOWNLOADS_DIR}`);
     console.log(`==================================================`);
+
+    // Inicializar agendador em background se ativo
+    try {
+      const { loadSchedulerSettings } = require('./src/services/schedulerSettings');
+      const scheduler = require('./src/services/scheduler');
+      const settings = await loadSchedulerSettings();
+      if (settings && settings.autoSyncEnabled) {
+        scheduler.start();
+      }
+    } catch (e) {
+      console.error('Erro ao inicializar o scheduler no boot:', e.message);
+    }
   });
 }
 
