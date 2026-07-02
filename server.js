@@ -10,6 +10,7 @@ const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const IS_VERCEL = process.env.VERCEL === '1';
 
 // Configurações de pastas
 const CONFIG_DIR = path.join(__dirname, 'config');
@@ -22,20 +23,22 @@ const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
 const xmlCache = new Map();
 
 // Garantir que as pastas existem
-if (!fs.existsSync(CONFIG_DIR)) {
+if (!IS_VERCEL && !fs.existsSync(CONFIG_DIR)) {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
 }
-if (!fs.existsSync(DOWNLOADS_DIR)) {
+if (!IS_VERCEL && !fs.existsSync(DOWNLOADS_DIR)) {
   fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
 }
-if (!fs.existsSync(CERTS_DIR)) {
+if (!IS_VERCEL && !fs.existsSync(CERTS_DIR)) {
   fs.mkdirSync(CERTS_DIR, { recursive: true });
 }
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/downloads', express.static(DOWNLOADS_DIR));
+if (!IS_VERCEL) {
+  app.use('/downloads', express.static(DOWNLOADS_DIR));
+}
 
 // Configuração do multer em memória para receber o arquivo do certificado
 const storage = multer.memoryStorage();
@@ -55,10 +58,23 @@ function getSettings() {
 
 // Função auxiliar para salvar configurações
 function saveSettings(settings) {
+  if (IS_VERCEL) return;
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
 }
 
 function getSupabaseConfig() {
+  const envUrl = process.env.SUPABASE_URL;
+  const envKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const envSecret = process.env.SUPABASE_APP_SECRET;
+
+  if (envUrl && envKey && envSecret) {
+    return {
+      url: String(envUrl).replace(/\/+$/, ''),
+      key: envKey,
+      appSecret: envSecret
+    };
+  }
+
   if (!fs.existsSync(SUPABASE_CONFIG_FILE)) {
     return null;
   }
@@ -183,7 +199,69 @@ async function syncSupabaseDocument({ certificateId, environment, doc }) {
   });
 }
 
+async function storeSupabaseXmlPayload({ token, certificateId, environment, nsu, fileName, xmlString }) {
+  return supabaseRpc('xml_nfse_upsert_xml_payload', {
+    p_token: token,
+    p_certificate_id: certificateId,
+    p_environment: normalizeEnvironment(environment),
+    p_nsu: nsu === undefined || nsu === null ? null : Number(nsu),
+    p_file_name: fileName,
+    p_xml_content: xmlString
+  });
+}
+
+async function getSupabaseXmlPayload(token) {
+  return supabaseRpc('xml_nfse_get_xml_payload', {
+    p_token: token
+  });
+}
+
+async function listSupabaseXmlPayloads() {
+  return supabaseRpc('xml_nfse_list_xml_payloads', {});
+}
+
+function getEnvCertificate() {
+  const base64 = process.env.NFSE_CERT_PFX_BASE64;
+  const passphrase = process.env.NFSE_CERT_PASSPHRASE;
+
+  if (!base64 || !passphrase) {
+    return null;
+  }
+
+  const normalizedBase64 = String(base64).replace(/\s/g, '');
+  return {
+    id: process.env.NFSE_CERT_ID || 'vercel-env-cert',
+    originalName: process.env.NFSE_CERT_NAME || 'certificado-vercel.pfx',
+    passphrase,
+    cnpj: process.env.NFSE_CERT_CNPJ || '',
+    createdAt: null,
+    updatedAt: null,
+    pfxBuffer: Buffer.from(normalizedBase64, 'base64'),
+    source: 'env'
+  };
+}
+
+function getCertificateBuffer(cert) {
+  if (cert && cert.pfxBuffer) {
+    return cert.pfxBuffer;
+  }
+
+  if (cert && cert.filePath) {
+    return fs.readFileSync(cert.filePath);
+  }
+
+  return null;
+}
+
 function readCertificatesIndex() {
+  const envCert = getEnvCertificate();
+  if (envCert && IS_VERCEL) {
+    return {
+      activeCertificateId: envCert.id,
+      certificates: [envCert]
+    };
+  }
+
   if (!fs.existsSync(CERTS_INDEX_FILE)) {
     return { activeCertificateId: null, certificates: [] };
   }
@@ -201,6 +279,7 @@ function readCertificatesIndex() {
 }
 
 function saveCertificatesIndex(index) {
+  if (IS_VERCEL) return;
   fs.writeFileSync(CERTS_INDEX_FILE, JSON.stringify(index, null, 2), 'utf8');
 }
 
@@ -256,6 +335,11 @@ function getCertificatesIndex() {
 }
 
 function resolveCertificate(certificateId) {
+  const envCert = getEnvCertificate();
+  if (envCert && (!certificateId || certificateId === envCert.id)) {
+    return envCert;
+  }
+
   const index = getCertificatesIndex();
   const id = certificateId || index.activeCertificateId;
   const cert = index.certificates.find(item => item.id === id);
@@ -276,6 +360,13 @@ function resolveCertificate(certificateId) {
 }
 
 function setActiveCertificate(certificateId) {
+  const envCert = getEnvCertificate();
+  if (envCert && certificateId === envCert.id) {
+    return envCert;
+  }
+
+  if (IS_VERCEL) return null;
+
   const index = getCertificatesIndex();
   const exists = index.certificates.some(cert => cert.id === certificateId);
   if (!exists) return null;
@@ -446,6 +537,13 @@ app.get('/api/certificates', (req, res) => {
 
 // 2. Upload do Certificado
 app.post('/api/upload-certificate', upload.single('pfx'), async (req, res) => {
+  if (IS_VERCEL) {
+    return res.status(409).json({
+      success: false,
+      error: 'Na Vercel o certificado deve ser configurado por variáveis de ambiente NFSE_CERT_PFX_BASE64 e NFSE_CERT_PASSPHRASE.'
+    });
+  }
+
   try {
     const pfxBuffer = req.file ? req.file.buffer : null;
     const passphrase = req.body.passphrase;
@@ -529,6 +627,13 @@ app.post('/api/select-certificate', async (req, res) => {
 
 // 3. Remover Certificado
 app.post('/api/remove-certificate', (req, res) => {
+  if (IS_VERCEL) {
+    return res.status(409).json({
+      success: false,
+      error: 'Na Vercel o certificado é gerenciado por variáveis de ambiente e não pode ser removido pela interface.'
+    });
+  }
+
   try {
     const { certificateId } = req.body || {};
     const index = getCertificatesIndex();
@@ -569,13 +674,17 @@ app.post('/api/remove-certificate', (req, res) => {
 // 4. Limpar Downloads Locais
 app.post('/api/clear-downloads', (req, res) => {
   try {
-    const files = fs.readdirSync(DOWNLOADS_DIR);
-    for (const file of files) {
-      fs.unlinkSync(path.join(DOWNLOADS_DIR, file));
+    let removedFiles = 0;
+    if (!IS_VERCEL && fs.existsSync(DOWNLOADS_DIR)) {
+      const files = fs.readdirSync(DOWNLOADS_DIR);
+      for (const file of files) {
+        fs.unlinkSync(path.join(DOWNLOADS_DIR, file));
+      }
+      removedFiles = files.length;
     }
     const cacheCount = xmlCache.size;
     xmlCache.clear();
-    return res.json({ success: true, count: files.length + cacheCount });
+    return res.json({ success: true, count: removedFiles + cacheCount });
   } catch (e) {
     return res.status(500).json({ success: false, error: 'Erro ao limpar pasta de downloads: ' + e.message });
   }
@@ -612,7 +721,10 @@ app.post('/api/fetch-batch', async (req, res) => {
       startNsu: requestStartNsu
     });
 
-    const pfxBuffer = fs.readFileSync(selectedCertificate.filePath);
+    const pfxBuffer = getCertificateBuffer(selectedCertificate);
+    if (!pfxBuffer) {
+      return res.status(400).json({ success: false, error: 'Arquivo ou variável do certificado não encontrada.' });
+    }
 
     // Configurar o Agent HTTPS com o certificado digital
     const httpsAgent = new https.Agent({
@@ -745,6 +857,15 @@ app.post('/api/fetch-batch', async (req, res) => {
           certificateId: selectedCertificate.id,
           environment: requestEnvironment,
           nsu: docNsu
+        });
+
+        await storeSupabaseXmlPayload({
+          token,
+          certificateId: selectedCertificate.id,
+          environment: requestEnvironment,
+          nsu: docNsu,
+          fileName,
+          xmlString
         });
 
         console.log(`[OK] NSU ${docNsu} | ${docTipo} | Chave: ${chaveAcesso} | XML pronto para download sob demanda.`);
@@ -928,8 +1049,13 @@ app.post('/api/discover-nsu', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
     }
 
+    const pfxBuffer = getCertificateBuffer(selectedCertificate);
+    if (!pfxBuffer) {
+      return res.status(400).json({ success: false, error: 'Arquivo ou variável do certificado não encontrada.' });
+    }
+
     const httpsAgent = new https.Agent({
-      pfx: fs.readFileSync(selectedCertificate.filePath),
+      pfx: pfxBuffer,
       passphrase: selectedCertificate.passphrase,
       rejectUnauthorized: false
     });
@@ -1002,7 +1128,19 @@ app.get('/api/sync-state', async (req, res) => {
 
 // 6. Download individual sob demanda
 app.get('/api/download-xml/:token', async (req, res) => {
-  const cached = xmlCache.get(req.params.token);
+  let cached = xmlCache.get(req.params.token);
+  if (!cached) {
+    const persisted = await getSupabaseXmlPayload(req.params.token);
+    if (persisted && persisted.xml_content) {
+      cached = {
+        fileName: persisted.file_name,
+        xmlString: persisted.xml_content,
+        certificateId: persisted.certificate_id,
+        environment: persisted.environment,
+        nsu: persisted.nsu
+      };
+    }
+  }
   if (!cached) {
     return res.status(404).json({ error: 'XML não encontrado nesta sessão. Faça a consulta novamente.' });
   }
@@ -1020,14 +1158,29 @@ app.get('/api/download-xml/:token', async (req, res) => {
 });
 
 // 7. Download de todos os XMLs consultados em um ZIP
-app.get('/api/download-zip', (req, res) => {
+app.get('/api/download-zip', async (req, res) => {
   try {
-    if (xmlCache.size === 0) {
+    let payloads = Array.from(xmlCache.values()).map(cached => ({
+      fileName: cached.fileName,
+      xmlString: cached.xmlString
+    }));
+
+    if (payloads.length === 0) {
+      const persistedPayloads = await listSupabaseXmlPayloads();
+      if (Array.isArray(persistedPayloads)) {
+        payloads = persistedPayloads.map(item => ({
+          fileName: item.file_name,
+          xmlString: item.xml_content
+        }));
+      }
+    }
+
+    if (payloads.length === 0) {
       return res.status(400).json({ error: 'Nenhum XML consultado nesta sessão para compactar.' });
     }
 
     const zip = new AdmZip();
-    for (const cached of xmlCache.values()) {
+    for (const cached of payloads) {
       zip.addFile(cached.fileName, Buffer.from(cached.xmlString, 'utf8'));
     }
 
@@ -1043,10 +1196,14 @@ app.get('/api/download-zip', (req, res) => {
 });
 
 // Iniciar Servidor
-app.listen(PORT, () => {
-  console.log(`==================================================`);
-  console.log(`Servidor local da NFS-e rodando na porta ${PORT}`);
-  console.log(`Acesse no navegador: http://localhost:${PORT}`);
-  console.log(`Pasta de downloads XML: ${DOWNLOADS_DIR}`);
-  console.log(`==================================================`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`==================================================`);
+    console.log(`Servidor local da NFS-e rodando na porta ${PORT}`);
+    console.log(`Acesse no navegador: http://localhost:${PORT}`);
+    console.log(`Pasta de downloads XML: ${DOWNLOADS_DIR}`);
+    console.log(`==================================================`);
+  });
+}
+
+module.exports = app;

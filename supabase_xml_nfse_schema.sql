@@ -87,6 +87,17 @@ create table if not exists xml_nfse.download_events (
   downloaded_at timestamptz not null default now()
 );
 
+create table if not exists xml_nfse.xml_payloads (
+  token text primary key,
+  certificate_id text references xml_nfse.certificates(id) on delete cascade,
+  environment text check (environment in ('producao', 'homologacao')),
+  nsu bigint,
+  file_name text not null,
+  xml_content text not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '12 hours'
+);
+
 create index if not exists sync_state_lookup_idx
   on xml_nfse.sync_state (certificate_id, environment, cnpj_consulta);
 
@@ -96,12 +107,16 @@ create index if not exists documents_certificate_environment_nsu_desc_idx
 create index if not exists documents_chave_idx
   on xml_nfse.documents (chave);
 
+create index if not exists xml_payloads_expires_at_idx
+  on xml_nfse.xml_payloads (expires_at);
+
 alter table xml_nfse.settings enable row level security;
 alter table xml_nfse.certificates enable row level security;
 alter table xml_nfse.sync_state enable row level security;
 alter table xml_nfse.sync_runs enable row level security;
 alter table xml_nfse.documents enable row level security;
 alter table xml_nfse.download_events enable row level security;
+alter table xml_nfse.xml_payloads enable row level security;
 
 revoke all on schema xml_nfse from anon, authenticated;
 revoke all on all tables in schema xml_nfse from anon, authenticated;
@@ -417,6 +432,105 @@ begin
 end;
 $$;
 
+create or replace function public.xml_nfse_upsert_xml_payload(
+  p_secret text,
+  p_token text,
+  p_certificate_id text,
+  p_environment text,
+  p_nsu bigint,
+  p_file_name text,
+  p_xml_content text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  delete from xml_nfse.xml_payloads where expires_at < now();
+
+  insert into xml_nfse.xml_payloads (
+    token,
+    certificate_id,
+    environment,
+    nsu,
+    file_name,
+    xml_content,
+    expires_at
+  )
+  values (
+    p_token,
+    p_certificate_id,
+    p_environment,
+    p_nsu,
+    p_file_name,
+    p_xml_content,
+    now() + interval '12 hours'
+  )
+  on conflict (token) do update
+  set certificate_id = excluded.certificate_id,
+      environment = excluded.environment,
+      nsu = excluded.nsu,
+      file_name = excluded.file_name,
+      xml_content = excluded.xml_content,
+      expires_at = excluded.expires_at;
+
+  return jsonb_build_object('success', true, 'token', p_token);
+end;
+$$;
+
+create or replace function public.xml_nfse_get_xml_payload(
+  p_secret text,
+  p_token text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  row_data jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  delete from xml_nfse.xml_payloads where expires_at < now();
+
+  select to_jsonb(p.*) into row_data
+  from xml_nfse.xml_payloads p
+  where p.token = p_token
+    and p.expires_at >= now();
+
+  return row_data;
+end;
+$$;
+
+create or replace function public.xml_nfse_list_xml_payloads(
+  p_secret text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  rows_data jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  delete from xml_nfse.xml_payloads where expires_at < now();
+
+  select coalesce(jsonb_agg(to_jsonb(p.*) order by p.created_at desc), '[]'::jsonb)
+  into rows_data
+  from xml_nfse.xml_payloads p
+  where p.expires_at >= now()
+  limit 500;
+
+  return rows_data;
+end;
+$$;
+
 grant execute on function public.xml_nfse_upsert_certificate(text, text, text, text, boolean) to anon, authenticated;
 grant execute on function public.xml_nfse_get_sync_state(text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_update_sync_state(text, text, text, text, bigint, bigint, text, timestamptz, text) to anon, authenticated;
@@ -424,3 +538,6 @@ grant execute on function public.xml_nfse_start_run(text, text, text, text, bigi
 grant execute on function public.xml_nfse_finish_run(text, uuid, text, bigint, bigint, integer, text) to anon, authenticated;
 grant execute on function public.xml_nfse_upsert_document(text, text, text, bigint, text, text, text, text, jsonb) to anon, authenticated;
 grant execute on function public.xml_nfse_register_download(text, text, text, bigint, text) to anon, authenticated;
+grant execute on function public.xml_nfse_upsert_xml_payload(text, text, text, text, bigint, text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_get_xml_payload(text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authenticated;

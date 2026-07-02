@@ -17,6 +17,8 @@ config/certificates/
 preview-*.png
 .env
 .env.*
+!.env.example
+.vercel/
 
 npm-debug.log*
 *.log
