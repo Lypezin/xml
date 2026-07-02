@@ -1,0 +1,117 @@
+/* Variables & Styling System Design Tokens */
+:root {
+  /* Dark Mode Color Palette (Default) */
+  --bg-color: #07090e;
+  --sidebar-bg: #0c0f17;
+  --card-bg: #111520;
+  --card-border: #1e2538;
+  --input-bg: #07090d;
+  --table-header-bg: rgba(255, 255, 255, 0.01);
+  --code-bg: #030406;
+  
+  --primary: #0284c7;
+  --primary-hover: #38bdf8;
+  --primary-glow: rgba(56, 189, 248, 0.1);
+  
+  --secondary: #4f46e5;
+  --secondary-hover: #6366f1;
+  
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.06);
+  --success-border: rgba(16, 185, 129, 0.15);
+  
+  --warning: #f59e0b;
+  --warning-bg: rgba(245, 158, 11, 0.06);
+  --warning-border: rgba(245, 158, 11, 0.15);
+  
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.06);
+  --danger-border: rgba(239, 68, 68, 0.15);
+  
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  
+  --border-radius: 6px;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.light-mode {
+  /* Light Mode Color Palette */
+  --bg-color: #f8fafc;
+  --sidebar-bg: #ffffff;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --input-bg: #f1f5f9;
+  --table-header-bg: #f8fafc;
+  --code-bg: #0f172a;
+  
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --primary-glow: rgba(2, 132, 199, 0.15);
+  
+  --secondary: #4f46e5;
+  --secondary-hover: #3730a3;
+  
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.08);
+  --success-border: rgba(16, 185, 129, 0.2);
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Background layout light glow - only visible in dark mode */
+.glass-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background-image: 
+    radial-gradient(circle at 5% 5%, rgba(99, 102, 241, 0.04) 0%, transparent 35%),
+    radial-gradient(circle at 95% 95%, rgba(56, 189, 248, 0.03) 0%, transparent 35%);
+  background-size: cover;
+  pointer-events: none;
+}
+
+body.light-mode .glass-bg {
+  display: none;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

@@ -1,0 +1,235 @@
+<div id="view-download-content" class="tab-content active">
+  <!-- KPI Metrics Cards Row -->
+  <section class="metrics-row">
+    <div class="metric-card">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-label">Progresso do NSU</span>
+        <h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-label">XMLs Consultados</span>
+        <h3 class="metric-value" id="stat-total-notas">0</h3>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-label">Ambiente</span>
+        <h3 class="metric-value text-primary" id="stat-ambiente">Produção</h3>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-label">Formato Fiscal</span>
+        <h3 class="metric-value text-success" style="font-size: 14px;">XML NFS-e</h3>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dashboard Split Grid -->
+  <div class="split-grid">
+    <!-- Left Side: Parameters -->
+    <div class="split-col-left">
+      <section class="card">
+        <div class="card-header">
+          <h2>Filtros e Parâmetros de Busca</h2>
+        </div>
+
+        <div class="input-group">
+          <label for="certificate-select">Certificado para Consulta:</label>
+          <select id="certificate-select">
+            <option value="">Nenhum certificado cadastrado</option>
+          </select>
+          <small class="helper-text">Selecione qual certificado digital será usado nesta consulta.</small>
+        </div>
+
+        <div class="input-group">
+          <label for="environment">Ambiente de Execução:</label>
+          <select id="environment">
+            <option value="producao" selected>Produção (Notas com valor jurídico)</option>
+            <option value="homologacao">Homologação / Produção restrita</option>
+          </select>
+          <small class="helper-text">Homologação usa a produção restrita do ADN; documentos reais de produção podem não existir nesse ambiente.</small>
+        </div>
+
+        <div class="input-group">
+          <label for="search-mode">Ordem de Busca (Sincronização):</label>
+          <select id="search-mode">
+            <option value="desc" selected>Mais recentes primeiro (exibição segura)</option>
+            <option value="asc">Mais antigas primeiro (ordem do NSU)</option>
+          </select>
+          <small class="helper-text">A API é consultada por NSU ascendente; esta opção ordena a tabela do maior para o menor NSU.</small>
+        </div>
+
+        <div class="input-group">
+          <label for="cnpj-consulta">CNPJ para Consulta (Opcional):</label>
+          <input type="text" id="cnpj-consulta" placeholder="Deixe vazio para usar o CNPJ do Certificado">
+        </div>
+
+        <div class="input-group">
+          <label for="start-nsu">NSU Inicial de Busca:</label>
+          <input type="number" id="start-nsu" value="0" min="0">
+          <small class="helper-text">NSU inicial para varredura sequencial.</small>
+        </div>
+
+        <div class="input-group">
+          <label for="limite-notas">Limite de XMLs a Consultar:</label>
+          <input type="number" id="limite-notas" min="1" placeholder="Sem limite definido">
+          <small class="helper-text">Interrompe a busca após consultar a quantidade limite.</small>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-success" id="btn-start" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span>Iniciar Consulta</span>
+          </button>
+          <button class="btn btn-warning" id="btn-pause" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="6" y="4" width="4" height="16"></rect>
+              <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            <span>Pausar</span>
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Right Side: Console and Progress -->
+    <div class="split-col-right">
+      <section class="card">
+        <div class="card-header">
+          <h2>Progresso da Sincronização</h2>
+        </div>
+
+        <div class="progress-container">
+          <div class="progress-bar-wrapper">
+            <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+          </div>
+          <div class="progress-labels">
+            <span id="progress-text">Aguardando comando...</span>
+            <span id="progress-percentage">0%</span>
+          </div>
+        </div>
+
+        <!-- Crawler Status Panel -->
+        <div class="crawler-status" id="crawler-status-container" style="display: none; margin-top: 16px; padding: 16px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--card-border);">
+          <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+            Varredura Automática de CNPJs
+          </h4>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span>CNPJ Atual:</span> <strong id="crawler-current-cnpj" class="text-primary">-</strong>
+          </div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span>Concluídos:</span> <span id="crawler-visited-count">0</span>
+          </div>
+          <div style="font-size: 13px; color: var(--text-secondary); display: flex; justify-content: space-between;">
+            <span>Na Fila (Aguardando):</span> <span id="crawler-queue-count">0</span>
+          </div>
+        </div>
+
+        <!-- Success Alert -->
+        <div class="alert-box success" id="alert-sync-success" style="display: none;">
+          <strong>Concluído:</strong> Todas as notas foram sincronizadas com sucesso. Evite consultas repetidas imediatas para evitar bloqueios.
+        </div>
+
+        <!-- Rate Limit Alert -->
+        <div class="alert-box danger" id="alert-rate-limit" style="display: none;">
+          <strong>Consumo Indevido:</strong> A API Nacional bloqueou temporariamente este CNPJ por 1 hora. Aguarde antes de reatar.
+        </div>
+      </section>
+
+      <section class="card console-card">
+        <div class="card-header">
+          <h2>Log de Comunicação em Tempo Real</h2>
+        </div>
+        <div class="console-log" id="console-log">
+          <div class="log-line system">[Sistema] Console pronto. Configure o certificado e clique em "Iniciar Consulta".</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Bottom Card: Documents DataGrid Table -->
+  <section class="card data-grid-card">
+    <div class="results-header">
+      <div>
+        <h2>Documentos Fiscais Sincronizados</h2>
+        <p class="results-subtitle">Os XMLs consultados ficam em memória e só são baixados quando você clicar em XML ou ZIP</p>
+      </div>
+      <div class="results-actions">
+        <button class="btn btn-secondary btn-sm text-danger" id="btn-clear-downloads">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Limpar Sessão</span>
+        </button>
+        <button class="btn btn-success" id="btn-download-zip" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Baixar Pacote ZIP</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="results-table" id="results-table">
+        <thead>
+          <tr>
+            <th width="110">NSU</th>
+            <th width="145">Documento</th>
+            <th>Chave de Acesso</th>
+            <th>Participantes</th>
+            <th>Serviço e Local</th>
+            <th width="170">Valores e Datas</th>
+            <th width="110">Download</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr id="empty-row">
+            <td colspan="7" class="text-center">Nenhum documento baixado nesta sessão.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
