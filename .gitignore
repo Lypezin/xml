@@ -23,3 +23,5 @@ preview-*.png
 
 npm-debug.log*
 *.log
+.vercel
+.env*
