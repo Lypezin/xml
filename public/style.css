@@ -39,6 +39,67 @@
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-panel {
+  width: min(420px, 100%);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-brand {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.auth-brand h1 {
+  font-size: 24px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.auth-brand p,
+.auth-message {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.auth-message {
+  min-height: 20px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.auth-message.error {
+  color: var(--danger);
+}
+
+.auth-message.success {
+  color: var(--success);
+}
+
+.user-status-badge {
+  gap: 10px;
+}
+
+#auth-user-email {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 body.light-mode {
   /* Light Mode Color Palette */
   --bg-color: #f8fafc;

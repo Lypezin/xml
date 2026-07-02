@@ -59,8 +59,8 @@ SUPABASE_URL
 SUPABASE_PUBLISHABLE_KEY
 SUPABASE_APP_SECRET
 CERT_ENCRYPTION_KEY
-APP_ACCESS_USER
-APP_ACCESS_PASSWORD
+AUTH_ALLOWED_EMAILS
+AUTH_ALLOWED_DOMAINS
 ```
 
 Use o valor local salvo em:
@@ -71,7 +71,16 @@ config/cert-encryption-key.txt
 
 Depois do deploy, o usuario pode enviar varios certificados pela propria interface, selecionar qual certificado usar e remover certificados cadastrados.
 
-Configure `APP_ACCESS_USER` e `APP_ACCESS_PASSWORD` para proteger a tela e as APIs com autenticação básica. Não deixe o sistema público sem essa proteção.
+O login usa Supabase Auth. Crie os usuarios da empresa no painel do Supabase Auth e limite o acesso com `AUTH_ALLOWED_EMAILS` ou `AUTH_ALLOWED_DOMAINS`.
+
+Exemplos:
+
+```text
+AUTH_ALLOWED_EMAILS=ana@suaempresa.com.br,joao@suaempresa.com.br
+AUTH_ALLOWED_DOMAINS=suaempresa.com.br
+```
+
+Não deixe `AUTH_ALLOWED_EMAILS` e `AUTH_ALLOWED_DOMAINS` vazios em producao se o projeto Supabase tiver usuarios externos.
 
 Os XMLs consultados sao gravados temporariamente no Supabase por ate 12 horas para permitir download individual ou ZIP em ambiente serverless.
 

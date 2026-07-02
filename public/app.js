@@ -7,8 +7,40 @@ let totalDownloaded = 0;
 let selectedFile = null;
 let certificates = [];
 let activeCertificateId = null;
+let authConfig = { authRequired: false, supabaseUrl: null, publishableKey: null };
+let authSession = null;
+
+const AUTH_STORAGE_KEY = 'xml_nfse_auth_session';
+const originalFetch = window.fetch.bind(window);
+
+window.fetch = (resource, options = {}) => {
+  const url = typeof resource === 'string' ? resource : resource.url;
+  const shouldAttachAuth = authSession?.access_token && url && url.startsWith('/api/') && url !== '/api/auth-config';
+
+  if (!shouldAttachAuth) {
+    return originalFetch(resource, options);
+  }
+
+  const headers = new Headers(options.headers || {});
+  headers.set('Authorization', `Bearer ${authSession.access_token}`);
+
+  return originalFetch(resource, {
+    ...options,
+    headers
+  });
+};
 
 // Elementos DOM
+const authScreen = document.getElementById('auth-screen');
+const appLayout = document.getElementById('app-layout');
+const authForm = document.getElementById('auth-form');
+const authEmail = document.getElementById('auth-email');
+const authPassword = document.getElementById('auth-password');
+const authSubmit = document.getElementById('auth-submit');
+const authMessage = document.getElementById('auth-message');
+const authUserEmail = document.getElementById('auth-user-email');
+const btnLogout = document.getElementById('btn-logout');
+
 const dropZone = document.getElementById('drop-zone-view');
 const fileInput = document.getElementById('file-cert-view');
 const fileNamePreview = document.getElementById('file-name-preview-view');
@@ -45,6 +77,146 @@ const consoleLog = document.getElementById('console-log');
 const btnClearDownloads = document.getElementById('btn-clear-downloads');
 const btnDownloadZip = document.getElementById('btn-download-zip');
 const tableBody = document.getElementById('table-body');
+
+// ----------------------------------------------------
+// AUTENTICACAO
+// ----------------------------------------------------
+function setAuthMessage(message, type = '') {
+  if (!authMessage) return;
+  authMessage.textContent = message || '';
+  authMessage.className = `auth-message ${type}`.trim();
+}
+
+function saveAuthSession(session) {
+  authSession = session;
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearAuthSession() {
+  authSession = null;
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+function loadStoredAuthSession() {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function loadAuthConfig() {
+  const res = await originalFetch('/api/auth-config');
+  authConfig = await res.json();
+  return authConfig;
+}
+
+async function validateAuthSession(session) {
+  if (!session?.access_token || !authConfig.supabaseUrl || !authConfig.publishableKey) {
+    return null;
+  }
+
+  const res = await originalFetch(`${authConfig.supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: authConfig.publishableKey,
+      Authorization: `Bearer ${session.access_token}`
+    }
+  });
+
+  if (!res.ok) {
+    return null;
+  }
+
+  return res.json();
+}
+
+async function loginWithPassword(email, password) {
+  const res = await originalFetch(`${authConfig.supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {
+      apikey: authConfig.publishableKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error_description || data.msg || data.error || 'Login inválido.');
+  }
+
+  saveAuthSession(data);
+  return data.user;
+}
+
+function showAuthenticatedApp(user) {
+  if (authScreen) authScreen.style.display = 'none';
+  if (appLayout) appLayout.style.display = 'grid';
+  if (authUserEmail) authUserEmail.textContent = user?.email || 'Sessão ativa';
+}
+
+function showLogin() {
+  if (appLayout) appLayout.style.display = 'none';
+  if (authScreen) authScreen.style.display = 'grid';
+}
+
+async function initializeAuthenticatedApp() {
+  await loadAuthConfig();
+
+  if (!authConfig.authRequired) {
+    if (appLayout) appLayout.style.display = 'grid';
+    if (authScreen) authScreen.style.display = 'none';
+    checkCertStatus();
+    updateProgress(0, 0);
+    selectEnvironment.dispatchEvent(new Event('change'));
+    return;
+  }
+
+  const storedSession = loadStoredAuthSession();
+  const user = await validateAuthSession(storedSession);
+  if (!user) {
+    clearAuthSession();
+    showLogin();
+    return;
+  }
+
+  authSession = storedSession;
+  showAuthenticatedApp(user);
+  checkCertStatus();
+  updateProgress(0, 0);
+  selectEnvironment.dispatchEvent(new Event('change'));
+}
+
+if (authForm) {
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setAuthMessage('Entrando...');
+    authSubmit.disabled = true;
+
+    try {
+      const user = await loginWithPassword(authEmail.value.trim(), authPassword.value);
+      setAuthMessage('Acesso liberado.', 'success');
+      showAuthenticatedApp(user);
+      checkCertStatus();
+      updateProgress(0, 0);
+      selectEnvironment.dispatchEvent(new Event('change'));
+    } catch (err) {
+      clearAuthSession();
+      setAuthMessage(err.message, 'error');
+    } finally {
+      authSubmit.disabled = false;
+    }
+  });
+}
+
+if (btnLogout) {
+  btnLogout.addEventListener('click', () => {
+    clearAuthSession();
+    stopQuerying();
+    showLogin();
+  });
+}
 
 // ----------------------------------------------------
 // LOGS E TERMINAL
@@ -640,14 +812,14 @@ function appendDocumentsToTable(docs) {
         <div class="helper-text">Processamento: ${doc.dataProcessamento || 'N/A'}</div>
       </td>
       <td>
-        <a href="/api/download-xml/${doc.token}" download class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; text-decoration:none; padding:4px 8px; gap: 4px;">
+        <button type="button" class="btn btn-secondary btn-sm" data-action="download-xml" data-token="${doc.token}" style="display:inline-flex; align-items:center; text-decoration:none; padding:4px 8px; gap: 4px;">
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
           <span>XML</span>
-        </a>
+        </button>
       </td>
     `;
     
@@ -658,6 +830,45 @@ function appendDocumentsToTable(docs) {
 // ----------------------------------------------------
 // AÇÕES DO RODAPÉ (ZIP E DIRETÓRIO)
 // ----------------------------------------------------
+async function downloadFromApi(url, fallbackFileName) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    let message = 'Falha ao baixar arquivo.';
+    try {
+      const data = await res.json();
+      message = data.error || message;
+    } catch (e) {
+      message = await res.text();
+    }
+    throw new Error(message);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  const fileName = match ? match[1] : fallbackFileName;
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+tableBody.addEventListener('click', async (e) => {
+  const button = e.target.closest('button[data-action="download-xml"]');
+  if (!button) return;
+
+  try {
+    await downloadFromApi(`/api/download-xml/${button.dataset.token}`, 'nfse.xml');
+    log('XML baixado com sucesso.', 'success');
+  } catch (err) {
+    log(`Erro ao baixar XML: ${err.message}`, 'error');
+  }
+});
+
 btnClearDownloads.addEventListener('click', async () => {
   if (!confirm('Tem certeza que deseja limpar os XMLs consultados nesta sessão e a tabela?')) {
     return;
@@ -687,9 +898,13 @@ btnClearDownloads.addEventListener('click', async () => {
   }
 });
 
-btnDownloadZip.addEventListener('click', () => {
+btnDownloadZip.addEventListener('click', async () => {
   log('Baixando pacote compactado ZIP contendo todos os XMLs...');
-  window.location.href = '/api/download-zip';
+  try {
+    await downloadFromApi('/api/download-zip', 'NFS-e_XMLs_Baixados.zip');
+  } catch (err) {
+    log(`Erro ao baixar ZIP: ${err.message}`, 'error');
+  }
 });
 
 // Atualizar Ambiente KPI Card
@@ -796,7 +1011,8 @@ if (themeToggle) {
 }
 
 // Inicialização
-checkCertStatus();
-updateProgress(0, 0);
-// Trigger ambiente inicial
-selectEnvironment.dispatchEvent(new Event('change'));
+initializeAuthenticatedApp().catch((err) => {
+  console.error('Erro ao inicializar autenticação:', err);
+  showLogin();
+  setAuthMessage('Não foi possível iniciar o login. Verifique as variáveis da Vercel.', 'error');
+});

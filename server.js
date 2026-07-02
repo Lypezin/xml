@@ -35,6 +35,15 @@ if (!IS_VERCEL && !fs.existsSync(CERTS_DIR)) {
 
 // Middleware
 app.use(express.json());
+app.get('/api/auth-config', (req, res) => {
+  const config = getSupabaseConfig();
+  return res.json({
+    authRequired: isSupabaseAuthRequired(),
+    supabaseUrl: config ? config.url : null,
+    publishableKey: config ? config.key : null
+  });
+});
+
 app.use((req, res, next) => {
   if (!isAccessAuthEnabled()) {
     return next();
@@ -52,6 +61,7 @@ app.use((req, res, next) => {
   res.setHeader('WWW-Authenticate', 'Basic realm=\"XML NFS-e\"');
   return res.status(401).send('Autenticação obrigatória.');
 });
+app.use('/api', requireSupabaseAuth);
 app.use(express.static(path.join(__dirname, 'public')));
 if (!IS_VERCEL) {
   app.use('/downloads', express.static(DOWNLOADS_DIR));
@@ -115,6 +125,84 @@ function getSupabaseConfig() {
   } catch (e) {
     console.error('Erro ao ler supabase.json:', e.message);
     return null;
+  }
+}
+
+function isSupabaseAuthRequired() {
+  return process.env.AUTH_REQUIRED === 'true' || IS_VERCEL;
+}
+
+function getAllowedEmails() {
+  return String(process.env.AUTH_ALLOWED_EMAILS || '')
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function getAllowedDomains() {
+  return String(process.env.AUTH_ALLOWED_DOMAINS || process.env.AUTH_ALLOWED_DOMAIN || '')
+    .split(',')
+    .map(domain => domain.trim().toLowerCase().replace(/^@/, ''))
+    .filter(Boolean);
+}
+
+function isUserAllowed(email) {
+  const normalizedEmail = String(email || '').toLowerCase();
+  if (!normalizedEmail) return false;
+
+  const allowedEmails = getAllowedEmails();
+  const allowedDomains = getAllowedDomains();
+
+  if (allowedEmails.length === 0 && allowedDomains.length === 0) {
+    return true;
+  }
+
+  if (allowedEmails.includes(normalizedEmail)) {
+    return true;
+  }
+
+  return allowedDomains.some(domain => normalizedEmail.endsWith(`@${domain}`));
+}
+
+async function getSupabaseUserFromToken(token) {
+  const config = getSupabaseConfig();
+  if (!config || !token) return null;
+
+  const response = await axios.get(`${config.url}/auth/v1/user`, {
+    timeout: 10000,
+    headers: {
+      apikey: config.key,
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  return response.data;
+}
+
+async function requireSupabaseAuth(req, res, next) {
+  if (req.path === '/auth-config' || !isSupabaseAuthRequired()) {
+    return next();
+  }
+
+  const header = req.headers.authorization || '';
+  const [type, token] = header.split(' ');
+  if (type !== 'Bearer' || !token) {
+    return res.status(401).json({ success: false, error: 'Login obrigatório.' });
+  }
+
+  try {
+    const user = await getSupabaseUserFromToken(token);
+    if (!user || !isUserAllowed(user.email)) {
+      return res.status(403).json({ success: false, error: 'Usuário não autorizado para este sistema.' });
+    }
+
+    req.authUser = {
+      id: user.id,
+      email: user.email
+    };
+    return next();
+  } catch (e) {
+    return res.status(401).json({ success: false, error: 'Sessão inválida ou expirada.' });
   }
 }
 
