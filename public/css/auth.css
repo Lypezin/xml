@@ -1,0 +1,192 @@
+/* Breathtaking Glassmorphic Login Screen Styles */
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: var(--bg-color);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background glows for premium ambient lighting */
+.auth-screen::before {
+  content: '';
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+  top: 15%;
+  left: 20%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-screen::after {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+  bottom: 10%;
+  right: 15%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Auth card with premium glassmorphic styling */
+.auth-panel {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(17, 21, 32, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 2;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+body.light-mode .auth-panel {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+}
+
+.auth-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35),
+              inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Brand logo and titles */
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-brand .brand-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-hover);
+  background: rgba(56, 189, 248, 0.1);
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+body.light-mode .auth-brand .brand-icon {
+  color: var(--primary);
+  background: rgba(2, 132, 199, 0.06);
+  border-color: rgba(2, 132, 199, 0.15);
+}
+
+.auth-brand h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.auth-brand p {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+/* Form groups and labels */
+.auth-panel .form-group {
+  margin-bottom: 20px;
+}
+
+.auth-panel .form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.auth-panel .form-group input {
+  width: 100%;
+  background: rgba(7, 9, 13, 0.6);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 11px 14px;
+  font-size: 13.5px;
+  color: var(--text-primary);
+  outline: none;
+  transition: var(--transition);
+}
+
+body.light-mode .auth-panel .form-group input {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+}
+
+.auth-panel .form-group input:focus {
+  border-color: var(--primary-hover);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+  background: rgba(7, 9, 13, 0.8);
+}
+
+body.light-mode .auth-panel .form-group input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+  background: #ffffff;
+}
+
+/* Premium Login Submit Button */
+#auth-submit {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: #ffffff;
+  border-radius: var(--border-radius);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+}
+
+#auth-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--secondary-hover) 100%);
+}
+
+#auth-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Authentication feedback message */
+.auth-message {
+  min-height: 20px;
+  margin-top: 14px;
+  font-size: 13px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.auth-message.error {
+  color: #f87171;
+}
+
+.auth-message.success {
+  color: #34d399;
+}
