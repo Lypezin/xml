@@ -15,7 +15,14 @@
     </div>
     <div class="input-row" style="margin-top: 12px;">
       <div class="input-group"><label for="search-mode">Ordem da varredura</label><select id="search-mode"><option value="asc" selected>Inicial completa</option><option value="desc">Mais recentes primeiro</option></select></div>
-      <div class="input-group"><label for="start-nsu">NSU inicial</label><input type="number" id="start-nsu" value="0" min="0"></div>
+      <div class="input-group">
+        <label for="start-nsu">NSU inicial</label>
+        <input type="number" id="start-nsu" value="0" min="0">
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-use-saved-nsu" style="flex: 1;">Ultimo salvo</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-use-national-nsu" style="flex: 1;">Ultimo nacional</button>
+        </div>
+      </div>
       <div class="input-group"><label for="limite-notas">Limite opcional</label><input type="number" id="limite-notas" min="1" placeholder="Sem limite"></div>
       <div class="input-group"><label for="scheduler-delay-seconds">Pausa entre lotes (s)</label><input type="number" id="scheduler-delay-seconds" value="5" min="2" max="3600"></div>
       <div class="input-group"><label for="scheduler-max-batches">Lotes por ciclo</label><input type="number" id="scheduler-max-batches" value="1" min="1" max="5"></div>

@@ -190,6 +190,47 @@ window.AppEvents = {
       selectSearchMode.addEventListener('change', () => window.AppUiTable.renderCurrentPage());
     }
 
+    if (btnUseSavedNsu) {
+      btnUseSavedNsu.addEventListener('click', async () => {
+        btnUseSavedNsu.disabled = true;
+        try {
+          const data = await window.AppApi.fetchSyncState({
+            environment: selectEnvironment ? selectEnvironment.value : 'producao',
+            cnpjConsulta: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+            certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId
+          });
+          const lastNsu = Number(data.state?.last_nsu || 0);
+          inputStartNsu.value = lastNsu;
+          window.AppUi.log(`NSU inicial ajustado para o ultimo salvo: ${lastNsu}.`, 'success');
+        } catch (err) {
+          window.AppUi.log(`Erro ao buscar ultimo NSU salvo: ${err.message}`, 'error');
+        } finally {
+          btnUseSavedNsu.disabled = false;
+        }
+      });
+    }
+
+    if (btnUseNationalNsu) {
+      btnUseNationalNsu.addEventListener('click', async () => {
+        btnUseNationalNsu.disabled = true;
+        window.AppUi.log('Consultando ADN para descobrir o ultimo NSU nacional...', 'warning');
+        try {
+          const data = await window.AppApi.discoverNsu({
+            environment: selectEnvironment ? selectEnvironment.value : 'producao',
+            cnpjConsulta: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+            certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId
+          });
+          if (!data.success) throw new Error(data.error || 'Nao foi possivel descobrir o ultimo NSU.');
+          inputStartNsu.value = Number(data.maxNSU || 0);
+          window.AppUi.log(`NSU inicial ajustado para o ultimo nacional: ${Number(data.maxNSU || 0)}.`, 'success');
+        } catch (err) {
+          window.AppUi.log(`Erro ao descobrir ultimo NSU nacional: ${err.message}`, 'error');
+        } finally {
+          btnUseNationalNsu.disabled = false;
+        }
+      });
+    }
+
     if (btnHistoryPrev) {
       btnHistoryPrev.addEventListener('click', () => window.AppUiTable.prevPage());
     }

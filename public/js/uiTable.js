@@ -24,6 +24,7 @@ window.AppUiTable = {
       descricao: doc.descricao || metadata.descricao || metadata.descricaoServico || 'N/A',
       municipioPrestacao: doc.municipioPrestacao || doc.municipio_prestacao || metadata.municipioPrestacao || 'N/A',
       codigoTributacao: doc.codigoTributacao || doc.codigo_tributacao || metadata.codigoTributacao || 'N/A',
+      eventoDescricao: doc.eventoDescricao || metadata.eventoDescricao || 'N/A',
       eventoMotivo: doc.eventoMotivo || metadata.eventoMotivo || 'N/A',
       tributacaoNacional: doc.tributacaoNacional || metadata.tributacaoNacional || '',
       valorServico: doc.valorServico || doc.valor_servico || metadata.valorServico || '0.00',
@@ -78,6 +79,10 @@ window.AppUiTable = {
     pageDocs.forEach(doc => {
       const tr = document.createElement('tr');
       const valorFormatado = window.AppUtils.formatCurrency(doc.valorServico);
+      const isEvento = String(doc.tipo || '').toUpperCase() === 'EVENTO' || doc.status === 'Evento';
+      const eventoDetalhe = isEvento
+        ? [doc.eventoDescricao, doc.eventoMotivo].filter(v => v && v !== 'N/A').join(' - ')
+        : '';
 
       tr.innerHTML = `
         <td>
@@ -87,6 +92,7 @@ window.AppUiTable = {
         <td>
           <span class="tipo-badge ${doc.tipo.toLowerCase()}">${doc.tipo}</span>
           <span class="status-badge ${doc.status === 'Evento' ? 'event' : 'ok'}">${doc.status || 'Autorizada'}</span>
+          ${eventoDetalhe ? `<div class="helper-text text-warning">${eventoDetalhe}</div>` : ''}
           <div class="helper-text">NFS-e: ${doc.numeroNfse || 'N/A'}</div>
           <div class="helper-text">DPS: ${doc.numeroDps || 'N/A'} / Série ${doc.serieDps || 'N/A'}</div>
         </td>
@@ -99,7 +105,7 @@ window.AppUiTable = {
           <div class="helper-text">CNPJ: ${doc.tomadorCnpj || 'Não cadastrado'}</div>
         </td>
         <td>
-          <div class="descricao-texto expanded" title="${doc.descricao || 'N/A'}">${doc.descricao || 'N/A'}</div>
+          <div class="descricao-texto expanded" title="${eventoDetalhe || doc.descricao || 'N/A'}">${eventoDetalhe || doc.descricao || 'N/A'}</div>
           <div class="helper-text">Município: ${doc.municipioPrestacao || 'N/A'}</div>
           <div class="helper-text">Cód. tributação: ${doc.codigoTributacao || 'N/A'}</div>
           <div class="helper-text">${doc.eventoMotivo && doc.eventoMotivo !== 'N/A' ? doc.eventoMotivo : doc.tributacaoNacional || ''}</div>

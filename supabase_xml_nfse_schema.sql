@@ -841,26 +841,110 @@ declare
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  with filtered as (
-    select d.*
+  with enriched as (
+    select
+      d.*,
+      coalesce(d.data_emissao, base.data_emissao) as effective_data_emissao,
+      coalesce(d.prestador_cnpj, base.prestador_cnpj) as effective_prestador_cnpj,
+      coalesce(d.prestador_nome, base.prestador_nome) as effective_prestador_nome,
+      coalesce(d.tomador_cnpj, base.tomador_cnpj) as effective_tomador_cnpj,
+      coalesce(d.tomador_nome, base.tomador_nome) as effective_tomador_nome,
+      coalesce(d.valor_servico, base.valor_servico) as effective_valor_servico,
+      coalesce(d.municipio_prestacao, base.municipio_prestacao) as effective_municipio_prestacao,
+      coalesce(d.codigo_tributacao, base.codigo_tributacao) as effective_codigo_tributacao,
+      d.metadata || jsonb_strip_nulls(jsonb_build_object(
+        'prestadorCnpj', coalesce(d.metadata ->> 'prestadorCnpj', base.prestador_cnpj),
+        'prestadorNome', coalesce(d.metadata ->> 'prestadorNome', base.prestador_nome),
+        'tomadorCnpj', coalesce(d.metadata ->> 'tomadorCnpj', base.tomador_cnpj),
+        'tomadorNome', coalesce(d.metadata ->> 'tomadorNome', base.tomador_nome),
+        'valorServico', coalesce(d.metadata ->> 'valorServico', base.valor_servico::text),
+        'municipioPrestacao', coalesce(d.metadata ->> 'municipioPrestacao', base.municipio_prestacao),
+        'codigoTributacao', coalesce(d.metadata ->> 'codigoTributacao', base.codigo_tributacao)
+      )) as effective_metadata
     from xml_nfse.documents d
+    left join lateral (
+      select b.*
+      from xml_nfse.documents b
+      where b.certificate_id = d.certificate_id
+        and b.environment = d.environment
+        and b.chave = d.chave
+        and b.tipo <> 'EVENTO'
+      order by b.nsu desc
+      limit 1
+    ) base on true
+  ),
+  filtered as (
+    select *
+    from enriched d
     where d.certificate_id = p_certificate_id
       and d.environment = p_environment
-      and (p_start_date is null or d.data_emissao >= p_start_date)
-      and (p_end_date is null or d.data_emissao <= p_end_date)
-      and (coalesce(p_cnpj_consulta, '') = '' or d.prestador_cnpj = p_cnpj_consulta or d.tomador_cnpj = p_cnpj_consulta)
+      and (p_start_date is null or d.effective_data_emissao >= p_start_date)
+      and (p_end_date is null or d.effective_data_emissao <= p_end_date)
+      and (coalesce(p_cnpj_consulta, '') = '' or d.effective_prestador_cnpj = p_cnpj_consulta or d.effective_tomador_cnpj = p_cnpj_consulta)
   )
   select count(*) into total_count
   from filtered;
 
-  with filtered as (
-    select d.*
+  with enriched as (
+    select
+      d.*,
+      coalesce(d.data_emissao, base.data_emissao) as effective_data_emissao,
+      coalesce(d.prestador_cnpj, base.prestador_cnpj) as effective_prestador_cnpj,
+      coalesce(d.prestador_nome, base.prestador_nome) as effective_prestador_nome,
+      coalesce(d.tomador_cnpj, base.tomador_cnpj) as effective_tomador_cnpj,
+      coalesce(d.tomador_nome, base.tomador_nome) as effective_tomador_nome,
+      coalesce(d.valor_servico, base.valor_servico) as effective_valor_servico,
+      coalesce(d.municipio_prestacao, base.municipio_prestacao) as effective_municipio_prestacao,
+      coalesce(d.codigo_tributacao, base.codigo_tributacao) as effective_codigo_tributacao,
+      d.metadata || jsonb_strip_nulls(jsonb_build_object(
+        'prestadorCnpj', coalesce(d.metadata ->> 'prestadorCnpj', base.prestador_cnpj),
+        'prestadorNome', coalesce(d.metadata ->> 'prestadorNome', base.prestador_nome),
+        'tomadorCnpj', coalesce(d.metadata ->> 'tomadorCnpj', base.tomador_cnpj),
+        'tomadorNome', coalesce(d.metadata ->> 'tomadorNome', base.tomador_nome),
+        'valorServico', coalesce(d.metadata ->> 'valorServico', base.valor_servico::text),
+        'municipioPrestacao', coalesce(d.metadata ->> 'municipioPrestacao', base.municipio_prestacao),
+        'codigoTributacao', coalesce(d.metadata ->> 'codigoTributacao', base.codigo_tributacao)
+      )) as effective_metadata
     from xml_nfse.documents d
+    left join lateral (
+      select b.*
+      from xml_nfse.documents b
+      where b.certificate_id = d.certificate_id
+        and b.environment = d.environment
+        and b.chave = d.chave
+        and b.tipo <> 'EVENTO'
+      order by b.nsu desc
+      limit 1
+    ) base on true
+  ),
+  filtered as (
+    select
+      d.id,
+      d.certificate_id,
+      d.environment,
+      d.nsu,
+      d.tipo,
+      d.chave,
+      d.numero_nfse,
+      d.effective_data_emissao as data_emissao,
+      d.effective_prestador_cnpj as prestador_cnpj,
+      d.effective_prestador_nome as prestador_nome,
+      d.effective_tomador_cnpj as tomador_cnpj,
+      d.effective_tomador_nome as tomador_nome,
+      d.effective_valor_servico as valor_servico,
+      d.effective_municipio_prestacao as municipio_prestacao,
+      d.effective_codigo_tributacao as codigo_tributacao,
+      d.file_name,
+      d.xml_sha256,
+      d.effective_metadata as metadata,
+      d.first_seen_at,
+      d.last_seen_at
+    from enriched d
     where d.certificate_id = p_certificate_id
       and d.environment = p_environment
-      and (p_start_date is null or d.data_emissao >= p_start_date)
-      and (p_end_date is null or d.data_emissao <= p_end_date)
-      and (coalesce(p_cnpj_consulta, '') = '' or d.prestador_cnpj = p_cnpj_consulta or d.tomador_cnpj = p_cnpj_consulta)
+      and (p_start_date is null or d.effective_data_emissao >= p_start_date)
+      and (p_end_date is null or d.effective_data_emissao <= p_end_date)
+      and (coalesce(p_cnpj_consulta, '') = '' or d.effective_prestador_cnpj = p_cnpj_consulta or d.effective_tomador_cnpj = p_cnpj_consulta)
     order by d.nsu desc
     limit coalesce(p_limit, 100000)
     offset coalesce(p_offset, 0)

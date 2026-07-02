@@ -153,14 +153,16 @@ router.get('/sync-state', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
   }
 
+  const requestCnpjConsulta = onlyDigits(cnpjConsulta) || onlyDigits(selectedCertificate?.cnpj) || '';
+
   await syncSupabaseCertificate(selectedCertificate, true);
   const state = await supabaseRpc('xml_nfse_get_sync_state', {
     p_certificate_id: selectedCertificate.id,
     p_environment: normalizeEnvironment(environment),
-    p_cnpj_consulta: cnpjConsulta || ''
+    p_cnpj_consulta: requestCnpjConsulta
   });
 
-  return res.json({ success: Boolean(state), state });
+  return res.json({ success: Boolean(state), state, cnpjConsulta: requestCnpjConsulta });
 });
 
 module.exports = router;

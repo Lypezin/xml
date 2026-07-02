@@ -121,6 +121,16 @@ window.AppApi = {
     return res.json();
   },
 
+  async fetchSyncState({ environment, cnpjConsulta, certificateId }) {
+    const params = new URLSearchParams({
+      environment,
+      cnpjConsulta: cnpjConsulta || '',
+      certificateId: certificateId || ''
+    });
+    const res = await fetch(`/api/sync-state?${params.toString()}`);
+    return res.json();
+  },
+
   async clearDownloads() {
     const res = await fetch('/api/clear-downloads', { method: 'POST' });
     return res.json();
