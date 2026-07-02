@@ -1,24 +1,80 @@
 // Wrapper de Requisições da API com Interceptador de Token
 const originalFetch = window.fetch.bind(window);
+let refreshSessionPromise = null;
 
-window.fetch = (resource, options = {}) => {
-  const url = typeof resource === 'string' ? resource : resource.url;
-  const shouldAttachAuth = window.authSession?.access_token && url && url.startsWith('/api/') && url !== '/api/auth-config';
+function getRequestUrl(resource) {
+  return typeof resource === 'string' ? resource : resource.url;
+}
+
+function isProtectedApiRequest(url) {
+  return Boolean(url && url.startsWith('/api/') && url !== '/api/auth-config');
+}
+
+function attachAuthHeader(options = {}) {
+  const { __authRetry, ...fetchOptions } = options;
+  const headers = new Headers(options.headers || {});
+  headers.set('Authorization', `Bearer ${window.authSession.access_token}`);
+  return {
+    ...fetchOptions,
+    headers
+  };
+}
+
+window.fetch = async (resource, options = {}) => {
+  const url = getRequestUrl(resource);
+  const shouldAttachAuth = window.authSession?.access_token && isProtectedApiRequest(url);
 
   if (!shouldAttachAuth) {
     return originalFetch(resource, options);
   }
 
-  const headers = new Headers(options.headers || {});
-  headers.set('Authorization', `Bearer ${window.authSession.access_token}`);
+  const firstResponse = await originalFetch(resource, attachAuthHeader(options));
+  if (firstResponse.status !== 401 || options.__authRetry) {
+    return firstResponse;
+  }
 
-  return originalFetch(resource, {
+  const refreshedSession = await window.AppApi.refreshAuthSession();
+  if (!refreshedSession?.access_token) {
+    if (window.AppUtils) window.AppUtils.clearAuthSession();
+    if (window.AppUi) window.AppUi.showLogin();
+    return firstResponse;
+  }
+
+  return originalFetch(resource, attachAuthHeader({
     ...options,
-    headers
-  });
+    __authRetry: true
+  }));
 };
 
 window.AppApi = {
+  async refreshAuthSession(session = window.authSession) {
+    if (!session?.refresh_token || !window.authConfig.supabaseUrl || !window.authConfig.publishableKey) {
+      return null;
+    }
+
+    if (!refreshSessionPromise) {
+      refreshSessionPromise = originalFetch(`${window.authConfig.supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: {
+          apikey: window.authConfig.publishableKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      })
+        .then(async res => {
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) return null;
+          window.AppUtils.saveAuthSession(data);
+          return data;
+        })
+        .finally(() => {
+          refreshSessionPromise = null;
+        });
+    }
+
+    return refreshSessionPromise;
+  },
+
   async loadAuthConfig() {
     const res = await originalFetch('/api/auth-config');
     window.authConfig = await res.json();
@@ -30,12 +86,20 @@ window.AppApi = {
       return null;
     }
 
-    const res = await originalFetch(`${window.authConfig.supabaseUrl}/auth/v1/user`, {
+    window.authSession = session;
+    const fetchUser = accessToken => originalFetch(`${window.authConfig.supabaseUrl}/auth/v1/user`, {
       headers: {
         apikey: window.authConfig.publishableKey,
-        Authorization: `Bearer ${session.access_token}`
+        Authorization: `Bearer ${accessToken}`
       }
     });
+
+    let res = await fetchUser(session.access_token);
+    if (!res.ok) {
+      const refreshedSession = await this.refreshAuthSession(session);
+      if (!refreshedSession?.access_token) return null;
+      res = await fetchUser(refreshedSession.access_token);
+    }
 
     if (!res.ok) return null;
     return res.json();

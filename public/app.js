@@ -37,7 +37,6 @@ async function initializeAuthenticatedApp() {
     return;
   }
 
-  window.authSession = storedSession;
   window.AppUi.showAuthenticatedApp(user);
   window.AppSyncController.checkCertStatus();
   if (window.loadSchedulerSettings) window.loadSchedulerSettings();

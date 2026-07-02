@@ -93,7 +93,11 @@ async function requireSupabaseAuth(req, res, next) {
 
   try {
     const user = await getSupabaseUserFromToken(token);
-    if (!user || !isUserAllowed(user.email)) {
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Sessao invalida ou expirada.' });
+    }
+
+    if (!isUserAllowed(user.email)) {
       return res.status(403).json({ success: false, error: 'Usuário não autorizado para este sistema.' });
     }
 
