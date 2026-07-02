@@ -388,6 +388,25 @@ function extractCertificateCnpj(cert) {
   return match ? match[0] : null;
 }
 
+function onlyDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function validateCnpjConsultaRoot(cnpjConsulta, certificateCnpj) {
+  const consulta = onlyDigits(cnpjConsulta);
+  const certificado = onlyDigits(certificateCnpj);
+
+  if (!consulta || !certificado || consulta.length !== 14 || certificado.length !== 14) {
+    return null;
+  }
+
+  if (consulta.slice(0, 8) !== certificado.slice(0, 8)) {
+    return 'O CNPJ para consulta deve ter a mesma raiz do CNPJ do certificado digital. Remova o CNPJ informado ou use um CNPJ da mesma empresa/grupo raiz.';
+  }
+
+  return null;
+}
+
 function validateCertificateForNationalApi(pfxBuffer, passphrase) {
   let p12;
   try {
@@ -1215,6 +1234,11 @@ app.post('/api/fetch-batch', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado. Selecione um certificado antes da consulta.' });
     }
 
+    const cnpjRootError = validateCnpjConsultaRoot(requestCnpjConsulta, selectedCertificate.cnpj);
+    if (cnpjRootError) {
+      return res.status(400).json({ success: false, error: cnpjRootError });
+    }
+
     await syncSupabaseCertificate(selectedCertificate, true);
     supabaseRunId = await startSupabaseRun({
       certificateId: selectedCertificate.id,
@@ -1557,6 +1581,11 @@ app.post('/api/discover-nsu', async (req, res) => {
     const selectedCertificate = await resolveCertificateForRequest(certificateId);
     if (!selectedCertificate) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
+    }
+
+    const cnpjRootError = validateCnpjConsultaRoot(cnpjConsulta, selectedCertificate.cnpj);
+    if (cnpjRootError) {
+      return res.status(400).json({ success: false, error: cnpjRootError });
     }
 
     const pfxBuffer = getCertificateBuffer(selectedCertificate);

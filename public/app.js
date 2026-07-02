@@ -553,12 +553,12 @@ btnStart.addEventListener('click', () => {
       const mode = selectSearchMode ? selectSearchMode.value : 'asc';
       currentNsu = parseInt(inputStartNsu.value) || 0;
       
-      // Iniciar Crawler
-      isCrawlerActive = true;
+      // A API ADN permite cnpjConsulta diferente apenas quando o CNPJ raiz
+      // corresponde ao certificado. Mantemos a consulta no CNPJ informado.
+      isCrawlerActive = false;
       crawlerVisited = new Set();
-      crawlerQueue = [inputCnpjConsulta.value.trim()];
-      currentCrawlerCnpj = crawlerQueue.shift();
-      crawlerVisited.add(currentCrawlerCnpj);
+      crawlerQueue = [];
+      currentCrawlerCnpj = inputCnpjConsulta.value.trim();
       updateCrawlerUI();
       
       if (mode === 'desc' && currentNsu === 0) {
@@ -748,23 +748,7 @@ async function runQueryLoop() {
     if (deveParar) {
       log('==================================================', 'success');
       log(`Sincronização concluída para o CNPJ ${currentCrawlerCnpj || 'Padrão'}! ${motivoParada}`, 'success');
-      
-      if (isCrawlerActive && crawlerQueue.length > 0) {
-        log('A fila de varredura possui mais CNPJs a serem sincronizados.', 'info');
-        currentCrawlerCnpj = crawlerQueue.shift();
-        crawlerVisited.add(currentCrawlerCnpj);
-        updateCrawlerUI();
-        
-        currentNsu = 0; // Resetar NSU para o novo CNPJ
-        inputStartNsu.value = 0;
-        
-        log(`Iniciando nova varredura para o próximo CNPJ descoberto: ${currentCrawlerCnpj}`, 'info');
-        log('Aguardando 5 segundos antes de prosseguir...');
-        setTimeout(discoverAndStart, 5000);
-        return;
-      }
-      
-      log('Todas as consultas e varreduras foram finalizadas com sucesso.', 'success');
+      log('Consulta finalizada. Use os botões XML ou ZIP para baixar os arquivos desejados.', 'success');
       log('==================================================', 'success');
       alertSyncSuccess.style.display = 'block';
       
