@@ -278,6 +278,23 @@
                 </div>
               </div>
 
+              <!-- Crawler Status Panel -->
+              <div class="crawler-status" id="crawler-status-container" style="display: none; margin-top: 16px; padding: 16px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--card-border);">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                  Varredura Automática de CNPJs
+                </h4>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between;">
+                  <span>CNPJ Atual:</span> <strong id="crawler-current-cnpj" class="text-primary">-</strong>
+                </div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between;">
+                  <span>Concluídos:</span> <span id="crawler-visited-count">0</span>
+                </div>
+                <div style="font-size: 13px; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                  <span>Na Fila (Aguardando):</span> <span id="crawler-queue-count">0</span>
+                </div>
+              </div>
+
               <!-- Success Alert -->
               <div class="alert-box success" id="alert-sync-success" style="display: none;">
                 <strong>Concluído:</strong> Todas as notas foram sincronizadas com sucesso. Evite consultas repetidas imediatas para evitar bloqueios.

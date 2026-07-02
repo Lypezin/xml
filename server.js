@@ -1447,10 +1447,19 @@ app.post('/api/discover-nsu', async (req, res) => {
     return res.json({ success: true, maxNSU: maxNSU || 0, reliableMax });
   } catch (e) {
     console.error('Erro no discover-nsu:', e);
-    // Se 404 Nenhum Documento, maxNSU é 0
-    if (e.response && e.response.status === 404) {
-      return res.json({ success: true, maxNSU: 0 });
+    
+    if (e.response) {
+      if (e.response.status === 404) {
+        return res.json({ success: true, maxNSU: 0 });
+      }
+      
+      const data = e.response.data;
+      if (data && data.Erros && data.Erros.length > 0) {
+        const errorDesc = data.Erros.map(err => `${err.Codigo}: ${err.Descricao}`).join(' | ');
+        return res.status(500).json({ success: false, error: `Rejeição da API Nacional: ${errorDesc}` });
+      }
     }
+
     return res.status(500).json({ success: false, error: 'Erro ao descobrir NSU: ' + e.message });
   }
 });

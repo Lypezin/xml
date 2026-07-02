@@ -10,6 +10,12 @@ let activeCertificateId = null;
 let authConfig = { authRequired: false, supabaseUrl: null, publishableKey: null };
 let authSession = null;
 
+// Crawler State
+let crawlerQueue = [];
+let crawlerVisited = new Set();
+let isCrawlerActive = false;
+let currentCrawlerCnpj = '';
+
 const AUTH_STORAGE_KEY = 'xml_nfse_auth_session';
 const originalFetch = window.fetch.bind(window);
 
@@ -72,6 +78,10 @@ const statNsuMax = document.getElementById('stat-nsu-max');
 const statTotalNotas = document.getElementById('stat-total-notas');
 const alertRateLimit = document.getElementById('alert-rate-limit');
 const alertSyncSuccess = document.getElementById('alert-sync-success');
+const crawlerStatusContainer = document.getElementById('crawler-status-container');
+const crawlerCurrentCnpj = document.getElementById('crawler-current-cnpj');
+const crawlerVisitedCount = document.getElementById('crawler-visited-count');
+const crawlerQueueCount = document.getElementById('crawler-queue-count');
 const consoleLog = document.getElementById('console-log');
 
 const btnClearDownloads = document.getElementById('btn-clear-downloads');
@@ -543,6 +553,14 @@ btnStart.addEventListener('click', () => {
       const mode = selectSearchMode ? selectSearchMode.value : 'asc';
       currentNsu = parseInt(inputStartNsu.value) || 0;
       
+      // Iniciar Crawler
+      isCrawlerActive = true;
+      crawlerVisited = new Set();
+      crawlerQueue = [inputCnpjConsulta.value.trim()];
+      currentCrawlerCnpj = crawlerQueue.shift();
+      crawlerVisited.add(currentCrawlerCnpj);
+      updateCrawlerUI();
+      
       if (mode === 'desc' && currentNsu === 0) {
         log(`Descobrindo NSU mais recente na Receita Federal para busca reversa...`);
         discoverAndStart();
@@ -561,7 +579,7 @@ btnStart.addEventListener('click', () => {
 async function discoverAndStart() {
   try {
     const environment = selectEnvironment.value;
-    const cnpjConsulta = inputCnpjConsulta.value.trim();
+    const cnpjConsulta = currentCrawlerCnpj;
     const certificateId = selectCertificate ? selectCertificate.value : activeCertificateId;
     
     const res = await fetch('/api/discover-nsu', {
@@ -621,7 +639,7 @@ async function runQueryLoop() {
   }
 
   const environment = selectEnvironment.value;
-  const cnpjConsulta = inputCnpjConsulta.value.trim();
+  const cnpjConsulta = currentCrawlerCnpj;
   const certificateId = selectCertificate ? selectCertificate.value : activeCertificateId;
   const limiteNotas = parseInt(inputLimiteNotas.value) || 0;
 
@@ -672,6 +690,26 @@ async function runQueryLoop() {
       totalDownloaded += documentos.length;
       statTotalNotas.innerText = totalDownloaded;
       btnDownloadZip.disabled = false;
+      
+      // Extrair CNPJs para o Crawler
+      if (isCrawlerActive) {
+        let novosEncontrados = 0;
+        documentos.forEach(doc => {
+          [doc.prestadorCnpj, doc.tomadorCnpj].forEach(cnpj => {
+            if (cnpj && cnpj !== 'N/A' && cnpj !== 'Não Informado') {
+              const cleanCnpj = cnpj.replace(/\\D/g, '');
+              if (cleanCnpj.length === 14 && !crawlerVisited.has(cleanCnpj) && !crawlerQueue.includes(cleanCnpj)) {
+                crawlerQueue.push(cleanCnpj);
+                novosEncontrados++;
+              }
+            }
+          });
+        });
+        if (novosEncontrados > 0) {
+          log(`Varredura encontrou ${novosEncontrados} novo(s) CNPJ(s) para sincronização futura.`, 'info');
+          updateCrawlerUI();
+        }
+      }
     } else {
       log('Nenhuma nota fiscal encontrada neste bloco que atenda aos filtros.');
     }
@@ -709,8 +747,24 @@ async function runQueryLoop() {
 
     if (deveParar) {
       log('==================================================', 'success');
-      log(`Sincronização concluída! ${motivoParada}`, 'success');
-      log('Consulta finalizada. Use os botões XML ou ZIP para baixar os arquivos desejados.', 'success');
+      log(`Sincronização concluída para o CNPJ ${currentCrawlerCnpj || 'Padrão'}! ${motivoParada}`, 'success');
+      
+      if (isCrawlerActive && crawlerQueue.length > 0) {
+        log('A fila de varredura possui mais CNPJs a serem sincronizados.', 'info');
+        currentCrawlerCnpj = crawlerQueue.shift();
+        crawlerVisited.add(currentCrawlerCnpj);
+        updateCrawlerUI();
+        
+        currentNsu = 0; // Resetar NSU para o novo CNPJ
+        inputStartNsu.value = 0;
+        
+        log(`Iniciando nova varredura para o próximo CNPJ descoberto: ${currentCrawlerCnpj}`, 'info');
+        log('Aguardando 5 segundos antes de prosseguir...');
+        setTimeout(discoverAndStart, 5000);
+        return;
+      }
+      
+      log('Todas as consultas e varreduras foram finalizadas com sucesso.', 'success');
       log('==================================================', 'success');
       alertSyncSuccess.style.display = 'block';
       
@@ -739,6 +793,17 @@ async function runQueryLoop() {
 // ----------------------------------------------------
 // ATUALIZAÇÕES DA UI
 // ----------------------------------------------------
+function updateCrawlerUI() {
+  if (isCrawlerActive) {
+    crawlerStatusContainer.style.display = 'block';
+    crawlerCurrentCnpj.innerText = currentCrawlerCnpj || 'CNPJ do Certificado';
+    crawlerVisitedCount.innerText = crawlerVisited.size;
+    crawlerQueueCount.innerText = crawlerQueue.length;
+  } else {
+    crawlerStatusContainer.style.display = 'none';
+  }
+}
+
 function updateProgress(current, max) {
   if (max === 0) {
     progressBar.style.width = '0%';
