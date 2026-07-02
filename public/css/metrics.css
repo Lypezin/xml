@@ -1,0 +1,90 @@
+/* Metrics KPI Cards Grid and Elements Styles */
+
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: var(--transition);
+}
+
+.metric-card:hover {
+  border-color: var(--text-muted);
+}
+
+.metric-card.click-card {
+  cursor: pointer;
+}
+
+.metric-card.click-card:hover {
+  transform: translateY(-1px);
+}
+
+.metric-icon {
+  background: var(--input-bg);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--card-border);
+  flex-shrink: 0;
+}
+
+.metric-icon svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+}
+
+.metric-data {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.metric-divider {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.text-primary {
+  color: var(--primary-hover) !important;
+}
+
+body.light-mode .text-primary {
+  color: var(--primary) !important;
+}
+
+.text-success {
+  color: var(--success) !important;
+}
