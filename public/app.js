@@ -278,7 +278,7 @@ async function loadAllComponents() {
     const el = document.getElementById(component.id);
     if (el) {
       const res = await fetch(component.path);
-      el.innerHTML = await res.text();
+      el.outerHTML = await res.text();
     }
   }
 }
