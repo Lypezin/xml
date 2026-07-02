@@ -22,6 +22,17 @@ create table if not exists xml_nfse.certificates (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists xml_nfse.certificate_secrets (
+  certificate_id text primary key references xml_nfse.certificates(id) on delete cascade,
+  pfx_ciphertext text not null,
+  pfx_iv text not null,
+  pfx_auth_tag text not null,
+  passphrase_ciphertext text not null,
+  passphrase_iv text not null,
+  passphrase_auth_tag text not null,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists xml_nfse.sync_state (
   id uuid primary key default gen_random_uuid(),
   certificate_id text not null references xml_nfse.certificates(id) on delete cascade,
@@ -112,6 +123,7 @@ create index if not exists xml_payloads_expires_at_idx
 
 alter table xml_nfse.settings enable row level security;
 alter table xml_nfse.certificates enable row level security;
+alter table xml_nfse.certificate_secrets enable row level security;
 alter table xml_nfse.sync_state enable row level security;
 alter table xml_nfse.sync_runs enable row level security;
 alter table xml_nfse.documents enable row level security;
@@ -172,6 +184,206 @@ begin
       updated_at = now();
 
   return jsonb_build_object('success', true, 'certificate_id', p_certificate_id);
+end;
+$$;
+
+create or replace function public.xml_nfse_upsert_certificate_secret(
+  p_secret text,
+  p_certificate_id text,
+  p_filename text,
+  p_cnpj text,
+  p_active boolean,
+  p_pfx_ciphertext text,
+  p_pfx_iv text,
+  p_pfx_auth_tag text,
+  p_passphrase_ciphertext text,
+  p_passphrase_iv text,
+  p_passphrase_auth_tag text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  if p_active then
+    update xml_nfse.certificates set active = false where active = true;
+  end if;
+
+  insert into xml_nfse.certificates (id, filename, cnpj, active)
+  values (p_certificate_id, p_filename, nullif(p_cnpj, ''), coalesce(p_active, false))
+  on conflict (id) do update
+  set filename = excluded.filename,
+      cnpj = excluded.cnpj,
+      active = excluded.active,
+      updated_at = now();
+
+  insert into xml_nfse.certificate_secrets (
+    certificate_id,
+    pfx_ciphertext,
+    pfx_iv,
+    pfx_auth_tag,
+    passphrase_ciphertext,
+    passphrase_iv,
+    passphrase_auth_tag,
+    updated_at
+  )
+  values (
+    p_certificate_id,
+    p_pfx_ciphertext,
+    p_pfx_iv,
+    p_pfx_auth_tag,
+    p_passphrase_ciphertext,
+    p_passphrase_iv,
+    p_passphrase_auth_tag,
+    now()
+  )
+  on conflict (certificate_id) do update
+  set pfx_ciphertext = excluded.pfx_ciphertext,
+      pfx_iv = excluded.pfx_iv,
+      pfx_auth_tag = excluded.pfx_auth_tag,
+      passphrase_ciphertext = excluded.passphrase_ciphertext,
+      passphrase_iv = excluded.passphrase_iv,
+      passphrase_auth_tag = excluded.passphrase_auth_tag,
+      updated_at = now();
+
+  return jsonb_build_object('success', true, 'certificate_id', p_certificate_id);
+end;
+$$;
+
+create or replace function public.xml_nfse_list_certificates(
+  p_secret text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  rows_data jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select coalesce(jsonb_agg(to_jsonb(c.*) order by c.active desc, c.created_at desc), '[]'::jsonb)
+  into rows_data
+  from xml_nfse.certificates c
+  where exists (
+    select 1
+    from xml_nfse.certificate_secrets s
+    where s.certificate_id = c.id
+  );
+
+  return rows_data;
+end;
+$$;
+
+create or replace function public.xml_nfse_set_active_certificate(
+  p_secret text,
+  p_certificate_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  if not exists (
+    select 1
+    from xml_nfse.certificates c
+    join xml_nfse.certificate_secrets s on s.certificate_id = c.id
+    where c.id = p_certificate_id
+  ) then
+    return jsonb_build_object('success', false);
+  end if;
+
+  update xml_nfse.certificates set active = false where active = true;
+  update xml_nfse.certificates
+  set active = true,
+      updated_at = now()
+  where id = p_certificate_id;
+
+  return jsonb_build_object('success', true, 'certificate_id', p_certificate_id);
+end;
+$$;
+
+create or replace function public.xml_nfse_get_certificate_secret(
+  p_secret text,
+  p_certificate_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  row_data jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select jsonb_build_object(
+    'id', c.id,
+    'filename', c.filename,
+    'cnpj', c.cnpj,
+    'active', c.active,
+    'created_at', c.created_at,
+    'updated_at', c.updated_at,
+    'pfx_ciphertext', s.pfx_ciphertext,
+    'pfx_iv', s.pfx_iv,
+    'pfx_auth_tag', s.pfx_auth_tag,
+    'passphrase_ciphertext', s.passphrase_ciphertext,
+    'passphrase_iv', s.passphrase_iv,
+    'passphrase_auth_tag', s.passphrase_auth_tag
+  )
+  into row_data
+  from xml_nfse.certificates c
+  join xml_nfse.certificate_secrets s on s.certificate_id = c.id
+  where c.id = p_certificate_id;
+
+  return row_data;
+end;
+$$;
+
+create or replace function public.xml_nfse_delete_certificate(
+  p_secret text,
+  p_certificate_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  was_active boolean;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select active into was_active
+  from xml_nfse.certificates
+  where id = p_certificate_id;
+
+  if was_active is null then
+    return jsonb_build_object('success', false);
+  end if;
+
+  delete from xml_nfse.certificates where id = p_certificate_id;
+
+  if was_active then
+    update xml_nfse.certificates
+    set active = true,
+        updated_at = now()
+    where id = (
+      select id
+      from xml_nfse.certificates
+      order by created_at desc
+      limit 1
+    );
+  end if;
+
+  return jsonb_build_object('success', true);
 end;
 $$;
 
@@ -532,6 +744,11 @@ end;
 $$;
 
 grant execute on function public.xml_nfse_upsert_certificate(text, text, text, text, boolean) to anon, authenticated;
+grant execute on function public.xml_nfse_upsert_certificate_secret(text, text, text, text, boolean, text, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_list_certificates(text) to anon, authenticated;
+grant execute on function public.xml_nfse_set_active_certificate(text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_get_certificate_secret(text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_delete_certificate(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_sync_state(text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_update_sync_state(text, text, text, text, bigint, bigint, text, timestamptz, text) to anon, authenticated;
 grant execute on function public.xml_nfse_start_run(text, text, text, text, bigint) to anon, authenticated;

@@ -35,6 +35,23 @@ if (!IS_VERCEL && !fs.existsSync(CERTS_DIR)) {
 
 // Middleware
 app.use(express.json());
+app.use((req, res, next) => {
+  if (!isAccessAuthEnabled()) {
+    return next();
+  }
+
+  const header = req.headers.authorization || '';
+  const [type, encoded] = header.split(' ');
+  if (type === 'Basic' && encoded) {
+    const [user, password] = Buffer.from(encoded, 'base64').toString('utf8').split(':');
+    if (user === process.env.APP_ACCESS_USER && password === process.env.APP_ACCESS_PASSWORD) {
+      return next();
+    }
+  }
+
+  res.setHeader('WWW-Authenticate', 'Basic realm=\"XML NFS-e\"');
+  return res.status(401).send('Autenticação obrigatória.');
+});
 app.use(express.static(path.join(__dirname, 'public')));
 if (!IS_VERCEL) {
   app.use('/downloads', express.static(DOWNLOADS_DIR));
@@ -43,6 +60,10 @@ if (!IS_VERCEL) {
 // Configuração do multer em memória para receber o arquivo do certificado
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+function isAccessAuthEnabled() {
+  return Boolean(process.env.APP_ACCESS_USER && process.env.APP_ACCESS_PASSWORD);
+}
 
 // Função auxiliar para carregar as configurações locais
 function getSettings() {
@@ -253,6 +274,152 @@ function getCertificateBuffer(cert) {
   return null;
 }
 
+function useRemoteCertificateStorage() {
+  return IS_VERCEL || process.env.CERT_STORAGE_MODE === 'supabase';
+}
+
+function getCertificateEncryptionKey() {
+  const raw = process.env.CERT_ENCRYPTION_KEY;
+  if (!raw) return null;
+
+  let key;
+  if (/^[0-9a-f]{64}$/i.test(raw)) {
+    key = Buffer.from(raw, 'hex');
+  } else {
+    try {
+      key = Buffer.from(raw, 'base64');
+    } catch (e) {
+      key = Buffer.alloc(0);
+    }
+
+    if (key.length !== 32) {
+      key = Buffer.from(raw, 'utf8');
+    }
+  }
+
+  return key.length === 32 ? key : null;
+}
+
+function encryptCertificateValue(value) {
+  const key = getCertificateEncryptionKey();
+  if (!key) {
+    throw new Error('CERT_ENCRYPTION_KEY deve ter 32 bytes. Use 64 caracteres hexadecimais ou Base64 de 32 bytes.');
+  }
+
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(value), cipher.final()]);
+
+  return {
+    ciphertext: encrypted.toString('base64'),
+    iv: iv.toString('base64'),
+    authTag: cipher.getAuthTag().toString('base64')
+  };
+}
+
+function decryptCertificateValue(payload) {
+  const key = getCertificateEncryptionKey();
+  if (!key) {
+    throw new Error('CERT_ENCRYPTION_KEY deve ter 32 bytes para descriptografar certificados.');
+  }
+
+  const decipher = crypto.createDecipheriv(
+    'aes-256-gcm',
+    key,
+    Buffer.from(payload.iv, 'base64')
+  );
+  decipher.setAuthTag(Buffer.from(payload.authTag, 'base64'));
+
+  return Buffer.concat([
+    decipher.update(Buffer.from(payload.ciphertext, 'base64')),
+    decipher.final()
+  ]);
+}
+
+async function listRemoteCertificates() {
+  const result = await supabaseRpc('xml_nfse_list_certificates', {});
+  return Array.isArray(result) ? result : [];
+}
+
+async function setRemoteActiveCertificate(certificateId) {
+  return supabaseRpc('xml_nfse_set_active_certificate', {
+    p_certificate_id: certificateId
+  });
+}
+
+async function deleteRemoteCertificate(certificateId) {
+  return supabaseRpc('xml_nfse_delete_certificate', {
+    p_certificate_id: certificateId
+  });
+}
+
+async function upsertRemoteCertificateSecret({ id, filename, cnpj, active, pfxBuffer, passphrase }) {
+  const encryptedPfx = encryptCertificateValue(pfxBuffer);
+  const encryptedPassphrase = encryptCertificateValue(Buffer.from(passphrase, 'utf8'));
+
+  return supabaseRpc('xml_nfse_upsert_certificate_secret', {
+    p_certificate_id: id,
+    p_filename: filename,
+    p_cnpj: cnpj || '',
+    p_active: Boolean(active),
+    p_pfx_ciphertext: encryptedPfx.ciphertext,
+    p_pfx_iv: encryptedPfx.iv,
+    p_pfx_auth_tag: encryptedPfx.authTag,
+    p_passphrase_ciphertext: encryptedPassphrase.ciphertext,
+    p_passphrase_iv: encryptedPassphrase.iv,
+    p_passphrase_auth_tag: encryptedPassphrase.authTag
+  });
+}
+
+async function resolveRemoteCertificate(certificateId) {
+  let id = certificateId;
+  if (!id) {
+    const certificates = await listRemoteCertificates();
+    const active = certificates.find(cert => cert.active) || certificates[0];
+    id = active ? active.id : null;
+  }
+
+  if (!id) {
+    const envCert = getEnvCertificate();
+    return envCert || null;
+  }
+
+  const row = await supabaseRpc('xml_nfse_get_certificate_secret', {
+    p_certificate_id: id
+  });
+  if (!row || !row.pfx_ciphertext || !row.passphrase_ciphertext) {
+    const envCert = getEnvCertificate();
+    return envCert && envCert.id === id ? envCert : null;
+  }
+
+  return {
+    id: row.id,
+    originalName: row.filename,
+    cnpj: row.cnpj || '',
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null,
+    passphrase: decryptCertificateValue({
+      ciphertext: row.passphrase_ciphertext,
+      iv: row.passphrase_iv,
+      authTag: row.passphrase_auth_tag
+    }).toString('utf8'),
+    pfxBuffer: decryptCertificateValue({
+      ciphertext: row.pfx_ciphertext,
+      iv: row.pfx_iv,
+      authTag: row.pfx_auth_tag
+    }),
+    source: 'supabase'
+  };
+}
+
+async function resolveCertificateForRequest(certificateId) {
+  if (useRemoteCertificateStorage()) {
+    return resolveRemoteCertificate(certificateId);
+  }
+
+  return resolveCertificate(certificateId);
+}
+
 function readCertificatesIndex() {
   const envCert = getEnvCertificate();
   if (envCert && IS_VERCEL) {
@@ -288,8 +455,9 @@ function sanitizeCertificate(cert) {
     id: cert.id,
     filename: cert.originalName || cert.filename || 'certificado.pfx',
     cnpj: cert.cnpj || '',
-    createdAt: cert.createdAt || null,
-    updatedAt: cert.updatedAt || null
+    active: Boolean(cert.active),
+    createdAt: cert.createdAt || cert.created_at || null,
+    updatedAt: cert.updatedAt || cert.updated_at || null
   };
 }
 
@@ -513,7 +681,22 @@ function parseXmlMetadata(xmlString, nsu) {
 // ----------------------------------------------------
 
 // 1. Status e lista de certificados
-app.get('/api/certificate-status', (req, res) => {
+app.get('/api/certificate-status', async (req, res) => {
+  if (useRemoteCertificateStorage()) {
+    const certificates = await listRemoteCertificates();
+    const envCert = getEnvCertificate();
+    const allCertificates = certificates.length > 0 ? certificates : (envCert ? [sanitizeCertificate(envCert)] : []);
+    const activeCert = allCertificates.find(cert => cert.active) || allCertificates[0] || null;
+
+    return res.json({
+      active: Boolean(activeCert),
+      activeCertificateId: activeCert ? activeCert.id : null,
+      filename: activeCert ? (activeCert.filename || activeCert.originalName || 'certificado.pfx') : null,
+      cnpj: activeCert ? (activeCert.cnpj || 'Não cadastrado') : null,
+      certificates: allCertificates.map(sanitizeCertificate)
+    });
+  }
+
   const index = getCertificatesIndex();
   const activeCert = resolveCertificate(index.activeCertificateId);
 
@@ -526,7 +709,20 @@ app.get('/api/certificate-status', (req, res) => {
   });
 });
 
-app.get('/api/certificates', (req, res) => {
+app.get('/api/certificates', async (req, res) => {
+  if (useRemoteCertificateStorage()) {
+    const certificates = await listRemoteCertificates();
+    const envCert = getEnvCertificate();
+    const allCertificates = certificates.length > 0 ? certificates : (envCert ? [sanitizeCertificate(envCert)] : []);
+    const activeCert = allCertificates.find(cert => cert.active) || allCertificates[0] || null;
+
+    return res.json({
+      success: true,
+      activeCertificateId: activeCert ? activeCert.id : null,
+      certificates: allCertificates.map(sanitizeCertificate)
+    });
+  }
+
   const index = getCertificatesIndex();
   return res.json({
     success: true,
@@ -537,13 +733,6 @@ app.get('/api/certificates', (req, res) => {
 
 // 2. Upload do Certificado
 app.post('/api/upload-certificate', upload.single('pfx'), async (req, res) => {
-  if (IS_VERCEL) {
-    return res.status(409).json({
-      success: false,
-      error: 'Na Vercel o certificado deve ser configurado por variáveis de ambiente NFSE_CERT_PFX_BASE64 e NFSE_CERT_PASSPHRASE.'
-    });
-  }
-
   try {
     const pfxBuffer = req.file ? req.file.buffer : null;
     const passphrase = req.body.passphrase;
@@ -563,6 +752,36 @@ app.post('/api/upload-certificate', upload.single('pfx'), async (req, res) => {
       });
     } catch (err) {
       return res.status(400).json({ success: false, error: 'Senha ou Certificado inválidos. Detalhes: ' + err.message });
+    }
+
+    if (useRemoteCertificateStorage()) {
+      const cert = {
+        id: crypto.randomUUID(),
+        originalName: req.file.originalname || 'certificado.pfx',
+        cnpj,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const saved = await upsertRemoteCertificateSecret({
+        id: cert.id,
+        filename: cert.originalName,
+        cnpj,
+        active: true,
+        pfxBuffer,
+        passphrase
+      });
+
+      if (!saved || !saved.success) {
+        return res.status(500).json({ success: false, error: 'Não foi possível salvar o certificado criptografado no Supabase.' });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Certificado salvo, criptografado e validado com sucesso!',
+        activeCertificateId: cert.id,
+        certificate: sanitizeCertificate(cert)
+      });
     }
 
     const id = crypto.randomUUID();
@@ -611,6 +830,21 @@ app.post('/api/select-certificate', async (req, res) => {
     return res.status(400).json({ success: false, error: 'certificateId é obrigatório.' });
   }
 
+  if (useRemoteCertificateStorage()) {
+    const selected = await setRemoteActiveCertificate(certificateId);
+    if (!selected || !selected.success) {
+      return res.status(404).json({ success: false, error: 'Certificado não encontrado.' });
+    }
+
+    const certificates = await listRemoteCertificates();
+    const cert = certificates.find(item => item.id === certificateId);
+    return res.json({
+      success: true,
+      activeCertificateId: certificateId,
+      certificate: cert ? sanitizeCertificate(cert) : null
+    });
+  }
+
   const cert = setActiveCertificate(certificateId);
   if (!cert) {
     return res.status(404).json({ success: false, error: 'Certificado não encontrado.' });
@@ -626,16 +860,28 @@ app.post('/api/select-certificate', async (req, res) => {
 });
 
 // 3. Remover Certificado
-app.post('/api/remove-certificate', (req, res) => {
-  if (IS_VERCEL) {
-    return res.status(409).json({
-      success: false,
-      error: 'Na Vercel o certificado é gerenciado por variáveis de ambiente e não pode ser removido pela interface.'
-    });
-  }
-
+app.post('/api/remove-certificate', async (req, res) => {
   try {
     const { certificateId } = req.body || {};
+    if (useRemoteCertificateStorage()) {
+      if (!certificateId) {
+        return res.status(400).json({ success: false, error: 'certificateId é obrigatório para remover certificado remoto.' });
+      }
+
+      const removed = await deleteRemoteCertificate(certificateId);
+      if (!removed || !removed.success) {
+        return res.status(404).json({ success: false, error: 'Certificado não encontrado.' });
+      }
+
+      const certificates = await listRemoteCertificates();
+      const activeCert = certificates.find(item => item.active) || certificates[0] || null;
+      return res.json({
+        success: true,
+        activeCertificateId: activeCert ? activeCert.id : null,
+        certificates: certificates.map(sanitizeCertificate)
+      });
+    }
+
     const index = getCertificatesIndex();
     const idToRemove = certificateId || index.activeCertificateId;
     const cert = index.certificates.find(item => item.id === idToRemove);
@@ -708,7 +954,7 @@ app.post('/api/fetch-batch', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Parâmetros startNsu e environment são obrigatórios.' });
     }
 
-    selectedCertificate = resolveCertificate(certificateId);
+    selectedCertificate = await resolveCertificateForRequest(certificateId);
     if (!selectedCertificate) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado. Selecione um certificado antes da consulta.' });
     }
@@ -1044,7 +1290,7 @@ app.post('/api/discover-nsu', async (req, res) => {
   try {
     const { environment, cnpjConsulta, certificateId } = req.body;
     
-    const selectedCertificate = resolveCertificate(certificateId);
+    const selectedCertificate = await resolveCertificateForRequest(certificateId);
     if (!selectedCertificate) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
     }
@@ -1107,7 +1353,7 @@ app.post('/api/discover-nsu', async (req, res) => {
 
 app.get('/api/sync-state', async (req, res) => {
   const { certificateId, environment = 'producao', cnpjConsulta = '' } = req.query;
-  const selectedCertificate = resolveCertificate(certificateId);
+  const selectedCertificate = await resolveCertificateForRequest(certificateId);
 
   if (!selectedCertificate) {
     return res.status(400).json({ success: false, error: 'Certificado nÃ£o configurado ou nÃ£o encontrado.' });

@@ -4,6 +4,7 @@ downloads/
 config/settings.json
 config/certificates.json
 config/supabase.json
+config/cert-encryption-key.txt
 config/certificate.pfx
 config/certificate.p12
 config/certificates/

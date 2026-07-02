@@ -50,7 +50,7 @@ e preencha a URL, chave publishable e segredo local da aplicacao.
 
 ## Deploy na Vercel
 
-O projeto suporta deploy na Vercel usando Node Functions. Em producao, o certificado A1 deve vir de variaveis de ambiente, porque o filesystem da Vercel nao deve ser usado para persistir `.pfx`.
+O projeto suporta deploy na Vercel usando Node Functions. Em producao, os certificados A1 enviados pela interface sao criptografados no backend e salvos no Supabase. A chave de criptografia fica somente nas variaveis da Vercel.
 
 Configure estas variaveis na Vercel:
 
@@ -58,20 +58,20 @@ Configure estas variaveis na Vercel:
 SUPABASE_URL
 SUPABASE_PUBLISHABLE_KEY
 SUPABASE_APP_SECRET
-NFSE_CERT_PFX_BASE64
-NFSE_CERT_PASSPHRASE
-NFSE_CERT_CNPJ
-NFSE_CERT_ID
-NFSE_CERT_NAME
+CERT_ENCRYPTION_KEY
+APP_ACCESS_USER
+APP_ACCESS_PASSWORD
 ```
 
-Para gerar o Base64 do certificado no PowerShell:
+Use o valor local salvo em:
 
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\caminho\certificado.pfx"))
+```text
+config/cert-encryption-key.txt
 ```
 
-Na Vercel, uploads de certificado pela interface ficam desabilitados. Para trocar certificado em producao, altere as variaveis `NFSE_CERT_*` e redeploye.
+Depois do deploy, o usuario pode enviar varios certificados pela propria interface, selecionar qual certificado usar e remover certificados cadastrados.
+
+Configure `APP_ACCESS_USER` e `APP_ACCESS_PASSWORD` para proteger a tela e as APIs com autenticação básica. Não deixe o sistema público sem essa proteção.
 
 Os XMLs consultados sao gravados temporariamente no Supabase por ate 12 horas para permitir download individual ou ZIP em ambiente serverless.
 
