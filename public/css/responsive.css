@@ -43,6 +43,7 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
 @media (max-width: 768px) {
   .app-layout {
     flex-direction: column;
@@ -58,18 +59,6 @@
 }
 
 /* Clean professional polish */
-body.light-mode {
-  --bg-color: #f6f8fb;
-  --sidebar-bg: #ffffff;
-  --card-bg: #ffffff;
-  --card-border: #dbe3ef;
-  --input-bg: #f8fafc;
-  --table-header-bg: #f1f5f9;
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-muted: #8a94a6;
-}
-
 body.light-mode .sidebar,
 body.light-mode .card,
 body.light-mode .metric-card,
@@ -80,7 +69,7 @@ body.light-mode .footer-status {
 
 body.light-mode .main-content {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(246, 248, 251, 1) 320px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), var(--bg-color) 320px),
     var(--bg-color);
 }
 
@@ -98,7 +87,7 @@ body.light-mode .main-content {
 
 .metric-card,
 .card {
-  border-radius: 8px;
+  border-radius: var(--border-radius);
 }
 
 .card h2,
@@ -138,10 +127,6 @@ body.light-mode .main-content {
 
 .descricao-texto {
   max-width: 320px;
-}
-
-.btn {
-  min-height: 34px;
 }
 
 @media (max-width: 768px) {

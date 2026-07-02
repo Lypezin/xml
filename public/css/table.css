@@ -1,74 +1,80 @@
 /* Bottom Datagrid Table & Badges */
 .data-grid-card {
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .results-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--card-border);
-  padding-bottom: 12px;
+  padding-bottom: 14px;
 }
 
 .results-header h2 {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .results-subtitle {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .results-actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .table-wrapper {
-  overflow-x: hidden;
+  overflow-x: auto;
   border-radius: var(--border-radius);
   border: 1px solid var(--card-border);
   background: var(--input-bg);
+  box-shadow: var(--shadow-sm);
 }
 
 .results-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 12.5px;
+  font-size: 13px;
   table-layout: fixed;
 }
 
 .results-table th,
 .results-table td {
-  padding: 10px 14px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--card-border);
+  transition: var(--transition);
 }
 
 .results-table th {
   background: var(--table-header-bg);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
-  font-size: 10.5px;
-  letter-spacing: 0.5px;
+  font-size: 11px;
+  letter-spacing: 0.8px;
 }
 
 .results-table tr:last-child td {
   border-bottom: none;
 }
 
+.results-table tbody tr {
+  transition: var(--transition);
+}
+
 .results-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.005);
+  background: rgba(59, 130, 246, 0.03);
 }
 
 body.light-mode .results-table tbody tr:hover {
-  background: rgba(0, 0, 0, 0.01);
+  background: rgba(37, 99, 235, 0.02);
 }
 
 .text-center {
@@ -77,12 +83,17 @@ body.light-mode .results-table tbody tr:hover {
 
 .cnpj-badge {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10.5px;
-  background: var(--sidebar-bg);
-  padding: 2px 5px;
-  border-radius: 3px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 8px;
+  border-radius: 6px;
   color: var(--text-secondary);
   border: 1px solid var(--card-border);
+  font-weight: 500;
+}
+
+body.light-mode .cnpj-badge {
+  background: #f1f5f9;
 }
 
 .cnpj-badge.wrap {
@@ -94,10 +105,10 @@ body.light-mode .results-table tbody tr:hover {
 }
 
 .tipo-badge {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 3px;
+  padding: 3px 6px;
+  border-radius: 6px;
   display: inline-block;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -116,13 +127,13 @@ body.light-mode .results-table tbody tr:hover {
 }
 
 .status-badge {
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 999px;
+  padding: 4px 8px;
+  border-radius: 50px;
   display: inline-flex;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   white-space: nowrap;
 }
 

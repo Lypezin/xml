@@ -1,62 +1,70 @@
 /* Sidebar Navigation Styling */
 .sidebar {
-  width: 250px;
+  width: 260px;
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--card-border);
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  padding: 32px 20px;
   flex-shrink: 0;
   z-index: 10;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: var(--transition);
+  backdrop-filter: blur(12px);
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 32px;
-  padding-left: 6px;
+  gap: 12px;
+  margin-bottom: 40px;
+  padding-left: 8px;
 }
 
 .brand-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   color: var(--primary-hover);
+  filter: drop-shadow(0 2px 8px var(--primary-glow));
 }
 
 body.light-mode .brand-icon {
   color: var(--primary);
+  filter: none;
 }
 
 .brand-text h2 {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.2px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
   color: var(--text-primary);
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .brand-text span {
   font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 500;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 12px 16px;
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   border-radius: var(--border-radius);
   transition: var(--transition);
   border: 1px solid transparent;
@@ -65,29 +73,36 @@ body.light-mode .brand-icon {
 .nav-item:hover {
   background: var(--input-bg);
   color: var(--text-primary);
+  transform: translateX(4px);
 }
 
 .nav-item.active {
-  background: var(--primary-glow);
+  background: linear-gradient(135deg, var(--primary-glow) 0%, rgba(139, 92, 246, 0.05) 100%);
   color: var(--primary-hover);
-  border-color: rgba(2, 132, 199, 0.15);
+  border-color: rgba(59, 130, 246, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 body.light-mode .nav-item.active {
   background: var(--primary-glow);
   color: var(--primary);
-  border-color: rgba(2, 132, 199, 0.2);
+  border-color: rgba(37, 99, 235, 0.15);
 }
 
 .nav-icon-svg {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
+  transition: var(--transition);
+}
+
+.nav-item:hover .nav-icon-svg {
+  transform: scale(1.05);
 }
 
 /* Theme Switcher */
 .theme-switcher-container {
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: 24px;
+  padding-top: 24px;
   border-top: 1px solid var(--card-border);
 }
 
@@ -96,50 +111,56 @@ body.light-mode .nav-item.active {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
 }
 
 .theme-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   color: var(--text-secondary);
 }
 
 /* Sidebar Footer & Status Indicator */
 .sidebar-footer {
   margin-top: auto;
-  padding-top: 16px;
+  padding-top: 24px;
   border-top: 1px solid var(--card-border);
 }
 
 .footer-status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--text-secondary);
   background: var(--input-bg);
-  padding: 8px 12px;
+  padding: 10px 16px;
   border-radius: var(--border-radius);
   border: 1px solid var(--card-border);
 }
 
 .status-indicator {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: inline-block;
+  box-shadow: 0 0 8px currentColor;
 }
 
 .status-indicator.online {
   background-color: var(--success);
+  color: var(--success);
 }
 
 .status-indicator.offline {
   background-color: var(--danger);
+  color: var(--danger);
 }
 
 .status-indicator.warning {
   background-color: var(--warning);
+  color: var(--warning);
 }
