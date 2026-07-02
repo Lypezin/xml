@@ -58,6 +58,7 @@ const certActiveState = document.getElementById('cert-active-state-view');
 const activeCertName = document.getElementById('active-cert-name-view');
 const activeCertCnpj = document.getElementById('active-cert-cnpj-view');
 const btnReplaceCert = document.getElementById('btn-replace-cert-view');
+const btnDiagnoseCert = document.getElementById('btn-diagnose-cert-view');
 const certList = document.getElementById('cert-list');
 const certCountLabel = document.getElementById('cert-count-label');
 
@@ -498,6 +499,40 @@ btnReplaceCert.addEventListener('click', async () => {
     log(`Erro ao remover certificado: ${err.message}`, 'error');
   }
 });
+
+if (btnDiagnoseCert) {
+  btnDiagnoseCert.addEventListener('click', async () => {
+    const certificateId = selectCertificate ? selectCertificate.value : activeCertificateId;
+    const environment = selectEnvironment ? selectEnvironment.value : 'producao';
+
+    if (!certificateId) {
+      log('Nenhum certificado selecionado para diagnosticar.', 'warning');
+      return;
+    }
+
+    btnDiagnoseCert.disabled = true;
+    log('Diagnosticando certificado, criptografia e ambiente selecionado...');
+
+    try {
+      const params = new URLSearchParams({ certificateId, environment });
+      const res = await fetch(`/api/certificate-diagnostics?${params.toString()}`);
+      const data = await res.json();
+
+      log(`Diagnostico: ambiente=${data.environment || environment} | endpoint=${data.nationalApiBaseUrl || 'N/A'}`);
+      log(`CERT_ENCRYPTION_KEY: configurada=${data.encryptionKey?.configured ? 'sim' : 'nao'} | tamanhoValido=${data.encryptionKey?.validLength ? 'sim' : 'nao'} | origem=${data.encryptionKey?.source || 'N/A'}`);
+
+      if (data.success) {
+        log(`PFX OK: descriptografado e validado. Titular=${data.pfx?.subject || 'N/A'} | CNPJ extraido=${data.pfx?.cnpjExtracted || 'N/A'} | validade=${data.pfx?.validUntil || 'N/A'}`, 'success');
+      } else {
+        log(`Diagnostico falhou: ${data.error || data.pfx?.error || 'erro desconhecido'}`, 'error');
+      }
+    } catch (err) {
+      log(`Erro ao diagnosticar certificado: ${err.message}`, 'error');
+    } finally {
+      btnDiagnoseCert.disabled = false;
+    }
+  });
+}
 
 // Helper para atualizar ícone e texto do botão de início sem emojis
 function setBtnStartActive(active, isResume = false) {

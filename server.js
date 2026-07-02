@@ -235,7 +235,13 @@ async function supabaseRpc(functionName, payload) {
 }
 
 function normalizeEnvironment(environment) {
-  return 'producao';
+  return environment === 'homologacao' ? 'homologacao' : 'producao';
+}
+
+function getNationalApiBaseUrl(environment) {
+  return normalizeEnvironment(environment) === 'producao'
+    ? 'https://adn.nfse.gov.br/contribuintes'
+    : 'https://adn.producaorestrita.nfse.gov.br/contribuintes';
 }
 
 async function syncSupabaseCertificate(cert, active = true) {
@@ -647,6 +653,47 @@ function getCertificateEncryptionKey() {
   }
 
   return key.length === 32 ? key : null;
+}
+
+function getCertificateEncryptionKeyDiagnostics() {
+  let raw = process.env.CERT_ENCRYPTION_KEY;
+  let source = raw ? 'env' : null;
+
+  if (!raw && !IS_VERCEL) {
+    const keyPath = path.join(CONFIG_DIR, 'cert-encryption-key.txt');
+    if (fs.existsSync(keyPath)) {
+      try {
+        raw = fs.readFileSync(keyPath, 'utf8');
+        source = 'config/cert-encryption-key.txt';
+      } catch (e) {
+        return {
+          configured: false,
+          validLength: false,
+          source: 'config/cert-encryption-key.txt',
+          error: e.message
+        };
+      }
+    }
+  }
+
+  if (!raw) {
+    return {
+      configured: false,
+      validLength: false,
+      source: null
+    };
+  }
+
+  raw = raw.trim().replace(/^["']|["']$/g, '');
+  const key = getCertificateEncryptionKey();
+
+  return {
+    configured: true,
+    validLength: Boolean(key),
+    source,
+    format: /^[0-9a-f]{64}$/i.test(raw) ? 'hex' : 'base64-or-utf8',
+    rawLength: raw.length
+  };
 }
 
 function encryptCertificateValue(value) {
@@ -1080,6 +1127,67 @@ app.get('/api/certificates', async (req, res) => {
   });
 });
 
+app.get('/api/certificate-diagnostics', async (req, res) => {
+  const environment = normalizeEnvironment(req.query.environment || 'producao');
+  const certificateId = req.query.certificateId || null;
+
+  try {
+    const selectedCertificate = await resolveCertificateForRequest(certificateId);
+    if (!selectedCertificate) {
+      return res.status(400).json({
+        success: false,
+        remoteStorage: useRemoteCertificateStorage(),
+        encryptionKey: getCertificateEncryptionKeyDiagnostics(),
+        environment,
+        nationalApiBaseUrl: getNationalApiBaseUrl(environment),
+        error: 'Certificado nao configurado ou nao encontrado.'
+      });
+    }
+
+    const pfxBuffer = getCertificateBuffer(selectedCertificate);
+    if (!pfxBuffer) {
+      return res.status(400).json({
+        success: false,
+        remoteStorage: useRemoteCertificateStorage(),
+        encryptionKey: getCertificateEncryptionKeyDiagnostics(),
+        environment,
+        nationalApiBaseUrl: getNationalApiBaseUrl(environment),
+        certificate: sanitizeCertificate(selectedCertificate),
+        error: 'Arquivo ou variavel do certificado nao encontrada.'
+      });
+    }
+
+    const certificateValidation = validateCertificateForNationalApi(pfxBuffer, selectedCertificate.passphrase);
+
+    return res.json({
+      success: certificateValidation.valid,
+      remoteStorage: useRemoteCertificateStorage(),
+      encryptionKey: getCertificateEncryptionKeyDiagnostics(),
+      environment,
+      nationalApiBaseUrl: getNationalApiBaseUrl(environment),
+      certificate: sanitizeCertificate(selectedCertificate),
+      pfx: {
+        decryptable: true,
+        valid: certificateValidation.valid,
+        subject: certificateValidation.subject || null,
+        cnpjExtracted: certificateValidation.cnpj || null,
+        certificatesInPfx: certificateValidation.certificatesInPfx || null,
+        validUntil: certificateValidation.validUntil || null,
+        error: certificateValidation.error || null
+      }
+    });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      remoteStorage: useRemoteCertificateStorage(),
+      encryptionKey: getCertificateEncryptionKeyDiagnostics(),
+      environment,
+      nationalApiBaseUrl: getNationalApiBaseUrl(environment),
+      error: 'Falha ao diagnosticar certificado: ' + e.message
+    });
+  }
+});
+
 // 2. Upload do Certificado
 app.post('/api/upload-certificate', upload.single('pfx'), async (req, res) => {
   try {
@@ -1363,14 +1471,12 @@ app.post('/api/fetch-batch', async (req, res) => {
     });
 
     // Definir URL Base
-    const baseUrl = environment === 'producao' 
-      ? 'https://adn.nfse.gov.br/contribuintes'
-      : 'https://adn.producaorestrita.nfse.gov.br/contribuintes';
+    const baseUrl = getNationalApiBaseUrl(requestEnvironment);
 
     // Montar URL do endpoint
-    let url = `${baseUrl}/DFe/${startNsu}`;
-    if (cnpjConsulta) {
-      url += `?cnpjConsulta=${cnpjConsulta}`;
+    let url = `${baseUrl}/DFe/${requestStartNsu}`;
+    if (requestCnpjConsulta) {
+      url += `?cnpjConsulta=${requestCnpjConsulta}`;
     }
 
     console.log(`Fazendo requisição à API Nacional: ${url}`);
@@ -1675,13 +1781,15 @@ app.post('/api/fetch-batch', async (req, res) => {
 app.post('/api/discover-nsu', async (req, res) => {
   try {
     const { environment, cnpjConsulta, certificateId } = req.body;
+    const requestEnvironment = normalizeEnvironment(environment);
+    const requestCnpjConsulta = cnpjConsulta || '';
     
     const selectedCertificate = await resolveCertificateForRequest(certificateId);
     if (!selectedCertificate) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
     }
 
-    const cnpjRootError = validateCnpjConsultaRoot(cnpjConsulta, selectedCertificate.cnpj);
+    const cnpjRootError = validateCnpjConsultaRoot(requestCnpjConsulta, selectedCertificate.cnpj);
     if (cnpjRootError) {
       return res.status(400).json({ success: false, error: cnpjRootError });
     }
@@ -1702,13 +1810,11 @@ app.post('/api/discover-nsu', async (req, res) => {
       rejectUnauthorized: false
     });
 
-    const baseUrl = environment === 'producao' 
-      ? 'https://adn.nfse.gov.br/contribuintes'
-      : 'https://adn.producaorestrita.nfse.gov.br/contribuintes';
+    const baseUrl = getNationalApiBaseUrl(requestEnvironment);
 
     let url = `${baseUrl}/DFe/0`;
-    if (cnpjConsulta) {
-      url += `?cnpjConsulta=${cnpjConsulta}`;
+    if (requestCnpjConsulta) {
+      url += `?cnpjConsulta=${requestCnpjConsulta}`;
     }
 
     const response = await axios.get(url, {

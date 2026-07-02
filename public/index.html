@@ -210,10 +210,11 @@
                 <small class="helper-text">Selecione qual certificado digital será usado nesta consulta.</small>
               </div>
 
-              <div class="input-group" style="display: none;">
+              <div class="input-group">
                 <label for="environment">Ambiente de Execução:</label>
                 <select id="environment">
                   <option value="producao" selected>Produção (Notas com valor jurídico)</option>
+                  <option value="homologacao">Homologação / Produção restrita</option>
                 </select>
               </div>
 
@@ -427,6 +428,9 @@
               </div>
               <button class="btn btn-danger btn-sm" id="btn-replace-cert-view">
                 Remover Certificado Ativo
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-diagnose-cert-view" style="margin-left: 8px;">
+                Diagnosticar Certificado
               </button>
             </div>
           </section>
