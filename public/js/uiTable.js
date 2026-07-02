@@ -1,18 +1,81 @@
 // Renderização de Documentos na Tabela do Dashboard
 
 window.AppUiTable = {
-  appendDocumentsToTable(docs) {
-    const emptyRow = document.getElementById('empty-row');
-    if (emptyRow) emptyRow.remove();
+  pageSize: 100,
+  currentPage: 1,
+  documents: [],
+  remoteTotal: 0,
+  remoteMode: false,
 
+  normalizeDocument(doc) {
+    const metadata = doc.metadata || {};
+    return {
+      nsu: doc.nsu,
+      tipo: doc.tipo || metadata.tipo || 'NFSE',
+      chave: doc.chave || metadata.chave || 'N/A',
+      status: metadata.status || doc.status || 'Autorizada',
+      numeroNfse: doc.numero_nfse || metadata.numeroNfse || 'N/A',
+      numeroDps: metadata.numeroDps || 'N/A',
+      serieDps: metadata.serieDps || 'N/A',
+      prestadorCnpj: doc.prestador_cnpj || metadata.prestadorCnpj || 'N/A',
+      prestadorNome: doc.prestador_nome || metadata.prestadorNome || 'N/A',
+      tomadorCnpj: doc.tomador_cnpj || metadata.tomadorCnpj || 'N/A',
+      tomadorNome: doc.tomador_nome || metadata.tomadorNome || 'N/A',
+      descricao: metadata.descricao || metadata.descricaoServico || 'N/A',
+      municipioPrestacao: doc.municipio_prestacao || metadata.municipioPrestacao || 'N/A',
+      codigoTributacao: doc.codigo_tributacao || metadata.codigoTributacao || 'N/A',
+      eventoMotivo: metadata.eventoMotivo || 'N/A',
+      tributacaoNacional: metadata.tributacaoNacional || '',
+      valorServico: doc.valor_servico || metadata.valorServico || '0.00',
+      dataEmissao: doc.data_emissao || metadata.dataEmissao || 'N/A',
+      competencia: metadata.competencia || 'N/A',
+      dataProcessamento: metadata.dataProcessamento || 'N/A',
+      token: metadata.token || doc.token || '',
+      arquivo: doc.file_name || metadata.arquivo || ''
+    };
+  },
+
+  setDocuments(docs, total = null, page = 1) {
+    this.documents = (docs || []).map(doc => this.normalizeDocument(doc));
+    this.remoteTotal = total === null ? this.documents.length : Number(total || 0);
+    this.remoteMode = total !== null;
+    this.currentPage = page;
+    this.renderCurrentPage();
+  },
+
+  appendDocumentsToTable(docs) {
+    this.remoteMode = false;
+    const normalized = (docs || []).map(doc => this.normalizeDocument(doc));
+    const byNsu = new Map(this.documents.map(doc => [String(doc.nsu), doc]));
+    normalized.forEach(doc => byNsu.set(String(doc.nsu), doc));
+    this.documents = Array.from(byNsu.values());
+    this.currentPage = Math.max(1, Math.ceil(this.documents.length / this.pageSize));
+    this.renderCurrentPage();
+  },
+
+  renderCurrentPage() {
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
     const mode = selectSearchMode ? selectSearchMode.value : 'asc';
-    const orderedDocs = [...docs].sort((a, b) => {
+    const orderedDocs = [...this.documents].sort((a, b) => {
       const aNsu = Number(a.nsu || 0);
       const bNsu = Number(b.nsu || 0);
       return mode === 'desc' ? bNsu - aNsu : aNsu - bNsu;
     });
 
-    orderedDocs.forEach(doc => {
+    const totalItems = this.remoteMode ? this.remoteTotal : orderedDocs.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / this.pageSize));
+    this.currentPage = Math.min(Math.max(this.currentPage, 1), totalPages);
+    const start = this.remoteMode ? ((this.currentPage - 1) * this.pageSize) : ((this.currentPage - 1) * this.pageSize);
+    const pageDocs = this.remoteMode ? orderedDocs : orderedDocs.slice(start, start + this.pageSize);
+
+    if (pageDocs.length === 0) {
+      tableBody.innerHTML = '<tr id="empty-row"><td colspan="7" class="text-center">Nenhum documento sincronizado ainda.</td></tr>';
+      this.updatePagination(totalItems, 0, 0);
+      return;
+    }
+
+    pageDocs.forEach(doc => {
       const tr = document.createElement('tr');
       const valorFormatado = window.AppUtils.formatCurrency(doc.valorServico);
 
@@ -60,5 +123,33 @@ window.AppUiTable = {
       `;
       tableBody.appendChild(tr);
     });
+
+    this.updatePagination(totalItems, start + 1, start + pageDocs.length);
+  },
+
+  updatePagination(total, from, to) {
+    if (historyCountLabel) historyCountLabel.innerText = `${total} XML${total === 1 ? '' : 's'} sincronizado${total === 1 ? '' : 's'}`;
+    if (historyPageInfo) historyPageInfo.innerText = total > 0 ? `${from}-${to} de ${total}` : '0 de 0';
+    if (btnHistoryPrev) btnHistoryPrev.disabled = this.currentPage <= 1;
+    if (btnHistoryNext) btnHistoryNext.disabled = this.currentPage >= Math.ceil(Math.max(total, 1) / this.pageSize);
+    if (statTotalNotas) statTotalNotas.innerText = total;
+  },
+
+  nextPage() {
+    if (this.remoteMode && window.AppSyncController?.loadPersistedHistory) {
+      window.AppSyncController.loadPersistedHistory(this.currentPage + 1);
+      return;
+    }
+    this.currentPage += 1;
+    this.renderCurrentPage();
+  },
+
+  prevPage() {
+    if (this.remoteMode && window.AppSyncController?.loadPersistedHistory) {
+      window.AppSyncController.loadPersistedHistory(this.currentPage - 1);
+      return;
+    }
+    this.currentPage -= 1;
+    this.renderCurrentPage();
   }
 };

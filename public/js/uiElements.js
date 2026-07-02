@@ -55,6 +55,10 @@ window.AppUiElements = {
     window.btnClearDownloads = document.getElementById('btn-clear-downloads');
     window.btnDownloadZip = document.getElementById('btn-download-zip');
     window.tableBody = document.getElementById('table-body');
+    window.historyCountLabel = document.getElementById('history-count-label');
+    window.historyPageInfo = document.getElementById('history-page-info');
+    window.btnHistoryPrev = document.getElementById('btn-history-prev');
+    window.btnHistoryNext = document.getElementById('btn-history-next');
 
     window.navDownload = document.getElementById('nav-download');
     window.navCertificado = document.getElementById('nav-certificado');

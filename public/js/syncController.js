@@ -1,6 +1,34 @@
 // Controle de Consultas e Estado do Certificado
 
 window.AppSyncController = {
+  async loadPersistedHistory(page = 1) {
+    const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
+    if (!certId || !window.AppApi?.listDocuments || !window.AppUiTable?.setDocuments) return;
+
+    try {
+      const safePage = Math.max(1, Number(page || 1));
+      const limit = window.AppUiTable.pageSize || 100;
+      const data = await window.AppApi.listDocuments({
+        certificateId: certId,
+        environment: selectEnvironment ? selectEnvironment.value : 'producao',
+        cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+        limit,
+        offset: (safePage - 1) * limit
+      });
+
+      if (!data.success) {
+        window.AppUi.log(`Erro ao carregar historico: ${data.error}`, 'warning');
+        return;
+      }
+
+      window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage);
+      btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
+      window.AppUi.log(`Historico carregado: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
+    } catch (err) {
+      window.AppUi.log(`Erro ao carregar historico: ${err.message}`, 'warning');
+    }
+  },
+
   async checkCertStatus() {
     try {
       const data = await window.AppApi.fetchCertStatus();
@@ -22,6 +50,7 @@ window.AppSyncController = {
           indicator.className = 'status-indicator online';
           txt.innerText = `Certificado Ativo: ${data.cnpj}`;
         }
+        this.loadPersistedHistory();
       } else {
         certUploadState.classList.add('active');
         certActiveState.classList.remove('active');
@@ -138,7 +167,6 @@ window.AppSyncController = {
         window.AppUi.log(`Lote processado! ${documentos.length} XMLs disponíveis.`, 'success');
         window.AppUi.appendDocumentsToTable(documentos);
         window.totalDownloaded += documentos.length;
-        statTotalNotas.innerText = window.totalDownloaded;
         btnDownloadZip.disabled = false;
         
         if (window.isCrawlerActive) {

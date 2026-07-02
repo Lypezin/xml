@@ -65,7 +65,10 @@ window.AppEvents = {
     }
 
     if (selectCertificate) {
-      selectCertificate.addEventListener('change', () => window.AppSyncController.selectCertificateById(selectCertificate.value));
+      selectCertificate.addEventListener('change', async () => {
+        await window.AppSyncController.selectCertificateById(selectCertificate.value);
+        window.AppSyncController.loadPersistedHistory();
+      });
     }
 
     btnStart.addEventListener('click', () => {
@@ -176,7 +179,24 @@ window.AppEvents = {
         statAmbiente.className = selectEnvironment.value === 'producao' ? 'metric-value text-primary' : 'metric-value text-warning';
       }
       window.AppUi.log(`Ambiente alterado para: ${envText}`);
+      window.AppSyncController.loadPersistedHistory();
     });
+
+    if (inputCnpjConsulta) {
+      inputCnpjConsulta.addEventListener('change', () => window.AppSyncController.loadPersistedHistory());
+    }
+
+    if (selectSearchMode) {
+      selectSearchMode.addEventListener('change', () => window.AppUiTable.renderCurrentPage());
+    }
+
+    if (btnHistoryPrev) {
+      btnHistoryPrev.addEventListener('click', () => window.AppUiTable.prevPage());
+    }
+
+    if (btnHistoryNext) {
+      btnHistoryNext.addEventListener('click', () => window.AppUiTable.nextPage());
+    }
 
     if (navDownload) {
       navDownload.addEventListener('click', (e) => {
@@ -214,7 +234,7 @@ window.AppEvents = {
           const settings = {
             autoSyncEnabled: false,
             autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
-            autoSyncEnvironment: schedulerEnv?.value || 'producao',
+            autoSyncEnvironment: selectEnvironment?.value || schedulerEnv?.value || 'producao',
             autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
             autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 65)
           };
@@ -239,7 +259,7 @@ window.AppEvents = {
           const settings = {
             autoSyncEnabled: false,
             autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
-            autoSyncEnvironment: schedulerEnv?.value || 'producao',
+            autoSyncEnvironment: selectEnvironment?.value || schedulerEnv?.value || 'producao',
             autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
             autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 65)
           };

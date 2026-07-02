@@ -83,21 +83,23 @@ router.get('/download-zip', async (req, res) => {
 
 router.get('/list-documents', async (req, res) => {
   try {
-    const { certificateId, environment = 'producao', startDate, endDate, cnpj } = req.query;
+    const { certificateId, environment = 'producao', startDate, endDate, cnpj, limit, offset } = req.query;
     const cert = await resolveCertificateForRequest(certificateId);
     if (!cert) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado.' });
     }
 
-    const documents = await listRemoteDocuments({
+    const result = await listRemoteDocuments({
       certificateId: cert.id,
       environment,
       startDate: startDate || null,
       endDate: endDate || null,
-      cnpj: cnpj || ''
+      cnpj: cnpj || '',
+      limit: limit || null,
+      offset: offset || null
     });
 
-    return res.json({ success: true, documents });
+    return res.json({ success: true, documents: result.documents, total: result.total });
   } catch (err) {
     console.error('Erro ao listar documentos:', err);
     return res.status(500).json({ success: false, error: err.message });
@@ -112,13 +114,14 @@ router.post('/download-period-zip', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
     }
 
-    const documents = await listRemoteDocuments({
+    const result = await listRemoteDocuments({
       certificateId: cert.id,
       environment,
       startDate: startDate || null,
       endDate: endDate || null,
       cnpj: cnpj || ''
     });
+    const documents = result.documents || [];
 
     if (!documents || documents.length === 0) {
       return res.status(400).json({ success: false, error: 'Nenhum documento no período.' });

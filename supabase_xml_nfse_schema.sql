@@ -826,7 +826,9 @@ create or replace function public.xml_nfse_list_documents(
   p_environment text,
   p_start_date date default null,
   p_end_date date default null,
-  p_cnpj_consulta text default ''
+  p_cnpj_consulta text default '',
+  p_limit integer default null,
+  p_offset integer default null
 )
 returns jsonb
 language plpgsql
@@ -835,21 +837,41 @@ set search_path = xml_nfse, public, extensions
 as $$
 declare
   rows_data jsonb;
+  total_count integer;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  select coalesce(jsonb_agg(to_jsonb(d.*) order by d.nsu desc), '[]'::jsonb)
-  into rows_data
-  from xml_nfse.documents d
-  where d.certificate_id = p_certificate_id
-    and d.environment = p_environment
-    and (p_start_date is null or d.data_emissao >= p_start_date)
-    and (p_end_date is null or d.data_emissao <= p_end_date)
-    and (coalesce(p_cnpj_consulta, '') = '' or d.prestador_cnpj = p_cnpj_consulta or d.tomador_cnpj = p_cnpj_consulta);
+  with filtered as (
+    select d.*
+    from xml_nfse.documents d
+    where d.certificate_id = p_certificate_id
+      and d.environment = p_environment
+      and (p_start_date is null or d.data_emissao >= p_start_date)
+      and (p_end_date is null or d.data_emissao <= p_end_date)
+      and (coalesce(p_cnpj_consulta, '') = '' or d.prestador_cnpj = p_cnpj_consulta or d.tomador_cnpj = p_cnpj_consulta)
+  )
+  select count(*) into total_count
+  from filtered;
 
-  return rows_data;
+  with filtered as (
+    select d.*
+    from xml_nfse.documents d
+    where d.certificate_id = p_certificate_id
+      and d.environment = p_environment
+      and (p_start_date is null or d.data_emissao >= p_start_date)
+      and (p_end_date is null or d.data_emissao <= p_end_date)
+      and (coalesce(p_cnpj_consulta, '') = '' or d.prestador_cnpj = p_cnpj_consulta or d.tomador_cnpj = p_cnpj_consulta)
+    order by d.nsu desc
+    limit coalesce(p_limit, 100000)
+    offset coalesce(p_offset, 0)
+  )
+  select coalesce(jsonb_agg(to_jsonb(filtered.*)), '[]'::jsonb)
+  into rows_data
+  from filtered;
+
+  return jsonb_build_object('documents', rows_data, 'total', total_count);
 end;
 $$;
 
-grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text) to anon, authenticated;
+grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer) to anon, authenticated;
 

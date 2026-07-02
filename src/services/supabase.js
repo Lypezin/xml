@@ -122,15 +122,23 @@ async function listRemoteCertificates() {
   return Array.isArray(result) ? result : [];
 }
 
-async function listRemoteDocuments({ certificateId, environment, startDate, endDate, cnpj }) {
+async function listRemoteDocuments({ certificateId, environment, startDate, endDate, cnpj, limit = null, offset = null }) {
   const result = await supabaseRpc('xml_nfse_list_documents', {
     p_certificate_id: certificateId,
     p_environment: normalizeEnvironment(environment),
     p_start_date: startDate || null,
     p_end_date: endDate || null,
-    p_cnpj_consulta: cnpj || ''
+    p_cnpj_consulta: cnpj || '',
+    p_limit: limit === null ? null : Number(limit),
+    p_offset: offset === null ? null : Number(offset)
   });
-  return Array.isArray(result) ? result : [];
+  if (Array.isArray(result)) {
+    return { documents: result, total: result.length };
+  }
+  return {
+    documents: Array.isArray(result?.documents) ? result.documents : [],
+    total: Number(result?.total || 0)
+  };
 }
 
 async function setRemoteActiveCertificate(certificateId) {
