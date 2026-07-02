@@ -282,6 +282,20 @@ function handleFileSelection(file) {
   log(`Arquivo selecionado: ${file.name}`);
 }
 
+function logNationalApiContext(nationalApi) {
+  if (!nationalApi) return;
+
+  log(`ADN: HTTP=${nationalApi.httpStatus || 'N/A'} | StatusProcessamento=${nationalApi.statusProcessamento || 'N/A'} | ambiente=${nationalApi.environment || 'N/A'} | cnpjConsulta=${nationalApi.cnpjConsulta || 'N/A'}`, 'warning');
+  if (nationalApi.endpoint) {
+    log(`ADN endpoint: ${nationalApi.endpoint}`, 'warning');
+  }
+  if (Array.isArray(nationalApi.errors) && nationalApi.errors.length > 0) {
+    nationalApi.errors.forEach(err => {
+      log(`ADN erro ${err.code || 'sem codigo'}: ${err.description || 'sem descricao'}`, 'error');
+    });
+  }
+}
+
 // ----------------------------------------------------
 // CONFIGURAÇÃO DO CERTIFICADO
 // ----------------------------------------------------
@@ -644,6 +658,7 @@ async function discoverAndStart() {
       runQueryLoop();
     } else {
       log('Erro ao descobrir NSU: ' + (data.error || 'Nenhum documento encontrado.'), 'error');
+      logNationalApiContext(data.nationalApi);
       stopQuerying();
     }
   } catch (err) {
@@ -703,6 +718,7 @@ async function runQueryLoop() {
 
     if (!data.success) {
       log(`Erro na resposta da NFS-e: ${data.error}`, 'error');
+      logNationalApiContext(data.nationalApi);
       if (data.error.includes('Consumo Indevido') || data.error.includes('429') || data.error.includes('656')) {
         alertRateLimit.style.display = 'block';
       } else {

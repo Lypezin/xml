@@ -613,6 +613,81 @@ function formatNationalApiRejection(responseData) {
   return `Rejeicao da API Nacional: ${rawMessage}`;
 }
 
+function getNationalApiStatus(responseData) {
+  return String(
+    responseData?.StatusProcessamento ||
+    responseData?.statusProcessamento ||
+    responseData?.status ||
+    ''
+  ).trim();
+}
+
+function extractDfeDocuments(responseData) {
+  if (!responseData) return [];
+
+  if (Array.isArray(responseData.LoteDFe)) return responseData.LoteDFe;
+  if (Array.isArray(responseData.loteDFe)) return responseData.loteDFe;
+  if (Array.isArray(responseData)) return responseData;
+
+  const keys = Object.keys(responseData);
+  for (const key of keys) {
+    const value = responseData[key];
+    if (Array.isArray(value) && value.length > 0 && (value[0].ArquivoXml || value[0].arquivoXml)) {
+      return value;
+    }
+  }
+
+  if (responseData.ArquivoXml || responseData.conteudo || responseData.docZip) {
+    return [responseData];
+  }
+
+  return [];
+}
+
+function getResponseNsu(responseData, variants) {
+  for (const key of variants) {
+    if (responseData && responseData[key] !== undefined && responseData[key] !== null) {
+      return Number(responseData[key]);
+    }
+  }
+  return null;
+}
+
+function resolveCnpjConsulta(cnpjConsulta, certificateCnpj) {
+  const requested = onlyDigits(cnpjConsulta);
+  if (requested.length === 14) return requested;
+
+  const certificate = onlyDigits(certificateCnpj);
+  return certificate.length === 14 ? certificate : '';
+}
+
+function buildDfeUrl(baseUrl, nsu, cnpjConsulta) {
+  const params = new URLSearchParams();
+  if (cnpjConsulta) {
+    params.set('cnpjConsulta', cnpjConsulta);
+  }
+  params.set('lote', 'true');
+
+  return `${baseUrl}/DFe/${Number(nsu || 0)}?${params.toString()}`;
+}
+
+function isNationalApiFiscalStatus(status) {
+  return status >= 200 && status < 300 || status === 400 || status === 404;
+}
+
+function buildNationalApiContext(response, url, environment, cnpjConsulta) {
+  const data = response?.data;
+  return {
+    httpStatus: response?.status || null,
+    statusProcessamento: getNationalApiStatus(data) || null,
+    endpoint: url,
+    environment,
+    cnpjConsulta: cnpjConsulta || null,
+    errors: extractNationalApiErrors(data),
+    rawKeys: data && typeof data === 'object' ? Object.keys(data) : []
+  };
+}
+
 function useRemoteCertificateStorage() {
   return IS_VERCEL || process.env.CERT_STORAGE_MODE === 'supabase';
 }
@@ -1440,6 +1515,8 @@ app.post('/api/fetch-batch', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado. Selecione um certificado antes da consulta.' });
     }
 
+    requestCnpjConsulta = resolveCnpjConsulta(requestCnpjConsulta, selectedCertificate.cnpj);
+
     const cnpjRootError = validateCnpjConsultaRoot(requestCnpjConsulta, selectedCertificate.cnpj);
     if (cnpjRootError) {
       return res.status(400).json({ success: false, error: cnpjRootError });
@@ -1474,16 +1551,14 @@ app.post('/api/fetch-batch', async (req, res) => {
     const baseUrl = getNationalApiBaseUrl(requestEnvironment);
 
     // Montar URL do endpoint
-    let url = `${baseUrl}/DFe/${requestStartNsu}`;
-    if (requestCnpjConsulta) {
-      url += `?cnpjConsulta=${requestCnpjConsulta}`;
-    }
+    const url = buildDfeUrl(baseUrl, requestStartNsu, requestCnpjConsulta);
 
     console.log(`Fazendo requisição à API Nacional: ${url}`);
 
     const response = await axios.get(url, {
       httpsAgent,
       timeout: 15000,
+      validateStatus: isNationalApiFiscalStatus,
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'NFS-e Batch Downloader Local'
@@ -1501,10 +1576,39 @@ app.post('/api/fetch-batch', async (req, res) => {
     console.log(`Resposta HTTP ${response.status} | Chaves: ${Object.keys(data).join(', ')}`);
     console.log(`StatusProcessamento: ${data.StatusProcessamento || 'N/A'}`);
 
+    const nationalStatus = getNationalApiStatus(data);
+    if (nationalStatus === 'REJEICAO') {
+      const errorMsg = formatNationalApiRejection(data) || 'Rejeicao da API Nacional sem detalhes.';
+
+      await syncSupabaseState({
+        certificateId: selectedCertificate.id,
+        environment: requestEnvironment,
+        cnpjConsulta: requestCnpjConsulta,
+        lastNsu: requestStartNsu,
+        maxNsuSeen: requestStartNsu,
+        status: 'error',
+        lastError: errorMsg
+      });
+      await finishSupabaseRun({
+        runId: supabaseRunId,
+        status: 'error',
+        endNsu: requestStartNsu,
+        maxNsuSeen: requestStartNsu,
+        documentsFound: 0,
+        errorMessage: errorMsg
+      });
+
+      return res.status(400).json({
+        success: false,
+        error: errorMsg,
+        nationalApi: buildNationalApiContext(response, url, requestEnvironment, requestCnpjConsulta)
+      });
+    }
+
     // Extrair ultNSU e maxNSU
     // A API Nacional pode não retornar esses campos — calculamos a partir dos documentos
-    let ultNSU = data.ultNSU !== undefined ? data.ultNSU : (data.UltNSU !== undefined ? data.UltNSU : (data.ultNsu !== undefined ? data.ultNsu : null));
-    let maxNSU = data.maxNSU !== undefined ? data.maxNSU : (data.MaxNSU !== undefined ? data.MaxNSU : (data.maxNsu !== undefined ? data.maxNsu : null));
+    let ultNSU = getResponseNsu(data, ['ultNSU', 'UltNSU', 'ultNsu', 'UltimoNSU', 'ultimoNSU']);
+    let maxNSU = getResponseNsu(data, ['maxNSU', 'MaxNSU', 'maxNsu', 'maiorNSU', 'MaiorNSU']);
 
     // Encontrar a lista de documentos no JSON
     // A API Nacional retorna os documentos em "LoteDFe"
@@ -1535,7 +1639,7 @@ app.post('/api/fetch-batch', async (req, res) => {
       const nsus = documentsList.map(d => d.NSU || d.nsu || 0);
       ultNSU = Math.max(...nsus);
     }
-    if (ultNSU === null) ultNSU = startNsu;
+    if (ultNSU === null) ultNSU = requestStartNsu;
     
     if (maxNSU === null) {
       if (documentsList.length === 50) {
@@ -1782,9 +1886,10 @@ app.post('/api/discover-nsu', async (req, res) => {
   try {
     const { environment, cnpjConsulta, certificateId } = req.body;
     const requestEnvironment = normalizeEnvironment(environment);
-    const requestCnpjConsulta = cnpjConsulta || '';
+    let requestCnpjConsulta = cnpjConsulta || '';
     
     const selectedCertificate = await resolveCertificateForRequest(certificateId);
+    requestCnpjConsulta = resolveCnpjConsulta(requestCnpjConsulta, selectedCertificate?.cnpj);
     if (!selectedCertificate) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
     }
@@ -1812,29 +1917,43 @@ app.post('/api/discover-nsu', async (req, res) => {
 
     const baseUrl = getNationalApiBaseUrl(requestEnvironment);
 
-    let url = `${baseUrl}/DFe/0`;
-    if (requestCnpjConsulta) {
-      url += `?cnpjConsulta=${requestCnpjConsulta}`;
-    }
+    const url = buildDfeUrl(baseUrl, 0, requestCnpjConsulta);
 
     const response = await axios.get(url, {
       httpsAgent,
       timeout: 15000,
+      validateStatus: isNationalApiFiscalStatus,
       headers: { 'Accept': 'application/json', 'User-Agent': 'NFS-e Batch Downloader Local' }
     });
 
     const data = response.data;
     if (!data) return res.status(500).json({ success: false, error: 'Retorno vazio' });
 
-    let maxNSU = data.maxNSU !== undefined ? data.maxNSU : (data.MaxNSU !== undefined ? data.MaxNSU : (data.maxNsu !== undefined ? data.maxNsu : null));
+    const nationalStatus = getNationalApiStatus(data);
+    if (nationalStatus === 'REJEICAO') {
+      const errorMsg = formatNationalApiRejection(data) || 'Rejeicao da API Nacional sem detalhes.';
+      return res.status(400).json({
+        success: false,
+        error: errorMsg,
+        nationalApi: buildNationalApiContext(response, url, requestEnvironment, requestCnpjConsulta)
+      });
+    }
+
+    if (nationalStatus === 'NENHUM_DOCUMENTO_LOCALIZADO') {
+      return res.json({
+        success: true,
+        maxNSU: 0,
+        reliableMax: true,
+        nationalApi: buildNationalApiContext(response, url, requestEnvironment, requestCnpjConsulta)
+      });
+    }
+
+    let maxNSU = getResponseNsu(data, ['maxNSU', 'MaxNSU', 'maxNsu', 'maiorNSU', 'MaiorNSU', 'UltimoNSU', 'ultimoNSU']);
     let reliableMax = maxNSU !== null;
     
     // Se não encontrou de primeira, procura nos documentos
     if (maxNSU === null) {
-      let documentsList = [];
-      if (data.LoteDFe && Array.isArray(data.LoteDFe)) documentsList = data.LoteDFe;
-      else if (data.loteDFe && Array.isArray(data.loteDFe)) documentsList = data.loteDFe;
-      else if (Array.isArray(data)) documentsList = data;
+      const documentsList = extractDfeDocuments(data);
       
       if (documentsList.length > 0) {
         maxNSU = Math.max(...documentsList.map(d => d.NSU || d.nsu || 0));
