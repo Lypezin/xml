@@ -275,7 +275,7 @@ window.AppEvents = {
           statNsuMax.innerText = String(window.maxNsu || savedNsu);
           window.totalDownloaded = 0;
           window.isPaused = false;
-          window.AppUi.log(`NSU inicial ajustado para o ultimo salvo: ${savedNsu}.`, 'success');
+          window.AppUi.log(`NSU inicial ajustado para o ultimo recebido salvo: ${savedNsu}.`, 'success');
         } catch (err) {
           window.AppUi.log(`Erro ao buscar ultimo NSU salvo: ${err.message}`, 'error');
         } finally {
