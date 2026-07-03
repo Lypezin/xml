@@ -265,32 +265,32 @@ window.AppSyncController = {
         return;
       }
 
-      const { ultNSU, maxNSU, totalFila, documentos } = data;
+      const { ultNSU, maxNSU, totalFila, documentos, novos = 0, existentes = 0 } = data;
       window.maxNsu = Math.max(window.maxNsu, maxNSU);
       statNsuMax.innerText = window.maxNsu;
       statNsuAtual.innerText = ultNSU;
       
       if (documentos && documentos.length > 0) {
-        window.AppUi.log(`Lote processado! ${documentos.length} XMLs disponíveis.`, 'success');
+        window.AppUi.log(`Lote processado! ${novos} novo(s), ${existentes} ja existiam, ${documentos.length} recebido(s) no lote.`, novos > 0 ? 'success' : 'warning');
         window.AppUi.appendDocumentsToTable(documentos);
-        window.totalDownloaded += documentos.length;
+        window.totalDownloaded += novos;
         btnDownloadZip.disabled = false;
         this.loadStorageSummary();
         
         if (window.isCrawlerActive) {
-          let novos = 0;
+          let novosCnpjs = 0;
           documentos.forEach(doc => {
             [doc.prestadorCnpj, doc.tomadorCnpj].forEach(c => {
               if (c && c !== 'N/A' && c !== 'Não Informado') {
                 const clean = c.replace(/\D/g, '');
                 if (clean.length === 14 && !window.crawlerVisited.has(clean) && !window.crawlerQueue.includes(clean)) {
                   window.crawlerQueue.push(clean);
-                  novos++;
+                  novosCnpjs++;
                 }
               }
             });
           });
-          if (novos > 0) window.AppUi.updateCrawlerUI();
+          if (novosCnpjs > 0) window.AppUi.updateCrawlerUI();
         }
       }
 

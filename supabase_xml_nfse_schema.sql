@@ -752,6 +752,7 @@ set search_path = xml_nfse, public, extensions
 as $$
 declare
   doc_id uuid;
+  inserted_new boolean;
   metadata_data_emissao text;
   metadata_valor_servico text;
 begin
@@ -819,9 +820,9 @@ begin
       xml_sha256 = excluded.xml_sha256,
       metadata = excluded.metadata,
       last_seen_at = now()
-  returning id into doc_id;
+  returning id, (xmax = 0) into doc_id, inserted_new;
 
-  return jsonb_build_object('success', true, 'document_id', doc_id);
+  return jsonb_build_object('success', true, 'document_id', doc_id, 'inserted', inserted_new);
 end;
 $$;
 

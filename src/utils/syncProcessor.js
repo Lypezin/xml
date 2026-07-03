@@ -153,12 +153,20 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     return sortOrder === 'desc' ? bNsu - aNsu : aNsu - bNsu;
   });
 
+  let newDocuments = 0;
+  let existingDocuments = 0;
+
   for (const doc of processedDocs) {
-    await syncSupabaseDocument({
+    const savedDoc = await syncSupabaseDocument({
       certificateId: selectedCertificate.id,
       environment: requestEnvironment,
       doc
     });
+    if (savedDoc?.inserted) {
+      newDocuments += 1;
+    } else {
+      existingDocuments += 1;
+    }
   }
 
   await syncSupabaseState({
@@ -184,6 +192,8 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     totalFila: documentsList.length,
     menorDataLote,
     maiorDataLote,
+    novos: newDocuments,
+    existentes: existingDocuments,
     documentos: processedDocs
   };
 }
