@@ -12,6 +12,7 @@ const {
   getStorageSummary
 } = require('../services/supabase');
 const { resolveCertificateForRequest } = require('../services/localCertificates');
+const { onlyDigits } = require('../utils/cert');
 
 const router = express.Router();
 
@@ -123,14 +124,16 @@ router.get('/list-documents', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Certificado não configurado.' });
     }
 
+    const receiverCnpj = onlyDigits(partyCnpj) || onlyDigits(cnpj) || onlyDigits(cert.cnpj);
+
     const result = await listRemoteDocuments({
       certificateId: cert.id,
       environment,
       startDate: startDate || null,
       endDate: endDate || null,
-      cnpj: cnpj || '',
-      partyCnpj: partyCnpj || '',
-      partyRole: partyRole || 'tomador',
+      cnpj: '',
+      partyCnpj: receiverCnpj,
+      partyRole: 'tomador',
       limit: limit || null,
       offset: offset || null
     });
@@ -164,14 +167,16 @@ router.post('/download-period-zip', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
     }
 
+    const receiverCnpj = onlyDigits(partyCnpj) || onlyDigits(cnpj) || onlyDigits(cert.cnpj);
+
     const result = await listRemoteDocuments({
       certificateId: cert.id,
       environment,
       startDate: startDate || null,
       endDate: endDate || null,
-      cnpj: cnpj || '',
-      partyCnpj: partyCnpj || '',
-      partyRole: partyRole || 'tomador'
+      cnpj: '',
+      partyCnpj: receiverCnpj,
+      partyRole: 'tomador'
     });
     const documents = dedupeXmlItems(result.documents || []);
 

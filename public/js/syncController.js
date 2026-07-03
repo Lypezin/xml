@@ -49,7 +49,7 @@ window.AppSyncController = {
   renderUnitSelector() {
     if (!unitFilter) return;
     const currentValue = unitFilter.value;
-    unitFilter.innerHTML = '<option value="">Todas as unidades</option>';
+    unitFilter.innerHTML = '<option value="">CNPJ tomador do certificado</option>';
     (window.units || []).forEach(unit => {
       const option = document.createElement('option');
       option.value = unit.cnpj || '';

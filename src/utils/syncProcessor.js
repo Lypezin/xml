@@ -128,6 +128,7 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     documentsList,
     selectedCertificate,
     requestEnvironment,
+    requestCnpjConsulta,
     xmlCache
   }));
 

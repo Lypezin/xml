@@ -3,8 +3,13 @@ const crypto = require('crypto');
 const { parseXmlMetadata, buildStableXmlToken } = require('../utils/xmlParser');
 const { storeSupabaseXmlPayload } = require('./supabase');
 
-async function processBatchDocuments({ documentsList, selectedCertificate, requestEnvironment, xmlCache }) {
+function onlyDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+async function processBatchDocuments({ documentsList, selectedCertificate, requestEnvironment, requestCnpjConsulta, xmlCache, receivedOnly = true }) {
   const processedDocs = [];
+  const receiverCnpj = onlyDigits(requestCnpjConsulta || selectedCertificate?.cnpj);
 
   for (const doc of documentsList) {
     const base64GzipData = doc.ArquivoXml || doc.arquivoXml || doc.conteudo || doc.docZip || doc.xml || doc.dps || doc.documento;
@@ -32,6 +37,12 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
 
       // 3. Extrair metadados
       const meta = parseXmlMetadata(xmlString, docNsu);
+      const tomadorCnpj = onlyDigits(meta.tomadorCnpj);
+
+      if (receivedOnly && receiverCnpj && tomadorCnpj !== receiverCnpj) {
+        console.log(`[SKIP] NSU ${docNsu} ignorado: documento nao recebido pelo CNPJ ${receiverCnpj}. Tomador extraido: ${tomadorCnpj || 'N/A'}.`);
+        continue;
+      }
 
       // 4. Usar a chave de acesso que a API já retorna
       const chaveAcesso = docChave || meta.chave;

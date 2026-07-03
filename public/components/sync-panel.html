@@ -12,7 +12,7 @@
     <div class="input-row">
       <div class="input-group"><label for="certificate-select">Certificado</label><select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select></div>
       <div class="input-group"><label for="environment">Ambiente</label><select id="environment"><option value="producao" selected>Producao</option><option value="homologacao">Homologacao</option></select></div>
-      <div class="input-group"><label for="cnpj-consulta">CNPJ opcional</label><input type="text" id="cnpj-consulta" placeholder="Vazio = CNPJ do certificado"></div>
+      <div class="input-group"><label for="cnpj-consulta">CNPJ tomador opcional</label><input type="text" id="cnpj-consulta" placeholder="Vazio = CNPJ do certificado"></div>
     </div>
     <div class="input-row" style="margin-top: 12px;">
       <div class="input-group"><label for="search-mode">Ordem da varredura</label><select id="search-mode"><option value="asc" selected>Inicial completa</option><option value="desc">Mais recentes primeiro</option></select></div>
@@ -31,8 +31,8 @@
     <div class="input-row" style="margin-top: 12px;">
       <div class="input-group"><label for="download-start-date">Data inicial para ZIP</label><input type="date" id="download-start-date"></div>
       <div class="input-group"><label for="download-end-date">Data final para ZIP</label><input type="date" id="download-end-date"></div>
-      <div class="input-group"><label for="unit-filter">Unidade para listar/baixar</label><select id="unit-filter"><option value="">Todas as unidades</option></select></div>
-      <div class="input-group"><label for="unit-party-role">Participacao da unidade</label><select id="unit-party-role"><option value="tomador" selected>Tomador</option><option value="prestador">Prestador</option><option value="ambos">Tomador ou prestador</option></select></div>
+      <div class="input-group"><label for="unit-filter">Unidade tomadora</label><select id="unit-filter"><option value="">CNPJ tomador do certificado</option></select></div>
+      <div class="input-group"><label for="unit-party-role">Tipo de XML</label><select id="unit-party-role"><option value="tomador" selected>Recebidas (tomador)</option></select></div>
       <div class="input-group" style="justify-content: flex-end;"><button class="btn btn-success" id="btn-download-period" style="width: 100%; margin-top: 20px;"><span>Baixar periodo (ZIP)</span></button></div>
     </div>
     <div class="input-row" style="margin-top: 12px;">

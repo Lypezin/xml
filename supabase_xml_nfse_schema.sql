@@ -1039,7 +1039,6 @@ begin
       and (p_end_date is null or d.effective_data_emissao <= p_end_date)
       and (
         coalesce(p_cnpj_consulta, '') = ''
-        or regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
         or regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
       )
       and (
@@ -1131,7 +1130,6 @@ begin
       and (p_end_date is null or d.effective_data_emissao <= p_end_date)
       and (
         coalesce(p_cnpj_consulta, '') = ''
-        or regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
         or regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
       )
       and (
