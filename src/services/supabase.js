@@ -59,6 +59,26 @@ async function finishSupabaseRun({ runId, status, endNsu = null, maxNsuSeen = nu
   });
 }
 
+function normalizeCurrencyForPersistence(value) {
+  if (value === null || value === undefined) return 'N/A';
+
+  const normalized = String(value)
+    .trim()
+    .replace(/\s/g, '')
+    .replace(',', '.');
+
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) {
+    return 'N/A';
+  }
+
+  const integerPart = normalized.split('.')[0].replace(/^-/, '');
+  if (integerPart.length > 18) {
+    return 'N/A';
+  }
+
+  return normalized;
+}
+
 async function syncSupabaseDocument({ certificateId, environment, doc }) {
   return supabaseRpc('xml_nfse_upsert_document', {
     p_certificate_id: certificateId,
@@ -74,7 +94,7 @@ async function syncSupabaseDocument({ certificateId, environment, doc }) {
       prestadorNome: doc.prestadorNome,
       tomadorCnpj: doc.tomadorCnpj,
       tomadorNome: doc.tomadorNome,
-      valorServico: doc.valorServico,
+      valorServico: normalizeCurrencyForPersistence(doc.valorServico),
       dataEmissao: doc.dataEmissao,
       municipioPrestacao: doc.municipioPrestacao,
       codigoTributacao: doc.codigoTributacao,

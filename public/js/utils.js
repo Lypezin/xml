@@ -22,7 +22,12 @@ window.AppUtils = {
   },
 
   formatCurrency(value) {
-    return parseFloat(value).toLocaleString('pt-BR', {
+    const parsed = parseFloat(value);
+    if (!Number.isFinite(parsed)) {
+      return 'N/A';
+    }
+
+    return parsed.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     });

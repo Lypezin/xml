@@ -77,7 +77,7 @@ create table if not exists xml_nfse.documents (
   prestador_nome text,
   tomador_cnpj text,
   tomador_nome text,
-  valor_servico numeric(15,2),
+  valor_servico numeric(20,2),
   municipio_prestacao text,
   codigo_tributacao text,
   file_name text,
@@ -87,6 +87,9 @@ create table if not exists xml_nfse.documents (
   last_seen_at timestamptz not null default now(),
   unique (certificate_id, environment, nsu)
 );
+
+alter table xml_nfse.documents
+  alter column valor_servico type numeric(20,2);
 
 create table if not exists xml_nfse.download_events (
   id uuid primary key default gen_random_uuid(),
@@ -650,7 +653,12 @@ begin
     nullif(nullif(p_metadata ->> 'prestadorNome', ''), 'N/A'),
     nullif(nullif(p_metadata ->> 'tomadorCnpj', ''), 'N/A'),
     nullif(nullif(p_metadata ->> 'tomadorNome', ''), 'N/A'),
-    case when metadata_valor_servico ~ '^-?\d+(\.\d+)?$' then metadata_valor_servico::numeric else null end,
+    case
+      when metadata_valor_servico ~ '^-?\d+(\.\d+)?$'
+       and length(regexp_replace(split_part(metadata_valor_servico, '.', 1), '^-', '')) <= 18
+      then round(metadata_valor_servico::numeric, 2)
+      else null
+    end,
     nullif(nullif(p_metadata ->> 'municipioPrestacao', ''), 'N/A'),
     nullif(nullif(p_metadata ->> 'codigoTributacao', ''), 'N/A'),
     p_file_name,
