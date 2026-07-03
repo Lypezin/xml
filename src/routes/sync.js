@@ -161,8 +161,17 @@ router.get('/sync-state', async (req, res) => {
     p_environment: normalizeEnvironment(environment),
     p_cnpj_consulta: requestCnpjConsulta
   });
+  const lastReceived = await supabaseRpc('xml_nfse_get_last_received_nsu', {
+    p_certificate_id: selectedCertificate.id,
+    p_environment: normalizeEnvironment(environment),
+    p_cnpj_consulta: requestCnpjConsulta
+  });
 
-  return res.json({ success: Boolean(state), state, cnpjConsulta: requestCnpjConsulta });
+  return res.json({
+    success: Boolean(state),
+    state: state ? { ...state, last_received_nsu: Number(lastReceived || 0) } : state,
+    cnpjConsulta: requestCnpjConsulta
+  });
 });
 
 module.exports = router;

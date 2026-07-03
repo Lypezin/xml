@@ -652,6 +652,33 @@ begin
 end;
 $$;
 
+create or replace function public.xml_nfse_get_last_received_nsu(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_cnpj_consulta text
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  last_received bigint;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select coalesce(max(d.nsu), 0)
+  into last_received
+  from xml_nfse.documents d
+  where d.certificate_id = p_certificate_id
+    and d.environment = p_environment
+    and regexp_replace(coalesce(d.tomador_cnpj, d.metadata ->> 'tomadorCnpj', ''), '\D', '', 'g') = regexp_replace(coalesce(p_cnpj_consulta, ''), '\D', '', 'g');
+
+  return coalesce(last_received, 0);
+end;
+$$;
+
 create or replace function public.xml_nfse_start_run(
   p_secret text,
   p_certificate_id text,
@@ -964,6 +991,7 @@ grant execute on function public.xml_nfse_get_certificate_secret(text, text) to 
 grant execute on function public.xml_nfse_delete_certificate(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_sync_state(text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_update_sync_state(text, text, text, text, bigint, bigint, text, timestamptz, text) to anon, authenticated;
+grant execute on function public.xml_nfse_get_last_received_nsu(text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_start_run(text, text, text, text, bigint) to anon, authenticated;
 grant execute on function public.xml_nfse_finish_run(text, uuid, text, bigint, bigint, integer, text) to anon, authenticated;
 grant execute on function public.xml_nfse_upsert_document(text, text, text, bigint, text, text, text, text, jsonb) to anon, authenticated;

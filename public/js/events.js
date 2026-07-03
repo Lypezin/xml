@@ -265,9 +265,9 @@ window.AppEvents = {
             cnpjConsulta: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
             certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId
           });
+          const lastReceivedNsu = Number(data.state?.last_received_nsu || 0);
           const lastNsu = Number(data.state?.last_nsu || 0);
-          const maxSeenNsu = Number(data.state?.max_nsu_seen || 0);
-          const savedNsu = Math.max(lastNsu, maxSeenNsu);
+          const savedNsu = lastReceivedNsu || lastNsu;
           inputStartNsu.value = savedNsu;
           window.currentNsu = savedNsu;
           window.maxNsu = Math.max(window.maxNsu || 0, savedNsu);
