@@ -1,25 +1,25 @@
 /* Bottom Datagrid Table & Badges */
 .data-grid-card {
-  margin-top: 24px;
+  padding: 18px;
 }
 
 .results-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--card-border);
   padding-bottom: 14px;
 }
 
 .results-header h2 {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .results-subtitle {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--text-secondary);
   margin-top: 4px;
 }
@@ -30,26 +30,45 @@
 }
 
 .table-wrapper {
-  overflow-x: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-radius: var(--border-radius);
   border: 1px solid var(--card-border);
   background: var(--input-bg);
   box-shadow: var(--shadow-sm);
+  max-height: 640px;
 }
 
 .results-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 13px;
+  font-size: 12px;
   table-layout: fixed;
 }
 
+.results-table th:nth-child(1),
+.results-table td:nth-child(1) { width: 7%; }
+.results-table th:nth-child(2),
+.results-table td:nth-child(2) { width: 12%; }
+.results-table th:nth-child(3),
+.results-table td:nth-child(3) { width: 19%; }
+.results-table th:nth-child(4),
+.results-table td:nth-child(4) { width: 22%; }
+.results-table th:nth-child(5),
+.results-table td:nth-child(5) { width: 18%; }
+.results-table th:nth-child(6),
+.results-table td:nth-child(6) { width: 15%; }
+.results-table th:nth-child(7),
+.results-table td:nth-child(7) { width: 7%; }
+
 .results-table th,
 .results-table td {
-  padding: 14px 18px;
+  padding: 12px 10px;
   border-bottom: 1px solid var(--card-border);
   transition: var(--transition);
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .results-table th {
@@ -57,8 +76,11 @@
   font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.8px;
+  font-size: 10.5px;
+  letter-spacing: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .results-table tr:last-child td {
@@ -85,7 +107,7 @@ body.light-mode .results-table tbody tr:hover {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   background: rgba(255, 255, 255, 0.03);
-  padding: 4px 8px;
+  padding: 3px 6px;
   border-radius: 6px;
   color: var(--text-secondary);
   border: 1px solid var(--card-border);
@@ -150,7 +172,7 @@ body.light-mode .cnpj-badge {
 }
 
 .descricao-texto {
-  max-width: 240px;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -162,4 +184,10 @@ body.light-mode .cnpj-badge {
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
+}
+
+.table-footer {
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
 }

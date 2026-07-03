@@ -166,11 +166,24 @@ window.AppEvents = {
     });
 
     btnDownloadZip.addEventListener('click', async () => {
-      window.AppUi.log('Baixando pacote compactado ZIP contendo todos os XMLs...');
+      window.AppUi.log('Gerando ZIP com os XMLs persistidos da tabela atual...');
+      btnDownloadZip.disabled = true;
       try {
-        await window.AppApi.downloadFromApi('/api/download-zip', 'NFS-e_XMLs_Baixados.zip');
+        const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
+        await window.AppApi.downloadPeriodZip({
+          certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId,
+          environment: selectEnvironment ? selectEnvironment.value : 'producao',
+          startDate: downloadStartDate?.value || null,
+          endDate: downloadEndDate?.value || null,
+          cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+          partyCnpj: unitFilterParams.partyCnpj,
+          partyRole: unitFilterParams.partyRole
+        });
+        window.AppUi.log('ZIP da tabela baixado com sucesso.', 'success');
       } catch (err) {
         window.AppUi.log(`Erro ao baixar ZIP: ${err.message}`, 'error');
+      } finally {
+        btnDownloadZip.disabled = !window.AppUiTable?.documents?.length;
       }
     });
 
@@ -181,7 +194,9 @@ window.AppEvents = {
         statAmbiente.innerText = envText;
         statAmbiente.className = selectEnvironment.value === 'producao' ? 'metric-value text-primary' : 'metric-value text-warning';
       }
-      window.AppUi.log(`Ambiente alterado para: ${envText}`);
+      if (selectEnvironment.offsetParent !== null) {
+        window.AppUi.log(`Ambiente alterado para: ${envText}`);
+      }
       window.AppSyncController.loadPersistedHistory();
     });
 

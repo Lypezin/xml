@@ -281,7 +281,9 @@ window.AppApi = {
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
-    anchor.download = `NFS-e_Periodo_${params.startDate}_a_${params.endDate}.zip`;
+    anchor.download = params.startDate && params.endDate
+      ? `NFS-e_Periodo_${params.startDate}_a_${params.endDate}.zip`
+      : 'NFS-e_XMLs_Tabela.zip';
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
