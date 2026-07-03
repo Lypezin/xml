@@ -145,9 +145,9 @@ window.AppUiTable = {
         </td>
         <td>
           <strong>${valorFormatado}</strong>
-          <div class="helper-text">Emissão: ${doc.dataEmissao || 'N/A'}</div>
-          <div class="helper-text">Competência: ${doc.competencia || 'N/A'}</div>
-          <div class="helper-text">Processamento: ${doc.dataProcessamento || 'N/A'}</div>
+          <div class="helper-text">Emissão: ${window.AppUtils.formatDate(doc.dataEmissao)}</div>
+          <div class="helper-text">Competência: ${window.AppUtils.formatDate(doc.competencia)}</div>
+          <div class="helper-text">Processamento: ${window.AppUtils.formatDate(doc.dataProcessamento)}</div>
         </td>
         <td>
           <button type="button" class="btn btn-secondary btn-sm" data-action="download-xml" data-token="${doc.token}" style="display:inline-flex; align-items:center; text-decoration:none; padding:4px 8px; gap: 4px;">
