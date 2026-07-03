@@ -142,13 +142,36 @@ async function listRemoteCertificates() {
   return Array.isArray(result) ? result : [];
 }
 
-async function listRemoteDocuments({ certificateId, environment, startDate, endDate, cnpj, limit = null, offset = null }) {
+async function listUnits() {
+  const result = await supabaseRpc('xml_nfse_list_units', {});
+  return Array.isArray(result) ? result : [];
+}
+
+async function upsertUnit({ id = null, name, cnpj, city = '', state = '' }) {
+  return supabaseRpc('xml_nfse_upsert_unit', {
+    p_unit_id: id || null,
+    p_name: name || '',
+    p_cnpj: cnpj || '',
+    p_city: city || '',
+    p_state: state || ''
+  });
+}
+
+async function deleteUnit(id) {
+  return supabaseRpc('xml_nfse_delete_unit', {
+    p_unit_id: id
+  });
+}
+
+async function listRemoteDocuments({ certificateId, environment, startDate, endDate, cnpj, partyCnpj = '', partyRole = 'tomador', limit = null, offset = null }) {
   const result = await supabaseRpc('xml_nfse_list_documents', {
     p_certificate_id: certificateId,
     p_environment: normalizeEnvironment(environment),
     p_start_date: startDate || null,
     p_end_date: endDate || null,
     p_cnpj_consulta: cnpj || '',
+    p_party_cnpj: partyCnpj || '',
+    p_party_role: partyRole || 'tomador',
     p_limit: limit === null ? null : Number(limit),
     p_offset: offset === null ? null : Number(offset)
   });
@@ -238,6 +261,9 @@ module.exports = {
   getSupabaseSetting,
   setSupabaseSetting,
   listRemoteCertificates,
+  listUnits,
+  upsertUnit,
+  deleteUnit,
   listRemoteDocuments,
   setRemoteActiveCertificate,
   deleteRemoteCertificate,

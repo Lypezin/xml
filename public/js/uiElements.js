@@ -93,5 +93,13 @@ window.AppUiElements = {
     window.downloadStartDate = document.getElementById('download-start-date');
     window.downloadEndDate = document.getElementById('download-end-date');
     window.btnDownloadPeriod = document.getElementById('btn-download-period');
+    window.unitFilter = document.getElementById('unit-filter');
+    window.unitPartyRole = document.getElementById('unit-party-role');
+    window.unitName = document.getElementById('unit-name');
+    window.unitCnpj = document.getElementById('unit-cnpj');
+    window.unitCity = document.getElementById('unit-city');
+    window.unitState = document.getElementById('unit-state');
+    window.btnSaveUnit = document.getElementById('btn-save-unit');
+    window.btnDeleteUnit = document.getElementById('btn-delete-unit');
   }
 };

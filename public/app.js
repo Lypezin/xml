@@ -6,6 +6,7 @@ window.maxNsu = 0;
 window.totalDownloaded = 0;
 window.selectedFile = null;
 window.certificates = [];
+window.units = [];
 window.activeCertificateId = null;
 window.authConfig = { authRequired: false, supabaseUrl: null, publishableKey: null };
 window.authSession = null;

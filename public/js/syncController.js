@@ -1,6 +1,61 @@
 // Controle de Consultas e Estado do Certificado
 
 window.AppSyncController = {
+  getSelectedUnitFilter() {
+    const selectedOption = unitFilter?.selectedOptions?.[0];
+    return {
+      partyCnpj: unitFilter ? unitFilter.value.trim() : '',
+      partyRole: unitPartyRole ? unitPartyRole.value : 'tomador',
+      unitId: selectedOption?.dataset?.id || ''
+    };
+  },
+
+  renderUnitSelector() {
+    if (!unitFilter) return;
+    const currentValue = unitFilter.value;
+    unitFilter.innerHTML = '<option value="">Todas as unidades</option>';
+    (window.units || []).forEach(unit => {
+      const option = document.createElement('option');
+      option.value = unit.cnpj || '';
+      option.dataset.id = unit.id || '';
+      option.dataset.name = unit.name || '';
+      option.dataset.city = unit.city || '';
+      option.dataset.state = unit.state || '';
+      const location = [unit.city, unit.state].filter(Boolean).join('/');
+      option.textContent = `${unit.name} - ${unit.cnpj}${location ? ` (${location})` : ''}`;
+      unitFilter.appendChild(option);
+    });
+    unitFilter.value = currentValue;
+    if (currentValue && unitFilter.value !== currentValue) unitFilter.value = '';
+  },
+
+  fillUnitFormFromSelection() {
+    const option = unitFilter?.selectedOptions?.[0];
+    if (!option || !unitFilter.value) {
+      if (unitName) unitName.value = '';
+      if (unitCnpj) unitCnpj.value = '';
+      if (unitCity) unitCity.value = '';
+      if (unitState) unitState.value = '';
+      return;
+    }
+    if (unitName) unitName.value = option.dataset.name || '';
+    if (unitCnpj) unitCnpj.value = unitFilter.value || '';
+    if (unitCity) unitCity.value = option.dataset.city || '';
+    if (unitState) unitState.value = option.dataset.state || '';
+  },
+
+  async loadUnits() {
+    if (!window.AppApi?.listUnits) return;
+    try {
+      const data = await window.AppApi.listUnits();
+      if (!data.success) throw new Error(data.error || 'Nao foi possivel carregar unidades.');
+      window.units = data.units || [];
+      this.renderUnitSelector();
+    } catch (err) {
+      window.AppUi.log(`Erro ao carregar unidades: ${err.message}`, 'warning');
+    }
+  },
+
   async loadPersistedHistory(page = 1) {
     const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
     if (!certId || !window.AppApi?.listDocuments || !window.AppUiTable?.setDocuments) return;
@@ -8,10 +63,13 @@ window.AppSyncController = {
     try {
       const safePage = Math.max(1, Number(page || 1));
       const limit = window.AppUiTable.pageSize || 100;
+      const unitFilterParams = this.getSelectedUnitFilter();
       const data = await window.AppApi.listDocuments({
         certificateId: certId,
         environment: selectEnvironment ? selectEnvironment.value : 'producao',
         cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+        partyCnpj: unitFilterParams.partyCnpj,
+        partyRole: unitFilterParams.partyRole,
         limit,
         offset: (safePage - 1) * limit
       });
@@ -23,7 +81,8 @@ window.AppSyncController = {
 
       window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage);
       btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
-      window.AppUi.log(`Historico carregado: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
+      const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
+      window.AppUi.log(`Historico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
     } catch (err) {
       window.AppUi.log(`Erro ao carregar historico: ${err.message}`, 'warning');
     }
@@ -36,6 +95,7 @@ window.AppSyncController = {
       const txt = document.getElementById('navbar-cert-text');
       window.certificates = data.certificates || [];
       window.activeCertificateId = data.activeCertificateId || null;
+      await this.loadUnits();
       window.AppUi.renderCertificateSelector();
       window.AppUi.renderCertificateList();
 

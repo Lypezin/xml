@@ -182,6 +182,69 @@ window.AppEvents = {
       inputCnpjConsulta.addEventListener('change', () => window.AppSyncController.loadPersistedHistory());
     }
 
+    if (unitFilter) {
+      unitFilter.addEventListener('change', () => {
+        window.AppSyncController.fillUnitFormFromSelection();
+        window.AppSyncController.loadPersistedHistory();
+      });
+    }
+
+    if (unitPartyRole) {
+      unitPartyRole.addEventListener('change', () => window.AppSyncController.loadPersistedHistory());
+    }
+
+    if (btnSaveUnit) {
+      btnSaveUnit.addEventListener('click', async () => {
+        btnSaveUnit.disabled = true;
+        try {
+          const selectedOption = unitFilter?.selectedOptions?.[0];
+          const data = await window.AppApi.saveUnit({
+            id: selectedOption?.dataset?.id || null,
+            name: unitName ? unitName.value.trim() : '',
+            cnpj: unitCnpj ? unitCnpj.value.trim() : '',
+            city: unitCity ? unitCity.value.trim() : '',
+            state: unitState ? unitState.value.trim() : ''
+          });
+          if (!data.success) throw new Error(data.error || 'Nao foi possivel salvar a unidade.');
+          await window.AppSyncController.loadUnits();
+          if (unitFilter && data.unit?.cnpj) unitFilter.value = data.unit.cnpj;
+          window.AppSyncController.fillUnitFormFromSelection();
+          window.AppSyncController.loadPersistedHistory();
+          window.AppUi.log('Unidade salva com sucesso.', 'success');
+        } catch (err) {
+          window.AppUi.log(`Erro ao salvar unidade: ${err.message}`, 'error');
+        } finally {
+          btnSaveUnit.disabled = false;
+        }
+      });
+    }
+
+    if (btnDeleteUnit) {
+      btnDeleteUnit.addEventListener('click', async () => {
+        const selected = window.AppSyncController.getSelectedUnitFilter();
+        if (!selected.unitId) {
+          window.AppUi.log('Selecione uma unidade cadastrada para remover.', 'warning');
+          return;
+        }
+        if (!confirm('Remover esta unidade da lista de filtros?')) return;
+
+        btnDeleteUnit.disabled = true;
+        try {
+          const data = await window.AppApi.deleteUnit(selected.unitId);
+          if (!data.success) throw new Error(data.error || 'Nao foi possivel remover a unidade.');
+          if (unitFilter) unitFilter.value = '';
+          await window.AppSyncController.loadUnits();
+          window.AppSyncController.fillUnitFormFromSelection();
+          window.AppSyncController.loadPersistedHistory();
+          window.AppUi.log('Unidade removida.', 'success');
+        } catch (err) {
+          window.AppUi.log(`Erro ao remover unidade: ${err.message}`, 'error');
+        } finally {
+          btnDeleteUnit.disabled = false;
+        }
+      });
+    }
+
     if (selectSearchMode) {
       selectSearchMode.addEventListener('change', () => window.AppUiTable.renderCurrentPage());
     }
@@ -367,12 +430,15 @@ window.AppEvents = {
         btnDownloadPeriod.disabled = true;
         window.AppUi.log(`Gerando ZIP do periodo ${startDate} a ${endDate}...`);
         try {
+          const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
           await window.AppApi.downloadPeriodZip({
             certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId,
             environment: selectEnvironment ? selectEnvironment.value : 'producao',
             startDate,
             endDate,
-            cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : ''
+            cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+            partyCnpj: unitFilterParams.partyCnpj,
+            partyRole: unitFilterParams.partyRole
           });
           window.AppUi.log('ZIP do periodo baixado com sucesso.', 'success');
         } catch (err) {

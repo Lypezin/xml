@@ -250,6 +250,22 @@ window.AppApi = {
     return (await fetch(`/api/list-documents?${new URLSearchParams(params)}`)).json();
   },
 
+  async listUnits() {
+    return (await fetch('/api/units')).json();
+  },
+
+  async saveUnit(unit) {
+    return (await fetch('/api/units', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(unit)
+    })).json();
+  },
+
+  async deleteUnit(id) {
+    return (await fetch(`/api/units/${id}`, { method: 'DELETE' })).json();
+  },
+
   async downloadPeriodZip(params) {
     const res = await fetch('/api/download-period-zip', {
       method: 'POST',

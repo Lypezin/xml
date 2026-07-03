@@ -30,7 +30,17 @@
     <div class="input-row" style="margin-top: 12px;">
       <div class="input-group"><label for="download-start-date">Data inicial para ZIP</label><input type="date" id="download-start-date"></div>
       <div class="input-group"><label for="download-end-date">Data final para ZIP</label><input type="date" id="download-end-date"></div>
+      <div class="input-group"><label for="unit-filter">Unidade para listar/baixar</label><select id="unit-filter"><option value="">Todas as unidades</option></select></div>
+      <div class="input-group"><label for="unit-party-role">Participacao da unidade</label><select id="unit-party-role"><option value="tomador" selected>Tomador</option><option value="prestador">Prestador</option><option value="ambos">Tomador ou prestador</option></select></div>
       <div class="input-group" style="justify-content: flex-end;"><button class="btn btn-success" id="btn-download-period" style="width: 100%; margin-top: 20px;"><span>Baixar periodo (ZIP)</span></button></div>
+    </div>
+    <div class="input-row" style="margin-top: 12px;">
+      <div class="input-group"><label for="unit-name">Nome da unidade</label><input type="text" id="unit-name" placeholder="Ex: Sao Paulo"></div>
+      <div class="input-group"><label for="unit-cnpj">CNPJ da unidade</label><input type="text" id="unit-cnpj" placeholder="Somente numeros"></div>
+      <div class="input-group"><label for="unit-city">Cidade</label><input type="text" id="unit-city" placeholder="Opcional"></div>
+      <div class="input-group"><label for="unit-state">UF</label><input type="text" id="unit-state" maxlength="2" placeholder="SP"></div>
+      <div class="input-group" style="justify-content: flex-end;"><button class="btn btn-secondary" id="btn-save-unit" style="width: 100%; margin-top: 20px;"><span>Salvar unidade</span></button></div>
+      <div class="input-group" style="justify-content: flex-end;"><button class="btn btn-secondary text-danger" id="btn-delete-unit" style="width: 100%; margin-top: 20px;"><span>Remover</span></button></div>
     </div>
     <input type="checkbox" id="scheduler-enabled" style="display: none;">
     <input type="number" id="scheduler-interval" value="12" min="1" max="168" style="display: none;">

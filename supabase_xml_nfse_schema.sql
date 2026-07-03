@@ -22,6 +22,18 @@ create table if not exists xml_nfse.certificates (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists xml_nfse.units (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  cnpj text not null,
+  city text,
+  state text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (cnpj)
+);
+
 create table if not exists xml_nfse.certificate_secrets (
   certificate_id text primary key references xml_nfse.certificates(id) on delete cascade,
   pfx_ciphertext text not null,
@@ -136,12 +148,16 @@ create index if not exists download_events_certificate_id_idx
 create index if not exists download_events_document_id_idx
   on xml_nfse.download_events (document_id);
 
+create index if not exists units_cnpj_idx
+  on xml_nfse.units (cnpj);
+
 alter table xml_nfse.xml_payloads
   alter column expires_at drop not null,
   alter column expires_at drop default;
 
 alter table xml_nfse.settings enable row level security;
 alter table xml_nfse.certificates enable row level security;
+alter table xml_nfse.units enable row level security;
 alter table xml_nfse.certificate_secrets enable row level security;
 alter table xml_nfse.sync_state enable row level security;
 alter table xml_nfse.sync_runs enable row level security;
@@ -172,6 +188,101 @@ begin
   if expected_hash is null or provided_hash <> expected_hash then
     raise exception 'invalid xml_nfse app secret' using errcode = '28000';
   end if;
+end;
+$$;
+
+create or replace function public.xml_nfse_list_units(
+  p_secret text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  rows_data jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select coalesce(jsonb_agg(to_jsonb(u.*) order by u.name asc), '[]'::jsonb)
+  into rows_data
+  from xml_nfse.units u
+  where u.active = true;
+
+  return rows_data;
+end;
+$$;
+
+create or replace function public.xml_nfse_upsert_unit(
+  p_secret text,
+  p_unit_id uuid default null,
+  p_name text default '',
+  p_cnpj text default '',
+  p_city text default null,
+  p_state text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  clean_cnpj text;
+  saved_unit xml_nfse.units%rowtype;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  clean_cnpj := regexp_replace(coalesce(p_cnpj, ''), '\D', '', 'g');
+  if length(clean_cnpj) <> 14 then
+    raise exception 'CNPJ da unidade deve ter 14 digitos' using errcode = '22023';
+  end if;
+
+  if nullif(trim(coalesce(p_name, '')), '') is null then
+    raise exception 'Nome da unidade e obrigatorio' using errcode = '22023';
+  end if;
+
+  insert into xml_nfse.units (id, name, cnpj, city, state, active)
+  values (
+    coalesce(p_unit_id, gen_random_uuid()),
+    trim(p_name),
+    clean_cnpj,
+    nullif(trim(coalesce(p_city, '')), ''),
+    nullif(upper(trim(coalesce(p_state, ''))), ''),
+    true
+  )
+  on conflict (cnpj) do update
+  set name = excluded.name,
+      city = excluded.city,
+      state = excluded.state,
+      active = true,
+      updated_at = now()
+  returning * into saved_unit;
+
+  return to_jsonb(saved_unit);
+end;
+$$;
+
+create or replace function public.xml_nfse_delete_unit(
+  p_secret text,
+  p_unit_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  saved_unit xml_nfse.units%rowtype;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  update xml_nfse.units
+  set active = false,
+      updated_at = now()
+  where id = p_unit_id
+  returning * into saved_unit;
+
+  return to_jsonb(saved_unit);
 end;
 $$;
 
@@ -828,6 +939,8 @@ grant execute on function public.xml_nfse_upsert_xml_payload(text, text, text, t
 grant execute on function public.xml_nfse_get_xml_payload(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authenticated;
 
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer);
+
 create or replace function public.xml_nfse_list_documents(
   p_secret text,
   p_certificate_id text,
@@ -835,6 +948,8 @@ create or replace function public.xml_nfse_list_documents(
   p_start_date date default null,
   p_end_date date default null,
   p_cnpj_consulta text default '',
+  p_party_cnpj text default '',
+  p_party_role text default 'tomador',
   p_limit integer default null,
   p_offset integer default null
 )
@@ -888,7 +1003,22 @@ begin
       and d.environment = p_environment
       and (p_start_date is null or d.effective_data_emissao >= p_start_date)
       and (p_end_date is null or d.effective_data_emissao <= p_end_date)
-      and (coalesce(p_cnpj_consulta, '') = '' or d.effective_prestador_cnpj = p_cnpj_consulta or d.effective_tomador_cnpj = p_cnpj_consulta)
+      and (
+        coalesce(p_cnpj_consulta, '') = ''
+        or regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
+        or regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
+      )
+      and (
+        coalesce(p_party_cnpj, '') = ''
+        or (
+          coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
+          and regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
+        )
+        or (
+          coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
+          and regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
+        )
+      )
   ),
   ranked as (
     select
@@ -965,7 +1095,22 @@ begin
       and d.environment = p_environment
       and (p_start_date is null or d.effective_data_emissao >= p_start_date)
       and (p_end_date is null or d.effective_data_emissao <= p_end_date)
-      and (coalesce(p_cnpj_consulta, '') = '' or d.effective_prestador_cnpj = p_cnpj_consulta or d.effective_tomador_cnpj = p_cnpj_consulta)
+      and (
+        coalesce(p_cnpj_consulta, '') = ''
+        or regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
+        or regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
+      )
+      and (
+        coalesce(p_party_cnpj, '') = ''
+        or (
+          coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
+          and regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
+        )
+        or (
+          coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
+          and regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
+        )
+      )
   ),
   ranked as (
     select
@@ -1015,5 +1160,8 @@ begin
 end;
 $$;
 
-grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer) to anon, authenticated;
+grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, integer, integer) to anon, authenticated;
+grant execute on function public.xml_nfse_list_units(text) to anon, authenticated;
+grant execute on function public.xml_nfse_upsert_unit(text, uuid, text, text, text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_delete_unit(text, uuid) to anon, authenticated;
 

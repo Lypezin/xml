@@ -50,6 +50,7 @@ app.use('/api', require('./src/routes/certificatesDiagnostics'));
 app.use('/api', require('./src/routes/certificatesManage'));
 app.use('/api', require('./src/routes/sync'));
 app.use('/api', require('./src/routes/downloads'));
+app.use('/api', require('./src/routes/units'));
 app.use('/api', require('./src/routes/schedulerRoutes'));
 
 // Servir arquivos estáticos do frontend

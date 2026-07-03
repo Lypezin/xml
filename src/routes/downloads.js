@@ -106,7 +106,7 @@ router.get('/download-zip', async (req, res) => {
 
 router.get('/list-documents', async (req, res) => {
   try {
-    const { certificateId, environment = 'producao', startDate, endDate, cnpj, limit, offset } = req.query;
+    const { certificateId, environment = 'producao', startDate, endDate, cnpj, partyCnpj, partyRole, limit, offset } = req.query;
     const cert = await resolveCertificateForRequest(certificateId);
     if (!cert) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado.' });
@@ -118,6 +118,8 @@ router.get('/list-documents', async (req, res) => {
       startDate: startDate || null,
       endDate: endDate || null,
       cnpj: cnpj || '',
+      partyCnpj: partyCnpj || '',
+      partyRole: partyRole || 'tomador',
       limit: limit || null,
       offset: offset || null
     });
@@ -131,7 +133,7 @@ router.get('/list-documents', async (req, res) => {
 
 router.post('/download-period-zip', async (req, res) => {
   try {
-    const { certificateId, environment = 'producao', startDate, endDate, cnpj } = req.body;
+    const { certificateId, environment = 'producao', startDate, endDate, cnpj, partyCnpj, partyRole } = req.body;
     const cert = await resolveCertificateForRequest(certificateId);
     if (!cert) {
       return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
@@ -142,7 +144,9 @@ router.post('/download-period-zip', async (req, res) => {
       environment,
       startDate: startDate || null,
       endDate: endDate || null,
-      cnpj: cnpj || ''
+      cnpj: cnpj || '',
+      partyCnpj: partyCnpj || '',
+      partyRole: partyRole || 'tomador'
     });
     const documents = dedupeXmlItems(result.documents || []);
 
