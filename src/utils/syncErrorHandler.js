@@ -29,10 +29,17 @@ async function handleSyncError({ e, res, selectedCertificate, requestEnvironment
   }
 
   let errorMsg = e.message;
+  const isTransientTransportError =
+    e.isTransient ||
+    e.code === 'ECONNABORTED' ||
+    /timeout|ECONNRESET|ECONNABORTED|ETIMEDOUT|EAI_AGAIN|Retorno vazio/i.test(String(e.message || ''));
+
   if (e.response) {
     const rejection = formatNationalApiRejection(e.response.data);
     if (rejection) {
       errorMsg = rejection;
+    } else if (e.response.status === 200) {
+      errorMsg = 'Retorno vazio temporario da API Nacional.';
     } else {
       const statusMap = {
         496: 'Erro 496: Certificado não fornecido ou inválido para o mTLS da Receita Federal.',
@@ -45,7 +52,9 @@ async function handleSyncError({ e, res, selectedCertificate, requestEnvironment
     }
   }
 
-  if (selectedCertificate) {
+  const isTransientError = isTransientTransportError || /Retorno vazio temporario|Erro 200 retornado/i.test(errorMsg);
+
+  if (selectedCertificate && !isTransientError) {
     const nextAllowedAt = /429|656|Consumo Indevido/i.test(errorMsg) ? new Date(Date.now() + 60 * 60 * 1000).toISOString() : null;
     await syncSupabaseState({
       certificateId: selectedCertificate.id,
@@ -67,7 +76,12 @@ async function handleSyncError({ e, res, selectedCertificate, requestEnvironment
     });
   }
 
-  return res.status(500).json({ success: false, error: errorMsg, nationalApi: e.nationalApi || null });
+  return res.status(isTransientError ? 503 : 500).json({
+    success: false,
+    error: errorMsg,
+    retryable: isTransientError,
+    nationalApi: e.nationalApi || null
+  });
 }
 
 module.exports = {

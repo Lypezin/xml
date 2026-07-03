@@ -6,6 +6,7 @@ window.maxNsu = 0;
 window.totalDownloaded = 0;
 window.activeQueryRunId = 0;
 window.queryLoopTimer = null;
+window.transientRetryCount = 0;
 window.selectedFile = null;
 window.certificates = [];
 window.units = [];

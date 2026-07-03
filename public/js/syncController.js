@@ -14,6 +14,33 @@ window.AppSyncController = {
     return window.isQuerying && !window.isPaused && runId === window.activeQueryRunId;
   },
 
+  isTransientSyncError(errorMessage = '') {
+    return /timeout|ECONNRESET|ECONNABORTED|ETIMEDOUT|EAI_AGAIN|Retorno vazio|Erro 200 retornado/i.test(String(errorMessage));
+  },
+
+  scheduleRetry(runId, requestNsu, errorMessage) {
+    if (!this.isActiveQueryRun(runId)) return;
+    window.transientRetryCount = (window.transientRetryCount || 0) + 1;
+    const retryCount = window.transientRetryCount;
+
+    if (retryCount > 6) {
+      window.AppUi.log('Limite de tentativas temporarias atingido. Consulta pausada para evitar insistir na API.', 'error');
+      this.stopQuerying();
+      return;
+    }
+
+    const retryDelaySeconds = Math.min(120, 10 * retryCount);
+    window.currentNsu = requestNsu;
+    inputStartNsu.value = requestNsu;
+    window.AppUi.log(`Erro temporario na API (${errorMessage}). Tentativa ${retryCount}/6 em ${retryDelaySeconds}s no mesmo NSU ${requestNsu}.`, 'warning');
+
+    if (window.queryLoopTimer) clearTimeout(window.queryLoopTimer);
+    window.queryLoopTimer = setTimeout(() => {
+      window.queryLoopTimer = null;
+      this.runQueryLoop(runId);
+    }, retryDelaySeconds * 1000);
+  },
+
   async loadStorageSummary() {
     const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
     if (!window.AppApi?.fetchStorageSummary || !statStoragePayloads || !statStorageSize) return;
@@ -254,16 +281,22 @@ window.AppSyncController = {
       if (!this.isActiveQueryRun(runId)) return;
 
       if (!data.success) {
-        window.AppUi.log(`Erro na NFS-e: ${data.error}`, 'error');
+        window.AppUi.log('Erro na NFS-e: ' + data.error, 'error');
         window.AppUi.logNationalApiContext(data.nationalApi);
+        if (data.retryable || this.isTransientSyncError(data.error)) {
+          this.scheduleRetry(runId, requestNsu, data.error);
+          return;
+        }
         if (data.error.includes('Consumo Indevido') || data.error.includes('429') || data.error.includes('656')) {
           alertRateLimit.style.display = 'block';
         } else {
-          alert(`Erro na sincronização: ${data.error}`);
+          window.AppUi.log('Consulta interrompida: ' + data.error, 'error');
         }
         this.stopQuerying();
         return;
       }
+
+      window.transientRetryCount = 0;
 
       const { ultNSU, maxNSU, totalFila, documentos, novos = 0, existentes = 0 } = data;
       window.maxNsu = Math.max(window.maxNsu, maxNSU);

@@ -76,7 +76,10 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
 
   const data = response.data;
   if (!data) {
-    throw new Error('Retorno vazio da API Nacional.');
+    const err = new Error('Retorno vazio temporario da API Nacional.');
+    err.isTransient = true;
+    err.nationalApi = buildNationalApiContext(response, url, requestEnvironment, requestCnpjConsulta);
+    throw err;
   }
 
   console.log(`Resposta HTTP ${response.status} | Chaves: ${Object.keys(data).join(', ')}`);
