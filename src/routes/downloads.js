@@ -8,7 +8,8 @@ const {
   supabaseRpc,
   getSupabaseXmlPayload,
   listSupabaseXmlPayloads,
-  listRemoteDocuments
+  listRemoteDocuments,
+  getStorageSummary
 } = require('../services/supabase');
 const { resolveCertificateForRequest } = require('../services/localCertificates');
 
@@ -104,6 +105,16 @@ router.get('/download-zip', async (req, res) => {
   }
 });
 
+router.post('/clear-downloads', async (req, res) => {
+  const count = xmlCache.size;
+  xmlCache.clear();
+  return res.json({
+    success: true,
+    count,
+    preservedRemotePayloads: true
+  });
+});
+
 router.get('/list-documents', async (req, res) => {
   try {
     const { certificateId, environment = 'producao', startDate, endDate, cnpj, partyCnpj, partyRole, limit, offset } = req.query;
@@ -127,6 +138,20 @@ router.get('/list-documents', async (req, res) => {
     return res.json({ success: true, documents: result.documents, total: result.total });
   } catch (err) {
     console.error('Erro ao listar documentos:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/storage-summary', async (req, res) => {
+  try {
+    const { certificateId, environment = '' } = req.query;
+    const summary = await getStorageSummary({
+      certificateId: certificateId || '',
+      environment: environment || ''
+    });
+    return res.json({ success: true, summary: summary || {} });
+  } catch (err) {
+    console.error('Erro ao carregar resumo de armazenamento:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });

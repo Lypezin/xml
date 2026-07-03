@@ -250,6 +250,10 @@ window.AppApi = {
     return (await fetch(`/api/list-documents?${new URLSearchParams(params)}`)).json();
   },
 
+  async fetchStorageSummary(params = {}) {
+    return (await fetch(`/api/storage-summary?${new URLSearchParams(params)}`)).json();
+  },
+
   async listUnits() {
     return (await fetch('/api/units')).json();
   },

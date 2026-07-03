@@ -38,6 +38,23 @@ window.AppUtils = {
     return String(value).split('T')[0];
   },
 
+  formatInteger(value) {
+    return Number(value || 0).toLocaleString('pt-BR');
+  },
+
+  formatBytes(bytes) {
+    const value = Number(bytes || 0);
+    if (value < 1024) return `${value} B`;
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let size = value / 1024;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    return `${size.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${units[unitIndex]}`;
+  },
+
   applyTheme(theme) {
     const themeText = document.getElementById('theme-text');
     const sunIcon = document.querySelector('.sun-icon');

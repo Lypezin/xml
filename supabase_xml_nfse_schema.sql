@@ -921,6 +921,39 @@ begin
 end;
 $$;
 
+create or replace function public.xml_nfse_storage_summary(
+  p_secret text,
+  p_certificate_id text default null,
+  p_environment text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  summary jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select jsonb_build_object(
+    'totalPayloads', count(*),
+    'permanentPayloads', count(*) filter (where p.expires_at is null),
+    'expiringPayloads', count(*) filter (where p.expires_at is not null),
+    'expiredPayloads', count(*) filter (where p.expires_at is not null and p.expires_at < now()),
+    'totalBytes', coalesce(sum(octet_length(p.xml_content)), 0),
+    'firstCreatedAt', min(p.created_at),
+    'lastCreatedAt', max(p.created_at)
+  )
+  into summary
+  from xml_nfse.xml_payloads p
+  where (p_certificate_id is null or p.certificate_id = p_certificate_id)
+    and (p_environment is null or p.environment = p_environment);
+
+  return coalesce(summary, '{}'::jsonb);
+end;
+$$;
+
 grant execute on function public.xml_nfse_upsert_certificate(text, text, text, text, boolean) to anon, authenticated;
 grant execute on function public.xml_nfse_get_setting(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_set_setting(text, text, jsonb) to anon, authenticated;
@@ -938,6 +971,7 @@ grant execute on function public.xml_nfse_register_download(text, text, text, bi
 grant execute on function public.xml_nfse_upsert_xml_payload(text, text, text, text, bigint, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_xml_payload(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authenticated;
+grant execute on function public.xml_nfse_storage_summary(text, text, text) to anon, authenticated;
 
 drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer);
 

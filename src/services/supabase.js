@@ -126,6 +126,13 @@ async function listSupabaseXmlPayloads() {
   return supabaseRpc('xml_nfse_list_xml_payloads', {});
 }
 
+async function getStorageSummary({ certificateId = '', environment = '' } = {}) {
+  return supabaseRpc('xml_nfse_storage_summary', {
+    p_certificate_id: certificateId || null,
+    p_environment: environment ? normalizeEnvironment(environment) : null
+  });
+}
+
 async function getSupabaseSetting(key) {
   return supabaseRpc('xml_nfse_get_setting', { p_key: key });
 }
@@ -258,6 +265,7 @@ module.exports = {
   storeSupabaseXmlPayload,
   getSupabaseXmlPayload,
   listSupabaseXmlPayloads,
+  getStorageSummary,
   getSupabaseSetting,
   setSupabaseSetting,
   listRemoteCertificates,

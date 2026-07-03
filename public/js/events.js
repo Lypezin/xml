@@ -133,25 +133,21 @@ window.AppEvents = {
     });
 
     btnClearDownloads.addEventListener('click', async () => {
-      if (!confirm('Tem certeza que deseja limpar os XMLs consultados nesta sessão?')) return;
+      if (!confirm('Limpar apenas a sessao atual? Os XMLs permanentes no Supabase serao preservados.')) return;
 
       try {
         const data = await window.AppApi.clearDownloads();
         if (data.success) {
-          window.AppUi.log(`Sessão limpa. Removidos ${data.count} XMLs.`);
-          tableBody.innerHTML = `
-            <tr id="empty-row">
-              <td colspan="7" class="text-center">Nenhum documento baixado nesta sessão.</td>
-            </tr>
-          `;
+          window.AppUi.log(`Sessao limpa. ${data.count} XML(s) removido(s) apenas do cache local; Supabase preservado.`);
           window.totalDownloaded = 0;
-          statTotalNotas.innerText = '0';
           btnDownloadZip.disabled = true;
           window.AppUi.updateProgress(0, 0);
           statNsuAtual.innerText = '0';
           statNsuMax.innerText = '0';
           alertRateLimit.style.display = 'none';
           alertSyncSuccess.style.display = 'none';
+          window.AppSyncController.loadPersistedHistory();
+          window.AppSyncController.loadStorageSummary();
         }
       } catch (err) {
         window.AppUi.log(`Erro ao limpar pasta: ${err.message}`, 'error');
@@ -347,7 +343,7 @@ window.AppEvents = {
         btnSaveScheduler.disabled = true;
         try {
           const settings = {
-            autoSyncEnabled: false,
+            autoSyncEnabled: Boolean(schedulerEnabled?.checked),
             autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
             autoSyncEnvironment: selectEnvironment?.value || schedulerEnv?.value || 'producao',
             autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
@@ -408,6 +404,8 @@ window.AppEvents = {
           }
 
           window.AppUi.log('Atualizacao manual concluida.', 'success');
+          window.AppSyncController.loadPersistedHistory();
+          window.AppSyncController.loadStorageSummary();
           loadSchedulerSettings();
         } catch (err) {
           window.AppUi.log(`Erro na atualizacao manual: ${err.message}`, 'error');

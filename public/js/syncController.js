@@ -1,6 +1,29 @@
 // Controle de Consultas e Estado do Certificado
 
 window.AppSyncController = {
+  async loadStorageSummary() {
+    const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
+    if (!window.AppApi?.fetchStorageSummary || !statStoragePayloads || !statStorageSize) return;
+
+    try {
+      const data = await window.AppApi.fetchStorageSummary({
+        certificateId: certId || '',
+        environment: selectEnvironment ? selectEnvironment.value : ''
+      });
+      if (!data.success) throw new Error(data.error || 'Nao foi possivel carregar armazenamento.');
+
+      const summary = data.summary || {};
+      statStoragePayloads.innerText = window.AppUtils.formatInteger(summary.totalPayloads || 0);
+      statStorageSize.innerText = `${window.AppUtils.formatBytes(summary.totalBytes || 0)} permanentes`;
+      if (Number(summary.expiringPayloads || 0) > 0) {
+        statStorageSize.innerText += ` | ${window.AppUtils.formatInteger(summary.expiringPayloads)} com expiracao`;
+      }
+    } catch (err) {
+      statStorageSize.innerText = 'Falha ao consultar';
+      window.AppUi.log(`Erro ao carregar armazenamento: ${err.message}`, 'warning');
+    }
+  },
+
   getSelectedUnitFilter() {
     const selectedOption = unitFilter?.selectedOptions?.[0];
     return {
@@ -83,6 +106,7 @@ window.AppSyncController = {
       btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
       const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
       window.AppUi.log(`Historico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
+      this.loadStorageSummary();
     } catch (err) {
       window.AppUi.log(`Erro ao carregar historico: ${err.message}`, 'warning');
     }
@@ -111,6 +135,7 @@ window.AppSyncController = {
           txt.innerText = `Certificado Ativo: ${data.cnpj}`;
         }
         this.loadPersistedHistory();
+        this.loadStorageSummary();
       } else {
         certUploadState.classList.add('active');
         certActiveState.classList.remove('active');
@@ -228,6 +253,7 @@ window.AppSyncController = {
         window.AppUi.appendDocumentsToTable(documentos);
         window.totalDownloaded += documentos.length;
         btnDownloadZip.disabled = false;
+        this.loadStorageSummary();
         
         if (window.isCrawlerActive) {
           let novos = 0;
