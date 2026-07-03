@@ -1,6 +1,19 @@
 // Controle de Consultas e Estado do Certificado
 
 window.AppSyncController = {
+  beginQueryRun() {
+    window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
+    if (window.queryLoopTimer) {
+      clearTimeout(window.queryLoopTimer);
+      window.queryLoopTimer = null;
+    }
+    return window.activeQueryRunId;
+  },
+
+  isActiveQueryRun(runId) {
+    return window.isQuerying && !window.isPaused && runId === window.activeQueryRunId;
+  },
+
   async loadStorageSummary() {
     const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
     if (!window.AppApi?.fetchStorageSummary || !statStoragePayloads || !statStorageSize) return;
@@ -167,29 +180,30 @@ window.AppSyncController = {
     }
   },
 
-  async discoverAndStart() {
+  async discoverAndStart(runId = window.activeQueryRunId) {
     try {
       const env = selectEnvironment.value, cnpj = window.currentCrawlerCnpj, certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
       const data = await window.AppApi.discoverNsu({ environment: env, cnpjConsulta: cnpj, certificateId: certId });
+      if (!this.isActiveQueryRun(runId)) return;
       
       if (data.success && data.maxNSU > 0 && data.reliableMax) {
         window.maxNsu = data.maxNSU;
         window.currentNsu = Math.max(0, window.maxNsu - 50);
         inputStartNsu.value = window.currentNsu;
         window.AppUi.log(`NSU máximo API: ${window.maxNsu}. Consultando a partir do NSU ${window.currentNsu}...`, 'success');
-        this.runQueryLoop();
+        this.runQueryLoop(runId);
       } else if (data.success) {
         if (data.maxNSU > 0) {
           window.maxNsu = data.maxNSU;
           window.currentNsu = Math.max(0, window.maxNsu - 50);
           inputStartNsu.value = window.currentNsu;
           window.AppUi.log(`Estimado ${window.maxNsu}. Consultando a partir de ${window.currentNsu}.`, 'warning');
-          this.runQueryLoop();
+          this.runQueryLoop(runId);
           return;
         }
         window.currentNsu = parseInt(inputStartNsu.value) || 0;
         window.AppUi.log('Sem maxNSU confiável. Seguirá sequência por NSU.', 'warning');
-        this.runQueryLoop();
+        this.runQueryLoop(runId);
       } else {
         window.AppUi.log('Erro ao descobrir NSU: ' + (data.error || 'Nenhum documento encontrado.'), 'error');
         window.AppUi.logNationalApiContext(data.nationalApi);
@@ -202,17 +216,23 @@ window.AppSyncController = {
   },
 
   stopQuerying() {
+    window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
+    if (window.queryLoopTimer) {
+      clearTimeout(window.queryLoopTimer);
+      window.queryLoopTimer = null;
+    }
     window.isQuerying = false;
     window.isPaused = false;
     window.AppUi.setBtnStartActive(false, false);
     btnPause.disabled = true;
   },
 
-  async runQueryLoop() {
-    if (window.isPaused || !window.isQuerying) return;
+  async runQueryLoop(runId = window.activeQueryRunId) {
+    if (!this.isActiveQueryRun(runId)) return;
 
     const env = selectEnvironment.value, cnpj = window.currentCrawlerCnpj, certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
     const limiteNotas = parseInt(inputLimiteNotas.value) || 0;
+    const requestNsu = Number(window.currentNsu || 0);
 
     if (!certId) {
       window.AppUi.log('Selecione um certificado.', 'error');
@@ -220,16 +240,18 @@ window.AppSyncController = {
       return;
     }
 
-    window.AppUi.log(`Consultando bloco a partir do NSU ${window.currentNsu}...`);
+    window.AppUi.log(`Consultando bloco a partir do NSU ${requestNsu}...`);
 
     try {
       const data = await window.AppApi.fetchBatch({
-        startNsu: window.currentNsu,
+        startNsu: requestNsu,
         environment: env,
         cnpjConsulta: cnpj,
         certificateId: certId,
         sortOrder: selectSearchMode ? selectSearchMode.value : 'asc'
       });
+
+      if (!this.isActiveQueryRun(runId)) return;
 
       if (!data.success) {
         window.AppUi.log(`Erro na NFS-e: ${data.error}`, 'error');
@@ -282,6 +304,9 @@ window.AppSyncController = {
         if (ultNSU >= window.maxNsu) {
           deveParar = true;
           motivoParada = `NSU Atual (${ultNSU}) atingiu o máximo (${window.maxNsu}).`;
+        } else if (Number(ultNSU || 0) < requestNsu) {
+          deveParar = true;
+          motivoParada = `A API retornou ultNSU (${ultNSU}) menor que o NSU consultado (${requestNsu}); consulta interrompida para evitar voltar no historico.`;
         }
       } else {
         if (window.currentNsu <= 0) {
@@ -308,7 +333,7 @@ window.AppSyncController = {
       }
 
       if (mode === 'asc') {
-        window.currentNsu = ultNSU;
+        window.currentNsu = Math.max(requestNsu, Number(ultNSU || requestNsu));
       } else {
         window.currentNsu = Math.max(0, window.currentNsu - 50);
         inputStartNsu.value = window.currentNsu;
@@ -317,9 +342,13 @@ window.AppSyncController = {
       const safeDelaySeconds = Math.max(2, Number(schedulerDelaySeconds?.value || 5));
       const safeDelayMs = safeDelaySeconds * 1000;
       window.AppUi.log(`Aguardando ${safeDelaySeconds}s antes do proximo bloco...`, 'warning');
-      setTimeout(() => this.runQueryLoop(), safeDelayMs);
+      window.queryLoopTimer = setTimeout(() => {
+        window.queryLoopTimer = null;
+        this.runQueryLoop(runId);
+      }, safeDelayMs);
 
     } catch (err) {
+      if (!this.isActiveQueryRun(runId)) return;
       window.AppUi.log(`Erro crítico: ${err.message}`, 'error');
       this.stopQuerying();
     }

@@ -73,6 +73,11 @@ window.AppEvents = {
 
     btnStart.addEventListener('click', () => {
       if (window.isQuerying) {
+        window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
+        if (window.queryLoopTimer) {
+          clearTimeout(window.queryLoopTimer);
+          window.queryLoopTimer = null;
+        }
         window.isPaused = true;
         window.AppUi.setBtnStartActive(false, true);
         btnPause.disabled = true;
@@ -82,6 +87,7 @@ window.AppEvents = {
         const wasPaused = window.isPaused;
         window.isQuerying = true;
         window.isPaused = false;
+        const runId = window.AppSyncController.beginQueryRun();
         alertRateLimit.style.display = 'none';
         alertSyncSuccess.style.display = 'none';
         window.AppUi.setBtnStartActive(true);
@@ -99,7 +105,7 @@ window.AppEvents = {
           
           if (mode === 'desc' && window.currentNsu === 0) {
             window.AppUi.log(`Descobrindo NSU mais recente na Receita Federal para busca reversa...`);
-            window.AppSyncController.discoverAndStart();
+            window.AppSyncController.discoverAndStart(runId);
             return;
           } else {
             window.AppUi.log(`Iniciando nova busca em lote a partir do NSU ${window.currentNsu}...`);
@@ -108,11 +114,16 @@ window.AppEvents = {
           window.AppUi.log(`Retomando busca a partir do NSU ${window.currentNsu}...`);
         }
         
-        window.AppSyncController.runQueryLoop();
+        window.AppSyncController.runQueryLoop(runId);
       }
     });
 
     btnPause.addEventListener('click', () => {
+      window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
+      if (window.queryLoopTimer) {
+        clearTimeout(window.queryLoopTimer);
+        window.queryLoopTimer = null;
+      }
       window.isPaused = true;
       window.AppUi.setBtnStartActive(false, true);
       btnPause.disabled = true;
