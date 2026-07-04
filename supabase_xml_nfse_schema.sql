@@ -1073,6 +1073,8 @@ declare
   search_term text := lower(trim(coalesce(p_search, '')));
   search_digits text := regexp_replace(coalesce(p_search, ''), '\D', '', 'g');
   search_decimal text := replace(lower(trim(coalesce(p_search, ''))), ',', '.');
+  cnpj_consulta_digits text := regexp_replace(coalesce(p_cnpj_consulta, ''), '\D', '', 'g');
+  party_cnpj_digits text := regexp_replace(coalesce(p_party_cnpj, ''), '\D', '', 'g');
   search_numeric numeric;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
@@ -1081,7 +1083,28 @@ begin
     search_numeric := search_decimal::numeric;
   end if;
 
-  with enriched as (
+  with source_docs as (
+    select d.*
+    from xml_nfse.documents d
+    where d.certificate_id = p_certificate_id
+      and d.environment = p_environment
+      and (
+        party_cnpj_digits = ''
+        or (
+          coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
+          and d.prestador_cnpj = party_cnpj_digits
+        )
+        or (
+          coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
+          and d.tomador_cnpj = party_cnpj_digits
+        )
+        or (
+          d.tipo = 'EVENTO'
+          and nullif(d.chave, '') is not null
+        )
+      )
+  ),
+  enriched as (
     select
       d.*,
       coalesce(d.data_emissao, base.data_emissao) as effective_data_emissao,
@@ -1091,17 +1114,8 @@ begin
       coalesce(d.tomador_nome, base.tomador_nome) as effective_tomador_nome,
       coalesce(d.valor_servico, base.valor_servico) as effective_valor_servico,
       coalesce(d.municipio_prestacao, base.municipio_prestacao) as effective_municipio_prestacao,
-      coalesce(d.codigo_tributacao, base.codigo_tributacao) as effective_codigo_tributacao,
-      d.metadata || jsonb_strip_nulls(jsonb_build_object(
-        'prestadorCnpj', coalesce(d.metadata ->> 'prestadorCnpj', base.prestador_cnpj),
-        'prestadorNome', coalesce(d.metadata ->> 'prestadorNome', base.prestador_nome),
-        'tomadorCnpj', coalesce(d.metadata ->> 'tomadorCnpj', base.tomador_cnpj),
-        'tomadorNome', coalesce(d.metadata ->> 'tomadorNome', base.tomador_nome),
-        'valorServico', coalesce(d.metadata ->> 'valorServico', base.valor_servico::text),
-        'municipioPrestacao', coalesce(d.metadata ->> 'municipioPrestacao', base.municipio_prestacao),
-        'codigoTributacao', coalesce(d.metadata ->> 'codigoTributacao', base.codigo_tributacao)
-      )) as effective_metadata
-    from xml_nfse.documents d
+      coalesce(d.codigo_tributacao, base.codigo_tributacao) as effective_codigo_tributacao
+    from source_docs d
     left join lateral (
       select b.*
       from xml_nfse.documents b
@@ -1111,7 +1125,7 @@ begin
         and b.tipo <> 'EVENTO'
       order by b.nsu desc
       limit 1
-    ) base on true
+    ) base on d.tipo = 'EVENTO' and nullif(d.chave, '') is not null
   ),
   filtered as (
     select *
@@ -1121,26 +1135,26 @@ begin
       and (p_start_date is null or d.effective_data_emissao >= p_start_date)
       and (p_end_date is null or d.effective_data_emissao <= p_end_date)
       and (
-        coalesce(p_cnpj_consulta, '') = ''
-        or regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
+        cnpj_consulta_digits = ''
+        or coalesce(d.effective_tomador_cnpj, '') = cnpj_consulta_digits
       )
       and (
-        coalesce(p_party_cnpj, '') = ''
+        party_cnpj_digits = ''
         or (
           coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
-          and regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
+          and coalesce(d.effective_prestador_cnpj, '') = party_cnpj_digits
         )
         or (
           coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
-          and regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
+          and coalesce(d.effective_tomador_cnpj, '') = party_cnpj_digits
         )
       )
       and (
         p_include_cancelled
         or not (
-          lower(coalesce(d.effective_metadata ->> 'status', '')) like '%cancel%'
-          or lower(coalesce(d.effective_metadata ->> 'eventoDescricao', '')) like '%cancel%'
-          or lower(coalesce(d.effective_metadata ->> 'eventoMotivo', '')) like '%cancel%'
+          lower(coalesce(d.metadata ->> 'status', '')) like '%cancel%'
+          or lower(coalesce(d.metadata ->> 'eventoDescricao', '')) like '%cancel%'
+          or lower(coalesce(d.metadata ->> 'eventoMotivo', '')) like '%cancel%'
           or lower(coalesce(d.tipo, '')) like '%cancel%'
         )
       )
@@ -1148,8 +1162,8 @@ begin
         search_term = ''
         or lower(coalesce(d.effective_prestador_nome, '')) like '%' || search_term || '%'
         or lower(coalesce(d.effective_tomador_nome, '')) like '%' || search_term || '%'
-        or (search_digits <> '' and regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') like '%' || search_digits || '%')
-        or (search_digits <> '' and regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') like '%' || search_digits || '%')
+        or (search_digits <> '' and coalesce(d.effective_prestador_cnpj, '') like '%' || search_digits || '%')
+        or (search_digits <> '' and coalesce(d.effective_tomador_cnpj, '') like '%' || search_digits || '%')
         or (search_numeric is not null and coalesce(d.effective_valor_servico, 0) = search_numeric)
         or coalesce(d.effective_valor_servico, 0)::text like '%' || search_decimal || '%'
       )
@@ -1173,7 +1187,7 @@ begin
       filtered.effective_codigo_tributacao as codigo_tributacao,
       filtered.file_name,
       filtered.xml_sha256,
-      filtered.effective_metadata as metadata,
+      filtered.metadata,
       filtered.first_seen_at,
       filtered.last_seen_at,
       row_number() over (
@@ -1220,7 +1234,15 @@ begin
       codigo_tributacao,
       file_name,
       xml_sha256,
-      metadata,
+      metadata || jsonb_strip_nulls(jsonb_build_object(
+        'prestadorCnpj', prestador_cnpj,
+        'prestadorNome', prestador_nome,
+        'tomadorCnpj', tomador_cnpj,
+        'tomadorNome', tomador_nome,
+        'valorServico', valor_servico::text,
+        'municipioPrestacao', municipio_prestacao,
+        'codigoTributacao', codigo_tributacao
+      )) as metadata,
       first_seen_at,
       last_seen_at
     from deduped
