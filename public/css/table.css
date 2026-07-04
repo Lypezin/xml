@@ -183,10 +183,14 @@ body.light-mode .xml-item:hover {
 .xml-action-cell {
   display: flex;
   justify-content: flex-end;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .xml-action-cell .btn {
   width: 72px;
+  justify-content: center;
 }
 
 .xml-empty-state {

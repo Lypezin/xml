@@ -329,9 +329,9 @@ window.AppSyncController = {
       
       if (documentos && documentos.length > 0) {
         window.AppUi.log(`Lote processado! ${novos} novo(s), ${existentes} ja existiam, ${documentos.length} recebido(s) no lote.`, novos > 0 ? 'success' : 'warning');
-        window.AppUi.appendDocumentsToTable(documentos);
         window.totalDownloaded += novos;
         btnDownloadZip.disabled = false;
+        await this.loadPersistedHistory(1);
         this.loadStorageSummary();
         
         if (window.isCrawlerActive) {

@@ -147,18 +147,29 @@ window.AppEvents = {
     });
 
     tableBody.addEventListener('click', async (e) => {
-      const button = e.target.closest('button[data-action="download-xml"]');
-      if (!button) return;
+      const xmlButton = e.target.closest('button[data-action="download-xml"]');
+      const pdfButton = e.target.closest('button[data-action="download-pdf"]');
+      if (!xmlButton && !pdfButton) return;
 
       try {
-        await window.AppApi.downloadFromApi(`/api/download-xml/${button.dataset.token}`, 'nfse.xml');
-        window.AppUi.log('XML baixado com sucesso.', 'success');
+        if (xmlButton) {
+          await window.AppApi.downloadFromApi(`/api/download-xml/${xmlButton.dataset.token}`, 'nfse.xml');
+          window.AppUi.log('XML baixado com sucesso.', 'success');
+          return;
+        }
+
+        const params = new URLSearchParams({
+          certificateId: selectCertificate ? selectCertificate.value : (window.activeCertificateId || ''),
+          environment: selectEnvironment ? selectEnvironment.value : 'producao'
+        });
+        await window.AppApi.downloadFromApi(`/api/download-pdf/${encodeURIComponent(pdfButton.dataset.chave)}?${params.toString()}`, 'danfse.pdf');
+        window.AppUi.log('PDF baixado com sucesso.', 'success');
       } catch (err) {
-        window.AppUi.log(`Erro ao baixar XML: ${err.message}`, 'error');
+        window.AppUi.log(`Erro ao baixar documento: ${err.message}`, 'error');
       }
     });
 
-    btnClearDownloads.addEventListener('click', async () => {
+    if (btnClearDownloads) btnClearDownloads.addEventListener('click', async () => {
       if (!confirm('Limpar apenas arquivos temporarios? Os XMLs permanentes no Supabase serao preservados.')) return;
 
       try {

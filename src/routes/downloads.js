@@ -1,6 +1,8 @@
 const express = require('express');
 const AdmZip = require('adm-zip');
+const axios = require('axios');
 const fs = require('fs');
+const https = require('https');
 const path = require('path');
 const xmlCache = require('../utils/xmlCache');
 const { DOWNLOADS_DIR, IS_VERCEL } = require('../config/constants');
@@ -9,10 +11,11 @@ const {
   getSupabaseXmlPayload,
   listSupabaseXmlPayloads,
   listRemoteDocuments,
+  listRemoteCertificates,
   getStorageSummary
 } = require('../services/supabase');
 const { resolveCertificateForRequest } = require('../services/localCertificates');
-const { onlyDigits } = require('../utils/cert');
+const { getCertificateBuffer, onlyDigits } = require('../utils/cert');
 
 const router = express.Router();
 
@@ -51,6 +54,35 @@ function dedupeXmlItems(items) {
   return Array.from(byKey.values());
 }
 
+function getDanfseBaseUrl(environment) {
+  return environment === 'homologacao'
+    ? 'https://adn.producaorestrita.nfse.gov.br/danfse'
+    : 'https://adn.nfse.gov.br/danfse';
+}
+
+function getDanfseFileName(chave) {
+  const safeKey = onlyDigits(chave) || 'nfse';
+  return `DANFSe_${safeKey}.pdf`;
+}
+
+function summarizeRemoteError(data) {
+  if (!data) return '';
+  const text = Buffer.isBuffer(data) ? data.toString('utf8') : String(data);
+  return text.replace(/\s+/g, ' ').trim().slice(0, 500);
+}
+
+async function resolveCertificateMetadataForList(certificateId) {
+  const certificates = await listRemoteCertificates();
+  if (Array.isArray(certificates) && certificates.length > 0) {
+    const cert = certificateId
+      ? certificates.find(item => item.id === certificateId)
+      : (certificates.find(item => item.active) || certificates[0]);
+    if (cert) return cert;
+  }
+
+  return resolveCertificateForRequest(certificateId);
+}
+
 router.get('/download-xml/:token', async (req, res) => {
   let cached = xmlCache.get(req.params.token);
   if (!cached) {
@@ -80,6 +112,62 @@ router.get('/download-xml/:token', async (req, res) => {
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${cached.fileName}"`);
   return res.send(cached.xmlString);
+});
+
+router.get('/download-pdf/:chave', async (req, res) => {
+  try {
+    const chave = onlyDigits(req.params.chave);
+    const environment = req.query.environment === 'homologacao' ? 'homologacao' : 'producao';
+
+    if (chave.length !== 50) {
+      return res.status(400).json({ success: false, error: 'Chave de acesso NFS-e invalida. A chave nacional deve ter 50 digitos.' });
+    }
+
+    const cert = await resolveCertificateForRequest(req.query.certificateId);
+    const pfx = getCertificateBuffer(cert);
+    if (!cert || !pfx || !cert.passphrase) {
+      return res.status(400).json({ success: false, error: 'Certificado nao configurado para consultar o DANFSe.' });
+    }
+
+    const httpsAgent = new https.Agent({
+      pfx,
+      passphrase: cert.passphrase,
+      rejectUnauthorized: false
+    });
+    const url = `${getDanfseBaseUrl(environment)}/${encodeURIComponent(chave)}`;
+    const response = await axios.get(url, {
+      httpsAgent,
+      responseType: 'arraybuffer',
+      timeout: 45000,
+      headers: {
+        Accept: 'application/pdf,application/octet-stream,*/*',
+        'User-Agent': 'XML-NFSe-Lote/1.0'
+      },
+      validateStatus: status => status < 500
+    });
+
+    const contentType = String(response.headers['content-type'] || '').toLowerCase();
+    const payload = Buffer.from(response.data || []);
+    if (response.status >= 400 || payload.length === 0 || (contentType && !contentType.includes('pdf') && !contentType.includes('octet-stream'))) {
+      const detail = summarizeRemoteError(payload);
+      return res.status(response.status >= 400 ? response.status : 502).json({
+        success: false,
+        error: `DANFSe nao retornou PDF para esta chave${detail ? `: ${detail}` : '.'}`
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${getDanfseFileName(chave)}"`);
+    return res.send(payload);
+  } catch (err) {
+    const status = err.response?.status || 500;
+    const detail = summarizeRemoteError(err.response?.data);
+    console.error('Erro ao baixar DANFSe:', detail || err.message);
+    return res.status(status).json({
+      success: false,
+      error: `Erro ao baixar DANFSe${detail ? `: ${detail}` : `: ${err.message}`}`
+    });
+  }
 });
 
 router.get('/download-zip', async (req, res) => {
@@ -143,7 +231,7 @@ router.get('/list-documents', async (req, res) => {
       limit,
       offset
     } = req.query;
-    const cert = await resolveCertificateForRequest(certificateId);
+    const cert = await resolveCertificateMetadataForList(certificateId);
     if (!cert) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado.' });
     }
@@ -173,8 +261,12 @@ router.get('/list-documents', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Erro ao listar documentos:', err);
-    return res.status(500).json({ success: false, error: err.message });
+    const detail = err.response?.data || err.message;
+    console.error('Erro ao listar documentos:', detail);
+    return res.status(500).json({
+      success: false,
+      error: typeof detail === 'string' ? detail : JSON.stringify(detail)
+    });
   }
 });
 
@@ -205,7 +297,7 @@ router.post('/download-period-zip', async (req, res) => {
       search = '',
       includeCancelled = 'false'
     } = req.body;
-    const cert = await resolveCertificateForRequest(certificateId);
+    const cert = await resolveCertificateMetadataForList(certificateId);
     if (!cert) {
       return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
     }

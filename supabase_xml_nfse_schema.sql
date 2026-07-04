@@ -142,6 +142,14 @@ create index if not exists documents_emissao_lookup_idx
 create index if not exists documents_chave_idx
   on xml_nfse.documents (chave);
 
+create index if not exists documents_chave_nfse_lookup_idx
+  on xml_nfse.documents (certificate_id, environment, chave, nsu desc)
+  where tipo <> 'EVENTO' and chave is not null and chave <> '';
+
+create index if not exists documents_chave_evento_lookup_idx
+  on xml_nfse.documents (certificate_id, environment, chave, nsu desc)
+  where tipo = 'EVENTO' and chave is not null and chave <> '';
+
 create index if not exists xml_payloads_expires_at_idx
   on xml_nfse.xml_payloads (expires_at);
 
@@ -836,7 +844,8 @@ begin
     nullif(nullif(p_metadata ->> 'tomadorNome', ''), 'N/A'),
     case
       when metadata_valor_servico ~ '^-?\d+(\.\d+)?$'
-       and length(regexp_replace(split_part(metadata_valor_servico, '.', 1), '^-', '')) <= 18
+       and metadata_valor_servico::numeric >= 0
+       and metadata_valor_servico::numeric < 1000000000
       then round(metadata_valor_servico::numeric, 2)
       else null
     end,
@@ -1083,126 +1092,82 @@ begin
     search_numeric := search_decimal::numeric;
   end if;
 
-  with source_docs as (
-    select d.*
+  with filtered as (
+    select
+      d.id,
+      d.certificate_id,
+      d.environment,
+      d.nsu,
+      d.tipo,
+      d.chave,
+      d.numero_nfse,
+      d.data_emissao,
+      d.prestador_cnpj,
+      d.prestador_nome,
+      d.tomador_cnpj,
+      d.tomador_nome,
+      d.valor_servico,
+      d.municipio_prestacao,
+      d.codigo_tributacao,
+      d.file_name,
+      d.xml_sha256,
+      d.metadata,
+      d.first_seen_at,
+      d.last_seen_at
     from xml_nfse.documents d
     where d.certificate_id = p_certificate_id
       and d.environment = p_environment
-      and (
-        party_cnpj_digits = ''
-        or (
-          coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
-          and d.prestador_cnpj = party_cnpj_digits
-        )
-        or (
-          coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
-          and d.tomador_cnpj = party_cnpj_digits
-        )
-        or (
-          d.tipo = 'EVENTO'
-          and nullif(d.chave, '') is not null
-        )
-      )
-  ),
-  enriched as (
-    select
-      d.*,
-      coalesce(d.data_emissao, base.data_emissao) as effective_data_emissao,
-      coalesce(d.prestador_cnpj, base.prestador_cnpj) as effective_prestador_cnpj,
-      coalesce(d.prestador_nome, base.prestador_nome) as effective_prestador_nome,
-      coalesce(d.tomador_cnpj, base.tomador_cnpj) as effective_tomador_cnpj,
-      coalesce(d.tomador_nome, base.tomador_nome) as effective_tomador_nome,
-      coalesce(d.valor_servico, base.valor_servico) as effective_valor_servico,
-      coalesce(d.municipio_prestacao, base.municipio_prestacao) as effective_municipio_prestacao,
-      coalesce(d.codigo_tributacao, base.codigo_tributacao) as effective_codigo_tributacao
-    from source_docs d
-    left join lateral (
-      select b.*
-      from xml_nfse.documents b
-      where b.certificate_id = d.certificate_id
-        and b.environment = d.environment
-        and b.chave = d.chave
-        and b.tipo <> 'EVENTO'
-      order by b.nsu desc
-      limit 1
-    ) base on d.tipo = 'EVENTO' and nullif(d.chave, '') is not null
-  ),
-  filtered as (
-    select *
-    from enriched d
-    where d.certificate_id = p_certificate_id
-      and d.environment = p_environment
-      and (p_start_date is null or d.effective_data_emissao >= p_start_date)
-      and (p_end_date is null or d.effective_data_emissao <= p_end_date)
+      and d.tipo <> 'EVENTO'
+      and (p_start_date is null or d.data_emissao >= p_start_date)
+      and (p_end_date is null or d.data_emissao <= p_end_date)
       and (
         cnpj_consulta_digits = ''
-        or coalesce(d.effective_tomador_cnpj, '') = cnpj_consulta_digits
+        or coalesce(d.tomador_cnpj, '') = cnpj_consulta_digits
       )
       and (
         party_cnpj_digits = ''
         or (
           coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
-          and coalesce(d.effective_prestador_cnpj, '') = party_cnpj_digits
+          and coalesce(d.prestador_cnpj, '') = party_cnpj_digits
         )
         or (
           coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
-          and coalesce(d.effective_tomador_cnpj, '') = party_cnpj_digits
+          and coalesce(d.tomador_cnpj, '') = party_cnpj_digits
         )
       )
       and (
         p_include_cancelled
         or not (
           lower(coalesce(d.metadata ->> 'status', '')) like '%cancel%'
-          or lower(coalesce(d.metadata ->> 'eventoDescricao', '')) like '%cancel%'
-          or lower(coalesce(d.metadata ->> 'eventoMotivo', '')) like '%cancel%'
           or lower(coalesce(d.tipo, '')) like '%cancel%'
+          or (
+            nullif(d.chave, '') is not null
+            and exists (
+              select 1
+              from xml_nfse.documents ev
+              where ev.certificate_id = d.certificate_id
+                and ev.environment = d.environment
+                and ev.chave = d.chave
+                and ev.tipo = 'EVENTO'
+                and (
+                  lower(coalesce(ev.metadata ->> 'status', '')) like '%cancel%'
+                  or lower(coalesce(ev.metadata ->> 'eventoDescricao', '')) like '%cancel%'
+                  or lower(coalesce(ev.metadata ->> 'eventoMotivo', '')) like '%cancel%'
+                )
+              limit 1
+            )
+          )
         )
       )
       and (
         search_term = ''
-        or lower(coalesce(d.effective_prestador_nome, '')) like '%' || search_term || '%'
-        or lower(coalesce(d.effective_tomador_nome, '')) like '%' || search_term || '%'
-        or (search_digits <> '' and coalesce(d.effective_prestador_cnpj, '') like '%' || search_digits || '%')
-        or (search_digits <> '' and coalesce(d.effective_tomador_cnpj, '') like '%' || search_digits || '%')
-        or (search_numeric is not null and coalesce(d.effective_valor_servico, 0) = search_numeric)
-        or coalesce(d.effective_valor_servico, 0)::text like '%' || search_decimal || '%'
+        or lower(coalesce(d.prestador_nome, '')) like '%' || search_term || '%'
+        or lower(coalesce(d.tomador_nome, '')) like '%' || search_term || '%'
+        or (search_digits <> '' and coalesce(d.prestador_cnpj, '') like '%' || search_digits || '%')
+        or (search_digits <> '' and coalesce(d.tomador_cnpj, '') like '%' || search_digits || '%')
+        or (search_numeric is not null and coalesce(d.valor_servico, 0) = search_numeric)
+        or (search_decimal <> '' and coalesce(d.valor_servico, 0)::text like '%' || search_decimal || '%')
       )
-  ),
-  ranked as (
-    select
-      filtered.id,
-      filtered.certificate_id,
-      filtered.environment,
-      filtered.nsu,
-      filtered.tipo,
-      filtered.chave,
-      filtered.numero_nfse,
-      filtered.effective_data_emissao as data_emissao,
-      filtered.effective_prestador_cnpj as prestador_cnpj,
-      filtered.effective_prestador_nome as prestador_nome,
-      filtered.effective_tomador_cnpj as tomador_cnpj,
-      filtered.effective_tomador_nome as tomador_nome,
-      filtered.effective_valor_servico as valor_servico,
-      filtered.effective_municipio_prestacao as municipio_prestacao,
-      filtered.effective_codigo_tributacao as codigo_tributacao,
-      filtered.file_name,
-      filtered.xml_sha256,
-      filtered.metadata,
-      filtered.first_seen_at,
-      filtered.last_seen_at,
-      row_number() over (
-        partition by case
-          when nullif(filtered.chave, '') is not null and filtered.chave <> 'N/A' then filtered.chave
-          else filtered.id::text
-        end
-        order by case when filtered.tipo = 'EVENTO' then 1 else 0 end, filtered.nsu desc
-    ) as dedupe_rank
-    from filtered
-  ),
-  deduped as (
-    select *
-    from ranked
-    where dedupe_rank = 1
   ),
   totals as (
     select
@@ -1213,7 +1178,7 @@ begin
           else 0
         end
       ), 0)::numeric as total_value
-    from deduped
+    from filtered
   ),
   page_rows as (
     select
@@ -1245,7 +1210,7 @@ begin
       )) as metadata,
       first_seen_at,
       last_seen_at
-    from deduped
+    from filtered
     order by nsu desc
     limit coalesce(p_limit, 100000)
     offset coalesce(p_offset, 0)

@@ -76,6 +76,11 @@ function normalizeCurrencyForPersistence(value) {
     return 'N/A';
   }
 
+  const numericValue = Number(normalized);
+  if (!Number.isFinite(numericValue) || numericValue < 0 || numericValue >= 1000000000) {
+    return 'N/A';
+  }
+
   return normalized;
 }
 
