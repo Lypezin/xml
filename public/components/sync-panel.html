@@ -28,7 +28,6 @@
     <input type="checkbox" id="scheduler-enabled" style="display: none;">
     <input type="number" id="scheduler-interval" value="12" min="1" max="168" style="display: none;">
     <select id="scheduler-env" style="display: none;"><option value="producao" selected>Producao</option></select>
-    <input type="number" id="scheduler-delay-seconds" value="5" min="2" max="3600" style="display: none;">
     <input type="number" id="scheduler-max-batches" value="1" min="1" max="5" style="display: none;">
   </section>
 
@@ -46,6 +45,11 @@
           <button type="button" class="btn btn-secondary btn-sm" id="btn-use-saved-nsu">Ultimo recebido</button>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-use-national-nsu">Ultimo nacional</button>
         </div>
+      </div>
+      <div class="nsu-control">
+        <label for="scheduler-delay-seconds">Segundos por lote</label>
+        <input type="number" id="scheduler-delay-seconds" value="5" min="2" max="3600">
+        <span class="helper-text">Pausa entre chamadas para reduzir risco de bloqueio.</span>
       </div>
       <div class="action-buttons">
         <button class="btn btn-success" id="btn-start" disabled><span>Iniciar varredura</span></button>
