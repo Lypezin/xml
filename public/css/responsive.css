@@ -3,6 +3,86 @@
   padding: 16px 20px;
 }
 
+.rules-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.rules-hero h2 {
+  font-size: 24px;
+  letter-spacing: 0;
+  margin-bottom: 8px;
+}
+
+.rules-hero p,
+.rules-source span,
+.rule-card p,
+.rules-flow span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.rules-source {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  background: var(--input-bg);
+}
+
+.rules-dashboard-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.rule-card {
+  min-height: 180px;
+  padding: 18px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.rule-index {
+  display: inline-flex;
+  color: var(--secondary-hover);
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.rule-card h3 {
+  font-size: 15px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.rules-flow-card {
+  margin-top: 18px;
+}
+
+.rules-flow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rules-flow > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+}
+
 .rules-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -50,6 +130,13 @@
   .overview-metrics {
     grid-template-columns: repeat(3, 1fr);
   }
+  .rules-dashboard-grid,
+  .rules-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rules-hero {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -66,7 +153,9 @@
   }
   .overview-metrics,
   .toolbar-grid,
-  .operations-grid {
+  .operations-grid,
+  .rules-dashboard-grid,
+  .rules-flow {
     grid-template-columns: 1fr;
   }
 }

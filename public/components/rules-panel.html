@@ -1,67 +1,69 @@
 <div id="view-regras-content" class="tab-content" style="display: none;">
-  <div class="split-grid" style="grid-template-columns: 1fr;">
-    <section class="card">
-      <div class="card-header">
-        <h2>Regras e Limites Operacionais da API</h2>
-      </div>
-      
-      <div class="rules-grid" style="grid-template-columns: 1fr; gap: 24px; max-width: 800px; margin: 0 auto; padding: 12px 0;">
-        <div class="rule-item" style="font-size: 13.5px; gap: 16px;">
-          <span class="rule-bullet-icon" style="margin-top: 4px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="6" x2="21" y2="6"></line>
-              <line x1="8" y1="12" x2="21" y2="12"></line>
-              <line x1="8" y1="18" x2="21" y2="18"></line>
-              <line x1="3" y1="6" x2="3.01" y2="6"></line>
-              <line x1="3" y1="12" x2="3.01" y2="12"></line>
-              <line x1="3" y1="18" x2="3.01" y2="18"></line>
-            </svg>
-          </span>
-          <div>
-            <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Busca em Lotes Sequenciais</h3>
-            <p>O programa consulta a API oficial de contribuintes do Ambiente de Dados Nacional em <code>/DFe/{NSU}</code>. A busca é feita por NSU, em blocos sequenciais, salvando localmente cada XML retornado no lote e avançando até não haver mais documentos compatíveis com os filtros.</p>
-          </div>
-        </div>
+  <section class="rules-hero card">
+    <div>
+      <span class="eyebrow">NFS-e Nacional</span>
+      <h2>Regras operacionais para distribuicao de XMLs</h2>
+      <p>Resumo pratico baseado nos manuais atuais do Portal NFS-e e nas regras de consulta por NSU do Ambiente de Dados Nacional.</p>
+    </div>
+    <div class="rules-source">
+      <strong>Fontes consultadas</strong>
+      <span>Portal Gov.br NFS-e - Documentacao Atual</span>
+      <span>Manual de API ADN para Contribuintes</span>
+      <span>Manual de API ADN para Municipios</span>
+    </div>
+  </section>
 
-        <div class="rule-item" style="font-size: 13.5px; gap: 16px;">
-          <span class="rule-bullet-icon" style="margin-top: 4px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-          </span>
-          <div>
-            <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Prevenção de Consumo Indevido (Erro 656)</h3>
-            <p>Consultas repetidas e muito rápidas podem gerar bloqueio temporário por consumo indevido. Para reduzir esse risco, a ferramenta aguarda <strong>10 segundos</strong> entre lotes automáticos e interrompe a execução quando a API retorna erro de limite.</p>
-          </div>
-        </div>
+  <section class="rules-grid rules-dashboard-grid">
+    <article class="rule-card">
+      <span class="rule-index">01</span>
+      <h3>Consulta por NSU</h3>
+      <p>A distribuicao e feita a partir de um Numero Sequencial Unico. O sistema deve guardar o ultimo NSU recebido e continuar do proximo ponto, sem recomecar toda a varredura sem necessidade.</p>
+    </article>
+    <article class="rule-card">
+      <span class="rule-index">02</span>
+      <h3>Lote maximo da API</h3>
+      <p>A documentacao do ADN descreve retorno em lotes de ate 50 documentos fiscais por chamada. A tela usa paginacao menor para visualizacao, mas a varredura respeita a dinamica de lotes da API.</p>
+    </article>
+    <article class="rule-card">
+      <span class="rule-index">03</span>
+      <h3>Ordem dos documentos</h3>
+      <p>O NSU segue a disponibilizacao no ambiente nacional. Ele nao deve ser tratado como ordenacao perfeita por data de emissao; eventos e notas podem aparecer conforme recepcao pelo ADN.</p>
+    </article>
+    <article class="rule-card">
+      <span class="rule-index">04</span>
+      <h3>Atores autorizados</h3>
+      <p>As APIs de contribuinte permitem consulta de documentos em que o CNPJ figure como emitente/prestador, tomador ou intermediario, conforme autorizacao do certificado usado na conexao.</p>
+    </article>
+    <article class="rule-card">
+      <span class="rule-index">05</span>
+      <h3>NFS-e e eventos</h3>
+      <p>Eventos vinculados, como cancelamento, fazem parte do ciclo de vida da NFS-e e podem aparecer na distribuicao. A lista consolida a nota principal quando ha documento e evento relacionados.</p>
+    </article>
+    <article class="rule-card">
+      <span class="rule-index">06</span>
+      <h3>Certificado digital</h3>
+      <p>A chamada usa mTLS com certificado ICP-Brasil A1 em arquivo PFX/P12. O certificado define a identidade fiscal e limita quais documentos podem ser acessados.</p>
+    </article>
+    <article class="rule-card">
+      <span class="rule-index">07</span>
+      <h3>Consumo indevido</h3>
+      <p>Consultas repetidas, muito rapidas ou insistentes apos fim de fila podem gerar rejeicao/bloqueio temporario. Use a pausa por lote e evite reiniciar varreduras completas sem necessidade.</p>
+    </article>
+    <article class="rule-card">
+      <span class="rule-index">08</span>
+      <h3>Persistencia local do sistema</h3>
+      <p>A visualizacao de XMLs e feita a partir do Supabase, com limit/offset. Isso permite navegar milhares de registros por unidade sem carregar todo o historico no navegador.</p>
+    </article>
+  </section>
 
-        <div class="rule-item" style="font-size: 13.5px; gap: 16px;">
-          <span class="rule-bullet-icon" style="margin-top: 4px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
-          <div>
-            <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Origem e Tipo dos XMLs</h3>
-            <p>A API Nacional disponibiliza documentos do <strong>Padrão Nacional da NFS-e</strong>. Notas de municípios que ainda usam layouts próprios ou integrações legadas podem não aparecer nesse barramento. O retorno pode incluir NFS-e e eventos associados, como cancelamento.</p>
-          </div>
-        </div>
-
-        <div class="rule-item" style="font-size: 13.5px; gap: 16px;">
-          <span class="rule-bullet-icon" style="margin-top: 4px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-          </span>
-          <div>
-            <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Certificado Digital e Vínculos</h3>
-            <p>O mTLS exige autenticação com certificado digital ICP-Brasil. Esta versão local aceita certificado A1 em arquivo <strong>.pfx</strong> ou <strong>.p12</strong>. A consulta só retorna documentos vinculados ao CNPJ autorizado pelo certificado ou informado para consulta.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-  </div>
+  <section class="card rules-flow-card">
+    <div class="card-header"><h2>Fluxo recomendado de operacao</h2></div>
+    <div class="rules-flow">
+      <div><strong>1. Cadastre o certificado</strong><span>Valide senha, CNPJ e validade antes de iniciar.</span></div>
+      <div><strong>2. Selecione a unidade</strong><span>Use o CNPJ da unidade desejada para filtrar a base persistida.</span></div>
+      <div><strong>3. Use ultimo recebido</strong><span>Retome do NSU salvo para evitar chamadas redundantes.</span></div>
+      <div><strong>4. Ajuste segundos por lote</strong><span>Aumente a pausa se houver erro de limite ou instabilidade.</span></div>
+      <div><strong>5. Navegue pela lista</strong><span>A tabela carrega 15 XMLs por pagina diretamente do Supabase.</span></div>
+    </div>
+  </section>
 </div>

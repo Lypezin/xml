@@ -144,12 +144,12 @@ window.AppEvents = {
     });
 
     btnClearDownloads.addEventListener('click', async () => {
-      if (!confirm('Limpar apenas a sessao atual? Os XMLs permanentes no Supabase serao preservados.')) return;
+      if (!confirm('Limpar apenas arquivos temporarios? Os XMLs permanentes no Supabase serao preservados.')) return;
 
       try {
         const data = await window.AppApi.clearDownloads();
         if (data.success) {
-          window.AppUi.log(`Sessao limpa. ${data.count} XML(s) removido(s) apenas do cache local; Supabase preservado.`);
+          window.AppUi.log(`Temporarios limpos. ${data.count} XML(s) removido(s); Supabase preservado.`);
           window.totalDownloaded = 0;
           btnDownloadZip.disabled = true;
           window.AppUi.updateProgress(0, 0);
@@ -338,19 +338,19 @@ window.AppEvents = {
     if (navDownload) {
       navDownload.addEventListener('click', (e) => {
         e.preventDefault();
-        window.AppUi.switchTab(navDownload, viewDownloadContent, 'Painel de Sincronização', 'Gerencie o download de documentos fiscais mTLS');
+        window.AppUi.switchTab(navDownload, viewDownloadContent, 'XML Sigma', 'XMLs NFS-e persistidos por certificado e unidade');
       });
     }
     if (navCertificado) {
       navCertificado.addEventListener('click', (e) => {
         e.preventDefault();
-        window.AppUi.switchTab(navCertificado, viewCertificadoContent, 'Configuração do Certificado', 'Gerencie as chaves de criptografia e senhas da empresa');
+        window.AppUi.switchTab(navCertificado, viewCertificadoContent, 'Certificados', 'Gerencie certificados A1 e nomes internos');
       });
     }
     if (navRegras) {
       navRegras.addEventListener('click', (e) => {
         e.preventDefault();
-        window.AppUi.switchTab(navRegras, viewRegrasContent, 'Regras e Limites', 'Entenda como o barramento da Receita Federal e da NFS-e operam');
+        window.AppUi.switchTab(navRegras, viewRegrasContent, 'Regras ADN', 'Limites de consulta e boas praticas da NFS-e Nacional');
       });
     }
 

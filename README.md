@@ -1,4 +1,4 @@
-# XML NFS-e em Lote
+# XML Sigma
 
 Ferramenta local em Node.js para consultar XMLs de NFS-e Nacional em lote via API ADN por NSU, usando certificado A1 com mTLS.
 

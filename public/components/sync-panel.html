@@ -2,8 +2,8 @@
   <section class="overview-strip">
     <div class="overview-copy">
       <span class="eyebrow">Operacao NFS-e</span>
-      <h2>XMLs sincronizados e prontos para download</h2>
-      <p>Consulte, acompanhe e baixe os XMLs persistidos no Supabase por certificado e CNPJ tomador.</p>
+      <h2>XMLs persistidos por unidade</h2>
+      <p>Selecione uma unidade e visualize os XMLs salvos no Supabase com paginacao leve, mesmo em bases grandes.</p>
     </div>
     <div class="overview-metrics">
       <div class="metric-card"><div class="metric-data"><span class="metric-label">Cursor NSU</span><h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3></div></div>
@@ -13,14 +13,15 @@
   </section>
 
   <section class="toolbar-card">
-    <div class="toolbar-grid">
+    <div class="toolbar-grid compact-toolbar-grid">
       <div class="input-group certificate-field"><label for="certificate-select">Certificado</label><select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select></div>
-      <div class="input-group"><label for="cnpj-consulta">CNPJ tomador</label><input type="text" id="cnpj-consulta" placeholder="Vazio = CNPJ do certificado"></div>
-      <div class="input-group"><label for="unit-filter">Unidade</label><select id="unit-filter"><option value="">CNPJ tomador do certificado</option></select></div>
+      <div class="input-group"><label for="unit-filter">Unidade</label><select id="unit-filter"><option value="">CNPJ do certificado ativo</option></select></div>
       <div class="input-group"><label for="download-start-date">Inicio</label><input type="date" id="download-start-date"></div>
       <div class="input-group"><label for="download-end-date">Fim</label><input type="date" id="download-end-date"></div>
       <button class="btn btn-success toolbar-action" id="btn-download-period"><span>Baixar ZIP</span></button>
     </div>
+
+    <input type="text" id="cnpj-consulta" value="" style="display: none;">
     <select id="environment" style="display: none;"><option value="producao" selected>Producao</option></select>
     <select id="search-mode" style="display: none;"><option value="asc" selected>Inicial completa</option></select>
     <input type="number" id="limite-notas" min="1" style="display: none;">
@@ -29,55 +30,38 @@
     <input type="number" id="scheduler-interval" value="12" min="1" max="168" style="display: none;">
     <select id="scheduler-env" style="display: none;"><option value="producao" selected>Producao</option></select>
     <input type="number" id="scheduler-max-batches" value="1" min="1" max="5" style="display: none;">
+    <button class="btn btn-primary btn-sm" id="btn-save-scheduler" style="display: none;">Salvar config.</button>
+    <button class="btn btn-secondary btn-sm" id="btn-run-scheduler-now" style="display: none;">Atualizar agora</button>
+    <div style="display: none;">
+      <div id="manual-sync-progress-bar"></div>
+      <span id="manual-sync-progress-text"></span>
+      <span id="manual-sync-progress-percentage"></span>
+      <strong id="scheduler-last-run">-</strong>
+      <strong id="scheduler-status">Manual</strong>
+    </div>
   </section>
 
-  <section class="operations-grid">
+  <section class="operations-grid single-operation-grid">
     <article class="operation-card primary-operation">
       <div>
         <span class="eyebrow">Varredura</span>
-        <h2>Sincronizacao inicial</h2>
-        <p>Monte o historico completo do CNPJ selecionado. Os XMLs encontrados entram na tabela ao fim de cada lote.</p>
+        <h2>Sincronizacao por NSU</h2>
+        <p>Execute a busca sequencial do CNPJ certificado/unidade selecionada. Cada lote encontrado e salvo entra na lista persistida abaixo.</p>
       </div>
-      <div class="nsu-control">
-        <label for="start-nsu">NSU inicial</label>
-        <input type="number" id="start-nsu" value="0" min="0">
-        <div class="inline-actions">
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-use-saved-nsu">Ultimo recebido</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-use-national-nsu">Ultimo nacional</button>
+      <div class="sync-form-grid">
+        <div class="nsu-control">
+          <label for="start-nsu">NSU inicial</label>
+          <input type="number" id="start-nsu" value="0" min="0">
+          <div class="inline-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-use-saved-nsu">Ultimo recebido</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-use-national-nsu">Ultimo nacional</button>
+          </div>
         </div>
-      </div>
-      <div class="nsu-control">
-        <label for="scheduler-delay-seconds">Segundos por lote</label>
-        <input type="number" id="scheduler-delay-seconds" value="5" min="2" max="3600">
-        <span class="helper-text">Pausa entre chamadas para reduzir risco de bloqueio.</span>
-      </div>
-      <div class="action-buttons">
-        <button class="btn btn-success" id="btn-start" disabled><span>Iniciar varredura</span></button>
-        <button class="btn btn-warning" id="btn-pause" disabled><span>Pausar</span></button>
-      </div>
-    </article>
-
-    <article class="operation-card">
-      <div>
-        <span class="eyebrow">Atualizacao</span>
-        <h2>Buscar novos XMLs</h2>
-        <p>Depois da primeira varredura, avance a partir do ultimo NSU salvo.</p>
-      </div>
-      <div class="progress-container">
-        <div class="progress-bar-wrapper"><div class="progress-bar" id="manual-sync-progress-bar" style="width: 0%;"></div></div>
-        <div class="progress-labels"><span id="manual-sync-progress-text">Aguardando atualizacao manual...</span><span id="manual-sync-progress-percentage">0%</span></div>
-      </div>
-      <div class="operation-meta">Ultima atualizacao: <strong id="scheduler-last-run">-</strong> | Status: <strong id="scheduler-status" class="text-primary">Manual</strong></div>
-      <div class="action-buttons">
-        <button class="btn btn-primary btn-sm" id="btn-save-scheduler">Salvar config.</button>
-        <button class="btn btn-secondary btn-sm" id="btn-run-scheduler-now">Atualizar agora</button>
-      </div>
-    </article>
-
-    <article class="operation-card progress-operation">
-      <div>
-        <span class="eyebrow">Status</span>
-        <h2>Progresso da consulta</h2>
+        <div class="nsu-control">
+          <label for="scheduler-delay-seconds">Segundos por lote</label>
+          <input type="number" id="scheduler-delay-seconds" value="5" min="2" max="3600">
+          <span class="helper-text">Pausa entre chamadas para reduzir risco de bloqueio.</span>
+        </div>
       </div>
       <div class="progress-container">
         <div class="progress-bar-wrapper"><div class="progress-bar" id="progress-bar" style="width: 0%;"></div></div>
@@ -86,6 +70,10 @@
       <div class="alert-box success" id="alert-sync-success" style="display: none;"><strong>Concluido:</strong> todas as notas foram sincronizadas.</div>
       <div class="alert-box danger" id="alert-rate-limit" style="display: none;"><strong>Consumo indevido:</strong> API bloqueou temporariamente este CNPJ.</div>
       <div class="crawler-status" id="crawler-status-container" style="display: none;"><span id="crawler-current-cnpj">-</span><span id="crawler-visited-count">0</span><span id="crawler-queue-count">0</span></div>
+      <div class="action-buttons">
+        <button class="btn btn-success" id="btn-start" disabled><span>Iniciar varredura</span></button>
+        <button class="btn btn-warning" id="btn-pause" disabled><span>Pausar</span></button>
+      </div>
     </article>
   </section>
 
@@ -93,15 +81,15 @@
     <div class="console-head">
       <div><span class="eyebrow">Auditoria</span><h2>Log operacional</h2></div>
     </div>
-    <div class="console-log" id="console-log"><div class="log-line system">[Sistema] Pronto. A tabela abaixo carrega o historico salvo.</div></div>
+    <div class="console-log" id="console-log"><div class="log-line system">[Sistema] Pronto. A lista abaixo carrega XMLs persistidos no Supabase.</div></div>
   </section>
 
   <section class="data-grid-card">
     <div class="results-header">
-      <div><h2>XMLs sincronizados</h2><p class="results-subtitle">Historico persistido no Supabase. A visualizacao carrega 15 XMLs por pagina.</p></div>
+      <div><h2>XMLs da unidade selecionada</h2><p class="results-subtitle">Consulta direta do Supabase por certificado/unidade. Mostra 15 XMLs por pagina sem carregar o historico inteiro.</p></div>
       <div class="results-actions">
-        <button class="btn btn-secondary btn-sm text-danger" id="btn-clear-downloads"><span>Limpar sessao</span></button>
-        <button class="btn btn-success" id="btn-download-zip" disabled><span>Baixar ZIP da tabela</span></button>
+        <button class="btn btn-secondary btn-sm text-danger" id="btn-clear-downloads"><span>Limpar temporarios</span></button>
+        <button class="btn btn-success" id="btn-download-zip" disabled><span>Baixar ZIP da lista</span></button>
       </div>
     </div>
     <div class="xml-list-wrapper" id="results-table">

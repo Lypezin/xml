@@ -87,6 +87,7 @@ window.AppUi = {
         </div>
         <div class="cert-list-actions">
           <button class="btn btn-secondary btn-sm" data-action="select-cert" data-id="${cert.id}" ${cert.id === window.activeCertificateId ? 'disabled' : ''}>Usar</button>
+          <button class="btn btn-secondary btn-sm" data-action="rename-cert" data-id="${cert.id}">Renomear</button>
           <button class="btn btn-secondary btn-sm text-danger" data-action="remove-cert" data-id="${cert.id}">Remover</button>
         </div>
       `;

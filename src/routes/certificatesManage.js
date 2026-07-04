@@ -11,6 +11,7 @@ const {
   useRemoteCertificateStorage,
   listRemoteCertificates,
   deleteRemoteCertificate,
+  renameRemoteCertificate,
   upsertRemoteCertificateSecret,
   syncSupabaseCertificate
 } = require('../services/supabase');
@@ -184,6 +185,53 @@ router.post('/remove-certificate', async (req, res) => {
     });
   } catch (e) {
     return res.status(500).json({ success: false, error: 'Erro ao remover certificado: ' + e.message });
+  }
+});
+
+router.post('/rename-certificate', async (req, res) => {
+  try {
+    const { certificateId, filename } = req.body || {};
+    const nextName = String(filename || '').trim();
+
+    if (!certificateId) {
+      return res.status(400).json({ success: false, error: 'certificateId e obrigatorio.' });
+    }
+    if (!nextName) {
+      return res.status(400).json({ success: false, error: 'Nome do certificado e obrigatorio.' });
+    }
+
+    if (useRemoteCertificateStorage()) {
+      const renamed = await renameRemoteCertificate(certificateId, nextName);
+      if (!renamed || renamed.success === false) {
+        return res.status(404).json({ success: false, error: 'Certificado nao encontrado.' });
+      }
+      const certificates = await listRemoteCertificates();
+      return res.json({
+        success: true,
+        certificate: sanitizeCertificate(renamed),
+        certificates: certificates.map(sanitizeCertificate)
+      });
+    }
+
+    const index = getCertificatesIndex();
+    const cert = index.certificates.find(item => item.id === certificateId);
+    if (!cert) {
+      return res.status(404).json({ success: false, error: 'Certificado nao encontrado.' });
+    }
+
+    cert.originalName = nextName;
+    cert.filename = nextName;
+    cert.updatedAt = new Date().toISOString();
+    saveCertificatesIndex(index);
+    await syncSupabaseCertificate(cert, index.activeCertificateId === certificateId);
+
+    return res.json({
+      success: true,
+      certificate: sanitizeCertificate(cert),
+      certificates: index.certificates.map(sanitizeCertificate)
+    });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: 'Erro ao renomear certificado: ' + e.message });
   }
 });
 

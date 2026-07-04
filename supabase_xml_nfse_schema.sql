@@ -535,6 +535,39 @@ begin
 end;
 $$;
 
+create or replace function public.xml_nfse_rename_certificate(
+  p_secret text,
+  p_certificate_id text,
+  p_filename text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  saved_certificate xml_nfse.certificates%rowtype;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  if nullif(trim(coalesce(p_filename, '')), '') is null then
+    raise exception 'Nome do certificado e obrigatorio' using errcode = '22023';
+  end if;
+
+  update xml_nfse.certificates
+  set filename = trim(p_filename),
+      updated_at = now()
+  where id = p_certificate_id
+  returning * into saved_certificate;
+
+  if saved_certificate.id is null then
+    return jsonb_build_object('success', false);
+  end if;
+
+  return to_jsonb(saved_certificate) || jsonb_build_object('success', true);
+end;
+$$;
+
 create or replace function public.xml_nfse_delete_certificate(
   p_secret text,
   p_certificate_id text
@@ -998,6 +1031,7 @@ grant execute on function public.xml_nfse_upsert_certificate_secret(text, text, 
 grant execute on function public.xml_nfse_list_certificates(text) to anon, authenticated;
 grant execute on function public.xml_nfse_set_active_certificate(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_certificate_secret(text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_rename_certificate(text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_delete_certificate(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_sync_state(text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_update_sync_state(text, text, text, text, bigint, bigint, text, timestamptz, text) to anon, authenticated;
@@ -1219,7 +1253,7 @@ begin
     from ranked
     where dedupe_rank = 1
     order by nsu desc
-    limit least(greatest(coalesce(p_limit, 15), 1), 50)
+    limit coalesce(p_limit, 100000)
     offset coalesce(p_offset, 0)
   )
   select coalesce(jsonb_agg(to_jsonb(filtered.*)), '[]'::jsonb)

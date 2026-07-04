@@ -155,6 +155,15 @@ window.AppApi = {
     return res.json();
   },
 
+  async renameCertificate(certificateId, filename) {
+    const res = await fetch('/api/rename-certificate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ certificateId, filename })
+    });
+    return res.json();
+  },
+
   async diagnoseCertificate(certificateId, environment) {
     const params = new URLSearchParams({ certificateId, environment });
     const res = await fetch(`/api/certificate-diagnostics?${params.toString()}`);

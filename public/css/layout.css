@@ -251,6 +251,10 @@ body.light-mode .input-group select:focus {
   align-items: end;
 }
 
+.compact-toolbar-grid {
+  grid-template-columns: minmax(260px, 1.45fr) minmax(240px, 1.25fr) minmax(136px, 0.7fr) minmax(136px, 0.7fr) minmax(132px, 0.62fr);
+}
+
 .toolbar-grid .input-group,
 .operation-card .input-group {
   margin-bottom: 0;
@@ -265,6 +269,10 @@ body.light-mode .input-group select:focus {
   display: grid;
   grid-template-columns: minmax(300px, 1.1fr) minmax(300px, 1fr) minmax(300px, 1fr);
   gap: 18px;
+}
+
+.single-operation-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .operation-card {
@@ -284,6 +292,12 @@ body.light-mode .input-group select:focus {
 
 .primary-operation {
   border-color: rgba(20, 184, 166, 0.22);
+}
+
+.sync-form-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+  gap: 14px;
 }
 
 .nsu-control label {

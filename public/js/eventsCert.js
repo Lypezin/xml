@@ -63,6 +63,22 @@ window.AppEventsCert = {
           return;
         }
 
+        if (button.dataset.action === 'rename-cert') {
+          const cert = window.certificates.find(item => item.id === certificateId);
+          const currentName = cert?.filename || cert?.originalName || '';
+          const nextName = prompt('Novo nome do certificado:', currentName);
+          if (nextName === null) return;
+
+          const data = await window.AppApi.renameCertificate(certificateId, nextName.trim());
+          if (data.success) {
+            window.AppUi.log('Certificado renomeado.', 'success');
+            window.AppSyncController.checkCertStatus();
+          } else {
+            window.AppUi.log(`Erro ao renomear: ${data.error}`, 'error');
+          }
+          return;
+        }
+
         if (button.dataset.action === 'remove-cert') {
           const cert = window.certificates.find(item => item.id === certificateId);
           if (!confirm(`Deseja remover o certificado "${cert?.filename || certificateId}"?`)) return;

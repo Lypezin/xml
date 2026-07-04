@@ -199,6 +199,13 @@ async function deleteRemoteCertificate(certificateId) {
   return supabaseRpc('xml_nfse_delete_certificate', { p_certificate_id: certificateId });
 }
 
+async function renameRemoteCertificate(certificateId, filename) {
+  return supabaseRpc('xml_nfse_rename_certificate', {
+    p_certificate_id: certificateId,
+    p_filename: filename || ''
+  });
+}
+
 async function upsertRemoteCertificateSecret({ id, filename, cnpj, active, pfxBuffer, passphrase }) {
   const encryptedPfx = encryptCertificateValue(pfxBuffer);
   const encryptedPassphrase = encryptCertificateValue(Buffer.from(passphrase, 'utf8'));
@@ -275,6 +282,7 @@ module.exports = {
   listRemoteDocuments,
   setRemoteActiveCertificate,
   deleteRemoteCertificate,
+  renameRemoteCertificate,
   upsertRemoteCertificateSecret,
   resolveRemoteCertificate,
   normalizeEnvironment
