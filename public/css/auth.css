@@ -1,4 +1,4 @@
-/* Breathtaking Glassmorphic Login Screen Styles */
+/* Login screen */
 
 .auth-screen {
   min-height: 100vh;
@@ -7,80 +7,20 @@
   justify-content: center;
   padding: 24px;
   background-color: var(--bg-color);
-  position: relative;
-  overflow: hidden;
 }
 
-/* Background glows for premium ambient lighting */
-.auth-screen::before {
-  content: '';
-  position: absolute;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 60%);
-  top: -10%;
-  left: -10%;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: pulseGlow 10s infinite alternate ease-in-out;
-}
-
-.auth-screen::after {
-  content: '';
-  position: absolute;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
-  bottom: -10%;
-  right: -10%;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: pulseGlow 12s infinite alternate-reverse ease-in-out;
-}
-
-@keyframes pulseGlow {
-  0% { transform: scale(1) translate(0, 0); opacity: 0.8; }
-  100% { transform: scale(1.1) translate(5%, 5%); opacity: 1; }
-}
-
-/* Auth card with premium glassmorphic styling */
 .auth-panel {
   width: 100%;
-  max-width: 440px;
-  background: rgba(17, 24, 39, 0.6);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 48px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
-              inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  position: relative;
-  z-index: 2;
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s ease;
-  animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes slideUpFade {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  max-width: 420px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 34px;
+  box-shadow: var(--shadow-lg);
 }
 
 body.light-mode .auth-panel {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.1),
-              inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.auth-panel:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6),
-              inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-body.light-mode .auth-panel:hover {
-  box-shadow: 0 30px 60px -15px rgba(15, 23, 42, 0.15),
-              inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.1);
 }
 
 /* Brand logo and titles */
@@ -89,23 +29,23 @@ body.light-mode .auth-panel:hover {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
 .auth-brand .brand-icon {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   color: #fff;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  padding: 12px;
-  border-radius: 16px;
-  margin-bottom: 20px;
-  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+  background: var(--primary);
+  padding: 11px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  box-shadow: none;
 }
 
 .auth-brand h1 {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 26px;
+  font-weight: 760;
   color: var(--text-primary);
   letter-spacing: -0.5px;
   margin-bottom: 8px;
@@ -119,7 +59,7 @@ body.light-mode .auth-panel:hover {
 
 /* Form groups and labels */
 .auth-panel .form-group {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .auth-panel .form-group label {
@@ -129,21 +69,21 @@ body.light-mode .auth-panel:hover {
   color: var(--text-secondary);
   margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.4px;
 }
 
 .auth-panel .form-group input {
   width: 100%;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 14px 16px;
-  font-size: 15px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 7px;
+  padding: 12px 14px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
   outline: none;
   transition: var(--transition);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: none;
 }
 
 body.light-mode .auth-panel .form-group input {
@@ -154,8 +94,8 @@ body.light-mode .auth-panel .form-group input {
 
 .auth-panel .form-group input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-glow), inset 0 2px 4px rgba(0,0,0,0.1);
-  background: rgba(15, 23, 42, 0.8);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  background: var(--input-bg);
 }
 
 body.light-mode .auth-panel .form-group input:focus {
@@ -167,23 +107,22 @@ body.light-mode .auth-panel .form-group input:focus {
 /* Premium Login Submit Button */
 #auth-submit {
   width: 100%;
-  padding: 14px;
-  font-size: 15px;
+  padding: 12px;
+  font-size: 14px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  background: var(--primary);
   color: #ffffff;
-  border-radius: 12px;
+  border-radius: 7px;
   border: none;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  box-shadow: none;
   margin-top: 8px;
 }
 
 #auth-submit:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);
-  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--secondary-hover) 100%);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  background: var(--primary-hover);
 }
 
 #auth-submit:disabled {

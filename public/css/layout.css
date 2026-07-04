@@ -2,12 +2,13 @@
 .app-layout {
   display: flex;
   min-height: 100vh;
+  background: var(--bg-color);
 }
 
 /* Main Content Area */
 .main-content {
   flex: 1;
-  padding: 28px 36px;
+  padding: 24px 32px 28px;
   overflow-y: auto;
   max-width: 100%;
 }
@@ -17,17 +18,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 18px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--card-border);
 }
 
 .navbar-title h1 {
-  font-size: 23px;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-muted) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 22px;
+  font-weight: 760;
+  color: var(--text-primary);
   letter-spacing: 0;
 }
 
@@ -45,10 +44,9 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  background: var(--card-bg);
-  backdrop-filter: blur(10px);
-  padding: 8px 16px;
-  border-radius: 50px;
+  background: var(--surface-muted);
+  padding: 8px 12px;
+  border-radius: 8px;
   border: 1px solid var(--card-border);
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
@@ -87,8 +85,6 @@
 /* Card System */
 .card {
   background: var(--card-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
   padding: 20px;
@@ -97,11 +93,7 @@
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: rgba(255, 255, 255, 0.14);
-}
-body.light-mode .card:hover {
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: var(--border-strong);
 }
 
 .card-header {
@@ -148,6 +140,7 @@ body.light-mode .card:hover {
   background: var(--input-bg);
   border: 1px solid var(--card-border);
   border-radius: 7px;
+  min-height: 40px;
   padding: 9px 12px;
   font-family: inherit;
   font-size: 13px;
@@ -155,7 +148,7 @@ body.light-mode .card:hover {
   color: var(--text-primary);
   outline: none;
   transition: var(--transition);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  box-shadow: none;
 }
 
 .input-group input:focus,
@@ -181,17 +174,67 @@ body.light-mode .input-group select:focus {
 .nfse-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
-.overview-strip {
+.dashboard-hero {
   display: grid;
-  grid-template-columns: minmax(300px, 0.8fr) minmax(620px, 1.8fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
-  align-items: stretch;
+  align-items: end;
+  padding: 20px 0 8px;
 }
 
-.overview-copy,
+.hero-copy {
+  max-width: 760px;
+}
+
+.hero-copy h2 {
+  font-size: 28px;
+  line-height: 1.12;
+  color: var(--text-primary);
+  letter-spacing: 0;
+}
+
+.hero-copy p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.hero-status-strip {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 8px;
+  align-items: center;
+}
+
+.hero-status-strip div {
+  min-width: 116px;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+}
+
+.hero-status-strip span,
+.hero-status-strip strong {
+  display: block;
+}
+
+.hero-status-strip span {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.hero-status-strip strong {
+  color: var(--text-primary);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
 .toolbar-card,
 .operation-card,
 .premium-console,
@@ -199,14 +242,7 @@ body.light-mode .input-group select:focus {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
-  box-shadow: var(--shadow-md);
-}
-
-.overview-copy {
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  box-shadow: var(--shadow-sm);
 }
 
 .eyebrow {
@@ -220,14 +256,6 @@ body.light-mode .input-group select:focus {
   margin-bottom: 8px;
 }
 
-.overview-copy h2 {
-  font-size: 22px;
-  line-height: 1.16;
-  letter-spacing: 0;
-  color: var(--text-primary);
-}
-
-.overview-copy p,
 .operation-card p {
   color: var(--text-secondary);
   font-size: 13px;
@@ -237,7 +265,7 @@ body.light-mode .input-group select:focus {
 .overview-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .toolbar-card {
@@ -252,7 +280,7 @@ body.light-mode .input-group select:focus {
 }
 
 .compact-toolbar-grid {
-  grid-template-columns: minmax(260px, 1.45fr) minmax(240px, 1.25fr) minmax(136px, 0.7fr) minmax(136px, 0.7fr) minmax(132px, 0.62fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .toolbar-grid .input-group,
@@ -261,18 +289,14 @@ body.light-mode .input-group select:focus {
 }
 
 .toolbar-action {
-  min-height: 38px;
-  width: 100%;
+  min-height: 40px;
 }
 
-.operations-grid {
+.operation-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 1.1fr) minmax(300px, 1fr) minmax(300px, 1fr);
-  gap: 18px;
-}
-
-.single-operation-grid {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(500px, 1fr) minmax(480px, 1.2fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
 .operation-card {
@@ -283,6 +307,19 @@ body.light-mode .input-group select:focus {
   min-height: 0;
 }
 
+.panel-heading,
+.operation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.panel-heading {
+  margin-bottom: 14px;
+}
+
+.panel-heading h2,
 .operation-card h2,
 .premium-console h2 {
   font-size: 16px;
@@ -291,7 +328,7 @@ body.light-mode .input-group select:focus {
 }
 
 .primary-operation {
-  border-color: rgba(20, 184, 166, 0.22);
+  border-color: rgba(0, 184, 169, 0.26);
 }
 
 .sync-form-grid,
@@ -310,8 +347,8 @@ body.light-mode .input-group select:focus {
 .sync-policy-item {
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
-  background: var(--input-bg);
-  padding: 14px;
+  background: var(--surface-muted);
+  padding: 12px;
   min-width: 0;
 }
 
@@ -361,7 +398,7 @@ body.light-mode .input-group select:focus {
 }
 
 .action-buttons .btn {
-  flex: 1;
+  min-width: 132px;
 }
 
 .operation-meta {

@@ -1,6 +1,6 @@
 /* XML list, pagination and document badges */
 .data-grid-card {
-  padding: 18px;
+  padding: 16px;
 }
 
 .results-header {
@@ -8,14 +8,14 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   border-bottom: 1px solid var(--card-border);
   padding-bottom: 14px;
 }
 
 .results-header h2 {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 740;
   color: var(--text-primary);
 }
 
@@ -35,9 +35,9 @@
   grid-template-columns: minmax(260px, 1fr) auto;
   gap: 12px;
   align-items: end;
-  margin-bottom: 14px;
-  padding: 12px;
-  background: var(--input-bg);
+  margin-bottom: 12px;
+  padding: 10px;
+  background: var(--surface-muted);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
 }
@@ -63,7 +63,7 @@
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  background: var(--card-bg);
+  background: var(--input-bg);
 }
 
 .toggle-row input {
@@ -76,14 +76,14 @@
   overflow: hidden;
   border-radius: var(--border-radius);
   border: 1px solid var(--card-border);
-  background: var(--input-bg);
+  background: var(--card-bg);
   box-shadow: var(--shadow-sm);
 }
 
 .xml-list-head,
 .xml-item {
   display: grid;
-  grid-template-columns: minmax(180px, 1.05fr) minmax(230px, 1.2fr) minmax(210px, 1.15fr) minmax(160px, 0.82fr) 86px;
+  grid-template-columns: minmax(178px, 1.02fr) minmax(230px, 1.24fr) minmax(210px, 1.16fr) minmax(154px, 0.82fr) 82px;
   gap: 12px;
   align-items: center;
 }
@@ -92,7 +92,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--table-header-bg);
   border-bottom: 1px solid var(--card-border);
   color: var(--text-secondary);
@@ -108,8 +108,8 @@
 }
 
 .xml-item {
-  padding: 13px 14px;
-  min-height: 112px;
+  padding: 12px;
+  min-height: 104px;
   border-bottom: 1px solid var(--card-border);
   transition: var(--transition);
 }
@@ -119,7 +119,7 @@
 }
 
 .xml-item:hover {
-  background: rgba(59, 130, 246, 0.035);
+  background: rgba(47, 128, 237, 0.045);
 }
 
 body.light-mode .xml-item:hover {
@@ -145,7 +145,7 @@ body.light-mode .xml-item:hover {
 .xml-main-cell strong,
 .xml-value-cell strong {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .xml-title-row {
@@ -168,7 +168,7 @@ body.light-mode .xml-item:hover {
 
 .xml-party-cell span {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11.8px;
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -186,7 +186,7 @@ body.light-mode .xml-item:hover {
 }
 
 .xml-action-cell .btn {
-  width: 78px;
+  width: 72px;
 }
 
 .xml-empty-state {
@@ -204,7 +204,7 @@ body.light-mode .xml-item:hover {
 .cnpj-badge {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10.5px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-muted);
   padding: 4px 7px;
   border-radius: 6px;
   color: var(--text-secondary);

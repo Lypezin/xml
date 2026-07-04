@@ -6,7 +6,7 @@
 .rules-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
-  gap: 24px;
+  gap: 18px;
   align-items: center;
   margin-bottom: 18px;
 }
@@ -32,7 +32,7 @@
   padding: 14px;
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
-  background: var(--input-bg);
+  background: var(--surface-muted);
 }
 
 .rules-dashboard-grid {
@@ -41,8 +41,8 @@
 }
 
 .rule-card {
-  min-height: 180px;
-  padding: 18px;
+  min-height: 168px;
+  padding: 16px;
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
   background: var(--card-bg);
@@ -78,7 +78,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 14px;
-  background: var(--input-bg);
+  background: var(--surface-muted);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
 }
@@ -109,19 +109,19 @@
 /* Footer Geral */
 .app-footer {
   text-align: center;
-  padding: 32px 0 16px;
+  padding: 24px 0 12px;
   color: var(--text-muted);
   font-size: 11px;
 }
 
 /* Responsividade Básica */
 @media (max-width: 1100px) {
-  .overview-strip,
+  .dashboard-hero,
+  .operation-layout,
   .split-grid {
     grid-template-columns: 1fr;
   }
-  .toolbar-grid,
-  .operations-grid {
+  .toolbar-grid {
     grid-template-columns: 1fr 1fr;
   }
   .metrics-row {
@@ -136,6 +136,9 @@
   }
   .rules-hero {
     grid-template-columns: 1fr;
+  }
+  .hero-status-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -153,9 +156,10 @@
   }
   .overview-metrics,
   .toolbar-grid,
-  .operations-grid,
+  .operation-layout,
   .sync-policy-grid,
   .results-filter-bar,
+  .hero-status-strip,
   .rules-dashboard-grid,
   .rules-flow {
     grid-template-columns: 1fr;
@@ -172,9 +176,7 @@ body.light-mode .footer-status {
 }
 
 body.light-mode .main-content {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.8), var(--bg-color) 320px),
-    var(--bg-color);
+  background: var(--bg-color);
 }
 
 .navbar {
@@ -225,7 +227,9 @@ body.light-mode .main-content {
   }
 
   .navbar,
-  .results-header {
+  .results-header,
+  .panel-heading,
+  .operation-header {
     flex-direction: column;
     align-items: stretch;
   }
@@ -234,8 +238,8 @@ body.light-mode .main-content {
     flex-direction: column;
   }
 
-  .overview-copy h2 {
-    font-size: 19px;
+  .hero-copy h2 {
+    font-size: 23px;
   }
 
   .xml-list-head {

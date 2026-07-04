@@ -1,25 +1,39 @@
 <div id="view-download-content" class="tab-content active nfse-dashboard">
-  <section class="overview-strip">
-    <div class="overview-copy">
+  <section class="dashboard-hero">
+    <div class="hero-copy">
       <span class="eyebrow">Operacao NFS-e</span>
-      <h2>XMLs persistidos por unidade</h2>
-      <p>Selecione uma unidade, filtre os XMLs salvos no Supabase e baixe somente o recorte que interessa para a operacao.</p>
+      <h2>Central de XMLs por unidade</h2>
+      <p>Varra, filtre e baixe XMLs NFS-e persistidos no Supabase com controles enxutos para operacao em lote.</p>
     </div>
-    <div class="overview-metrics">
-      <div class="metric-card"><div class="metric-data"><span class="metric-label">Total de notas</span><h3 class="metric-value" id="stat-total-notas">0</h3><span class="helper-text">Filtro atual</span></div></div>
-      <div class="metric-card"><div class="metric-data"><span class="metric-label">Valor total</span><h3 class="metric-value text-primary" id="stat-total-value">R$ 0,00</h3><span class="helper-text">Notas exibidas no filtro</span></div></div>
-      <div class="metric-card"><div class="metric-data"><span class="metric-label">Cursor NSU</span><h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3><span class="helper-text">Ultima varredura</span></div></div>
-      <div class="metric-card"><div class="metric-data"><span class="metric-label">XMLs no Supabase</span><h3 class="metric-value text-success" id="stat-storage-payloads">0</h3><span class="helper-text" id="stat-storage-size">Permanentes</span></div></div>
+    <div class="hero-status-strip">
+      <div><span>Ambiente</span><strong>Producao</strong></div>
+      <div><span>Modo</span><strong>Ultimo NSU recebido</strong></div>
+      <div><span>Intervalo</span><strong>2s por lote</strong></div>
     </div>
   </section>
 
-  <section class="toolbar-card">
-    <div class="toolbar-grid compact-toolbar-grid">
-      <div class="input-group certificate-field"><label for="certificate-select">Certificado</label><select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select></div>
-      <div class="input-group"><label for="unit-filter">Unidade</label><select id="unit-filter"><option value="">CNPJ do certificado ativo</option></select></div>
-      <div class="input-group"><label for="download-start-date">Inicio</label><input type="date" id="download-start-date"></div>
-      <div class="input-group"><label for="download-end-date">Fim</label><input type="date" id="download-end-date"></div>
-      <button class="btn btn-success toolbar-action" id="btn-download-period"><span>Baixar ZIP</span></button>
+  <section class="overview-metrics">
+    <div class="metric-card"><div class="metric-data"><span class="metric-label">Total de notas</span><h3 class="metric-value" id="stat-total-notas">0</h3><span class="helper-text">Filtro atual</span></div></div>
+    <div class="metric-card metric-card-primary"><div class="metric-data"><span class="metric-label">Valor total</span><h3 class="metric-value text-primary" id="stat-total-value">R$ 0,00</h3><span class="helper-text">Notas exibidas no filtro</span></div></div>
+    <div class="metric-card"><div class="metric-data"><span class="metric-label">Cursor NSU</span><h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3><span class="helper-text">Ultima varredura</span></div></div>
+    <div class="metric-card"><div class="metric-data"><span class="metric-label">XMLs no Supabase</span><h3 class="metric-value text-success" id="stat-storage-payloads">0</h3><span class="helper-text" id="stat-storage-size">Permanentes</span></div></div>
+  </section>
+
+  <section class="operation-layout">
+    <div class="toolbar-card">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Recorte</span>
+          <h2>Certificado, unidade e periodo</h2>
+        </div>
+        <button class="btn btn-success toolbar-action" id="btn-download-period"><span>Baixar ZIP</span></button>
+      </div>
+      <div class="toolbar-grid compact-toolbar-grid">
+        <div class="input-group certificate-field"><label for="certificate-select">Certificado</label><select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select></div>
+        <div class="input-group"><label for="unit-filter">Unidade</label><select id="unit-filter"><option value="">CNPJ do certificado ativo</option></select></div>
+        <div class="input-group"><label for="download-start-date">Inicio</label><input type="date" id="download-start-date"></div>
+        <div class="input-group"><label for="download-end-date">Fim</label><input type="date" id="download-end-date"></div>
+      </div>
     </div>
 
     <input type="text" id="cnpj-consulta" value="" style="display: none;">
@@ -41,27 +55,23 @@
       <strong id="scheduler-last-run">-</strong>
       <strong id="scheduler-status">Manual</strong>
     </div>
-  </section>
 
-  <section class="operations-grid single-operation-grid">
     <article class="operation-card primary-operation">
-      <div class="operation-intro">
-        <span class="eyebrow">Varredura</span>
-        <h2>Sincronizacao por NSU</h2>
-        <p>A varredura sempre parte do ultimo NSU recebido salvo para o certificado/unidade selecionada, com intervalo fixo de 2s por lote.</p>
-        <input type="number" id="start-nsu" value="0" min="0" style="display: none;">
+      <div class="operation-header">
+        <div class="operation-intro">
+          <span class="eyebrow">Varredura</span>
+          <h2>Sincronizacao por NSU</h2>
+          <p>A varredura sempre parte do ultimo NSU recebido salvo para o certificado/unidade selecionada.</p>
+          <input type="number" id="start-nsu" value="0" min="0" style="display: none;">
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-success" id="btn-start" disabled><span>Iniciar varredura</span></button>
+          <button class="btn btn-warning" id="btn-pause" disabled><span>Pausar</span></button>
+        </div>
       </div>
       <div class="sync-policy-grid">
-        <div class="sync-policy-item">
-          <span>Origem</span>
-          <strong>Ultimo recebido salvo</strong>
-          <small>Sem ajuste manual antes de iniciar.</small>
-        </div>
-        <div class="sync-policy-item">
-          <span>Intervalo</span>
-          <strong>2 segundos</strong>
-          <small>Pausa fixa entre chamadas em lote.</small>
-        </div>
+        <div class="sync-policy-item"><span>Origem</span><strong>Ultimo recebido salvo</strong><small>Sem ajuste manual antes de iniciar.</small></div>
+        <div class="sync-policy-item"><span>Intervalo</span><strong>2 segundos</strong><small>Pausa fixa entre chamadas em lote.</small></div>
       </div>
       <div class="progress-container">
         <div class="progress-bar-wrapper"><div class="progress-bar" id="progress-bar" style="width: 0%;"></div></div>
@@ -70,18 +80,7 @@
       <div class="alert-box success" id="alert-sync-success" style="display: none;"><strong>Concluido:</strong> todas as notas foram sincronizadas.</div>
       <div class="alert-box danger" id="alert-rate-limit" style="display: none;"><strong>Consumo indevido:</strong> API bloqueou temporariamente este CNPJ.</div>
       <div class="crawler-status" id="crawler-status-container" style="display: none;"><span id="crawler-current-cnpj">-</span><span id="crawler-visited-count">0</span><span id="crawler-queue-count">0</span></div>
-      <div class="action-buttons">
-        <button class="btn btn-success" id="btn-start" disabled><span>Iniciar varredura</span></button>
-        <button class="btn btn-warning" id="btn-pause" disabled><span>Pausar</span></button>
-      </div>
     </article>
-  </section>
-
-  <section class="console-card premium-console">
-    <div class="console-head">
-      <div><span class="eyebrow">Auditoria</span><h2>Log operacional</h2></div>
-    </div>
-    <div class="console-log" id="console-log"><div class="log-line system">[Sistema] Pronto. A lista abaixo carrega XMLs persistidos no Supabase.</div></div>
   </section>
 
   <section class="data-grid-card">

@@ -62,8 +62,16 @@
       <div><strong>1. Cadastre o certificado</strong><span>Valide senha, CNPJ e validade antes de iniciar.</span></div>
       <div><strong>2. Selecione a unidade</strong><span>Use o CNPJ da unidade desejada para filtrar a base persistida.</span></div>
       <div><strong>3. Use ultimo recebido</strong><span>Retome do NSU salvo para evitar chamadas redundantes.</span></div>
-      <div><strong>4. Ajuste segundos por lote</strong><span>Aumente a pausa se houver erro de limite ou instabilidade.</span></div>
-      <div><strong>5. Navegue pela lista</strong><span>A tabela carrega 15 XMLs por pagina diretamente do Supabase.</span></div>
+      <div><strong>4. Execute com pausa fixa</strong><span>O sistema aguarda 2 segundos entre lotes para reduzir pressao na API.</span></div>
+      <div><strong>5. Navegue pela lista</strong><span>A tabela carrega 10 XMLs por pagina diretamente do Supabase.</span></div>
     </div>
+  </section>
+
+  <section class="console-card premium-console rules-log-panel">
+    <div class="console-head">
+      <div><span class="eyebrow">Auditoria</span><h2>Log operacional</h2></div>
+      <span class="helper-text">Temporario nesta guia durante o uso assistido.</span>
+    </div>
+    <div class="console-log" id="console-log"><div class="log-line system">[Sistema] Pronto. A lista abaixo carrega XMLs persistidos no Supabase.</div></div>
   </section>
 </div>

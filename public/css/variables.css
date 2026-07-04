@@ -1,18 +1,21 @@
 /* Variables & Styling System Design Tokens */
 :root {
-  --bg-color: #0c1016;
-  --sidebar-bg: #101720;
-  --card-bg: rgba(18, 24, 32, 0.88);
-  --card-border: rgba(218, 226, 235, 0.1);
-  --input-bg: rgba(10, 15, 21, 0.72);
-  --table-header-bg: rgba(218, 226, 235, 0.05);
-  --code-bg: #0a0f15;
+  --bg-color: #0b1118;
+  --sidebar-bg: #0f1721;
+  --card-bg: #111a24;
+  --card-border: rgba(148, 163, 184, 0.16);
+  --input-bg: #0c141d;
+  --table-header-bg: #121d28;
+  --code-bg: #081018;
+  --surface-muted: #0e1720;
+  --surface-raised: #162230;
+  --border-strong: rgba(148, 163, 184, 0.24);
   
-  --primary: #3b82f6;
-  --primary-hover: #60a5fa;
-  --primary-glow: rgba(59, 130, 246, 0.25);
+  --primary: #2f80ed;
+  --primary-hover: #58a6ff;
+  --primary-glow: rgba(47, 128, 237, 0.18);
   
-  --secondary: #14b8a6;
+  --secondary: #00b8a9;
   --secondary-hover: #2dd4bf;
   
   --success: #10b981;
@@ -28,24 +31,27 @@
   --danger-border: rgba(239, 68, 68, 0.2);
   
   --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #64748b;
+  --text-secondary: #b9c5d4;
+  --text-muted: #748399;
   
   --border-radius: 8px;
-  --transition: all 0.18s ease;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
-  --shadow-md: 0 14px 32px rgba(0, 0, 0, 0.18);
-  --shadow-lg: 0 18px 42px rgba(0, 0, 0, 0.24);
+  --transition: all 0.16s ease;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.16);
+  --shadow-lg: 0 18px 46px rgba(0, 0, 0, 0.2);
 }
 
 body.light-mode {
-  --bg-color: #f5f7fb;
+  --bg-color: #f4f7fb;
   --sidebar-bg: #ffffff;
-  --card-bg: rgba(255, 255, 255, 0.8);
-  --card-border: rgba(0, 0, 0, 0.06);
+  --card-bg: #ffffff;
+  --card-border: rgba(15, 23, 42, 0.08);
   --input-bg: #ffffff;
-  --table-header-bg: #f8fafc;
+  --table-header-bg: #f7f9fc;
   --code-bg: #f1f5f9;
+  --surface-muted: #f7f9fc;
+  --surface-raised: #ffffff;
+  --border-strong: rgba(15, 23, 42, 0.14);
   
   --primary: #2563eb;
   --primary-hover: #3b82f6;
@@ -75,7 +81,7 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
-  line-height: 1.6;
+  line-height: 1.5;
   transition: background-color 0.3s ease, color 0.3s ease;
   -webkit-font-smoothing: antialiased;
 }
@@ -87,12 +93,12 @@ body {
   width: 100vw;
   height: 100vh;
   z-index: -1;
-  background: linear-gradient(180deg, #101720 0%, var(--bg-color) 42%, #080c11 100%);
+  background: var(--bg-color);
   pointer-events: none;
 }
 
 body.light-mode .glass-bg {
-  background: linear-gradient(180deg, #ffffff 0%, var(--bg-color) 58%, #eef2f7 100%);
+  background: var(--bg-color);
 }
 
 /* Custom Scrollbars */

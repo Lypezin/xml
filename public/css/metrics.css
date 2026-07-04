@@ -11,7 +11,7 @@
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
-  padding: 18px;
+  padding: 14px 15px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -21,9 +21,8 @@
 }
 
 .metric-card:hover {
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 body.light-mode .metric-card:hover {
@@ -72,6 +71,7 @@ body.light-mode .metric-card:hover .metric-icon svg {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  gap: 2px;
 }
 
 .metric-label {
@@ -79,12 +79,12 @@ body.light-mode .metric-card:hover .metric-icon svg {
   color: var(--text-secondary);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.4px;
 }
 
 .metric-value {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 760;
   color: var(--text-primary);
   margin-top: 4px;
   display: flex;
@@ -92,6 +92,11 @@ body.light-mode .metric-card:hover .metric-icon svg {
   gap: 4px;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.metric-card-primary {
+  border-color: rgba(47, 128, 237, 0.28);
+  background: linear-gradient(180deg, var(--card-bg), var(--surface-muted));
 }
 
 .metric-divider {
