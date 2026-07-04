@@ -9,6 +9,7 @@ const { DOWNLOADS_DIR, IS_VERCEL } = require('../config/constants');
 const {
   supabaseRpc,
   getSupabaseXmlPayload,
+  getSupabaseXmlPayloads,
   listSupabaseXmlPayloads,
   listRemoteDocuments,
   listRemoteCertificates,
@@ -18,6 +19,7 @@ const { resolveCertificateForRequest } = require('../services/localCertificates'
 const { getCertificateBuffer, onlyDigits } = require('../utils/cert');
 
 const router = express.Router();
+const MAX_ZIP_DOCUMENTS = 500;
 
 function clampListLimit(limit) {
   const parsed = Number(limit || 10);
@@ -69,6 +71,10 @@ function summarizeRemoteError(data) {
   if (!data) return '';
   const text = Buffer.isBuffer(data) ? data.toString('utf8') : String(data);
   return text.replace(/\s+/g, ' ').trim().slice(0, 500);
+}
+
+function getDocumentToken(doc) {
+  return doc?.metadata?.token || doc?.token || '';
 }
 
 async function resolveCertificateMetadataForList(certificateId) {
@@ -313,16 +319,46 @@ router.post('/download-period-zip', async (req, res) => {
       partyCnpj: receiverCnpj,
       partyRole: 'tomador',
       search,
-      includeCancelled: String(includeCancelled).toLowerCase() === 'true'
+      includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+      limit: 10,
+      offset: 0
     });
-    const documents = dedupeXmlItems(result.documents || []);
+    let documents = dedupeXmlItems(result.documents || []);
 
     if (!documents || documents.length === 0) {
       return res.status(400).json({ success: false, error: 'Nenhum documento no período.' });
     }
 
+    const totalMatched = Number(result.total || documents.length);
+    if (totalMatched > MAX_ZIP_DOCUMENTS) {
+      return res.status(413).json({
+        success: false,
+        error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} XMLs. Para evitar timeout na Vercel, baixe no maximo ${MAX_ZIP_DOCUMENTS.toLocaleString('pt-BR')} por ZIP usando periodo, unidade ou busca.`
+      });
+    }
+
+    if (totalMatched > documents.length) {
+      const fullResult = await listRemoteDocuments({
+        certificateId: cert.id,
+        environment,
+        startDate: startDate || null,
+        endDate: endDate || null,
+        cnpj: '',
+        partyCnpj: receiverCnpj,
+        partyRole: 'tomador',
+        search,
+        includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+        limit: totalMatched,
+        offset: 0
+      });
+      documents = dedupeXmlItems(fullResult.documents || []);
+    }
+
     const zip = new AdmZip();
     let addedCount = 0;
+    const remoteTokens = documents.map(doc => getDocumentToken(doc)).filter(Boolean);
+    const remotePayloads = await getSupabaseXmlPayloads(remoteTokens);
+    const payloadByToken = new Map(remotePayloads.map(payload => [payload.token, payload]));
 
     for (const doc of documents) {
       const fileName = doc.file_name || doc.arquivo;
@@ -333,9 +369,9 @@ router.post('/download-period-zip', async (req, res) => {
         zip.addLocalFile(localPath);
         addedCount++;
       } else {
-        const token = doc.metadata?.token || doc.token;
+        const token = getDocumentToken(doc);
         if (token) {
-          const payload = await getSupabaseXmlPayload(token);
+          const payload = payloadByToken.get(token) || await getSupabaseXmlPayload(token);
           if (payload && payload.xml_content) {
             zip.addFile(fileName, Buffer.from(payload.xml_content, 'utf8'));
             addedCount++;

@@ -977,6 +977,30 @@ begin
 end;
 $$;
 
+create or replace function public.xml_nfse_get_xml_payloads_by_tokens(
+  p_secret text,
+  p_tokens text[]
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  rows_data jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select coalesce(jsonb_agg(to_jsonb(p.*) order by p.created_at desc), '[]'::jsonb)
+  into rows_data
+  from xml_nfse.xml_payloads p
+  where p.token = any(coalesce(p_tokens, array[]::text[]))
+    and (p.expires_at is null or p.expires_at >= now());
+
+  return rows_data;
+end;
+$$;
+
 create or replace function public.xml_nfse_list_xml_payloads(
   p_secret text
 )
@@ -1051,6 +1075,7 @@ grant execute on function public.xml_nfse_upsert_document(text, text, text, bigi
 grant execute on function public.xml_nfse_register_download(text, text, text, bigint, text) to anon, authenticated;
 grant execute on function public.xml_nfse_upsert_xml_payload(text, text, text, text, bigint, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_xml_payload(text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_get_xml_payloads_by_tokens(text, text[]) to anon, authenticated;
 grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authenticated;
 grant execute on function public.xml_nfse_storage_summary(text, text, text) to anon, authenticated;
 

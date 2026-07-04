@@ -285,7 +285,16 @@ window.AppApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params)
     });
-    if (!res.ok) throw new Error((await res.json()).error || 'Erro no ZIP.');
+    if (!res.ok) {
+      let message = 'Erro no ZIP.';
+      try {
+        const data = await res.json();
+        message = data.error || message;
+      } catch (err) {
+        message = await res.text() || message;
+      }
+      throw new Error(message);
+    }
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');

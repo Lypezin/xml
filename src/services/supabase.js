@@ -127,6 +127,12 @@ async function getSupabaseXmlPayload(token) {
   return supabaseRpc('xml_nfse_get_xml_payload', { p_token: token });
 }
 
+async function getSupabaseXmlPayloads(tokens) {
+  if (!Array.isArray(tokens) || tokens.length === 0) return [];
+  const result = await supabaseRpc('xml_nfse_get_xml_payloads_by_tokens', { p_tokens: tokens });
+  return Array.isArray(result) ? result : [];
+}
+
 async function listSupabaseXmlPayloads() {
   return supabaseRpc('xml_nfse_list_xml_payloads', {});
 }
@@ -291,6 +297,7 @@ module.exports = {
   syncSupabaseDocument,
   storeSupabaseXmlPayload,
   getSupabaseXmlPayload,
+  getSupabaseXmlPayloads,
   listSupabaseXmlPayloads,
   getStorageSummary,
   getSupabaseSetting,
