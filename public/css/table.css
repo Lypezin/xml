@@ -1,4 +1,4 @@
-/* Bottom Datagrid Table & Badges */
+/* XML list, pagination and document badges */
 .data-grid-card {
   padding: 18px;
 }
@@ -7,6 +7,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   margin-bottom: 14px;
   border-bottom: 1px solid var(--card-border);
   padding-bottom: 14px;
@@ -29,74 +30,129 @@
   gap: 12px;
 }
 
-.table-wrapper {
-  overflow-x: hidden;
-  overflow-y: auto;
+.xml-list-wrapper {
+  overflow: hidden;
   border-radius: var(--border-radius);
   border: 1px solid var(--card-border);
   background: var(--input-bg);
   box-shadow: var(--shadow-sm);
-  max-height: 640px;
 }
 
-.results-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 12px;
-  table-layout: fixed;
+.xml-list-head,
+.xml-item {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.15fr) minmax(250px, 1.3fr) minmax(220px, 1.2fr) minmax(170px, 0.9fr) 94px;
+  gap: 14px;
+  align-items: center;
 }
 
-.results-table th:nth-child(1),
-.results-table td:nth-child(1) { width: 7%; }
-.results-table th:nth-child(2),
-.results-table td:nth-child(2) { width: 12%; }
-.results-table th:nth-child(3),
-.results-table td:nth-child(3) { width: 19%; }
-.results-table th:nth-child(4),
-.results-table td:nth-child(4) { width: 22%; }
-.results-table th:nth-child(5),
-.results-table td:nth-child(5) { width: 18%; }
-.results-table th:nth-child(6),
-.results-table td:nth-child(6) { width: 15%; }
-.results-table th:nth-child(7),
-.results-table td:nth-child(7) { width: 7%; }
-
-.results-table th,
-.results-table td {
-  padding: 12px 10px;
-  border-bottom: 1px solid var(--card-border);
-  transition: var(--transition);
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-
-.results-table th {
-  background: var(--table-header-bg);
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  font-size: 10.5px;
-  letter-spacing: 0;
+.xml-list-head {
   position: sticky;
   top: 0;
   z-index: 1;
+  padding: 12px 14px;
+  background: var(--table-header-bg);
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
-.results-table tr:last-child td {
-  border-bottom: none;
+.xml-list {
+  display: flex;
+  flex-direction: column;
 }
 
-.results-table tbody tr {
+.xml-item {
+  padding: 14px;
+  min-height: 118px;
+  border-bottom: 1px solid var(--card-border);
   transition: var(--transition);
 }
 
-.results-table tbody tr:hover {
-  background: rgba(59, 130, 246, 0.03);
+.xml-item:last-child {
+  border-bottom: none;
 }
 
-body.light-mode .results-table tbody tr:hover {
-  background: rgba(37, 99, 235, 0.02);
+.xml-item:hover {
+  background: rgba(59, 130, 246, 0.035);
+}
+
+body.light-mode .xml-item:hover {
+  background: rgba(37, 99, 235, 0.025);
+}
+
+.xml-main-cell,
+.xml-party-cell,
+.xml-service-cell,
+.xml-value-cell {
+  min-width: 0;
+}
+
+.xml-main-cell,
+.xml-service-cell,
+.xml-value-cell,
+.xml-party-cell > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.xml-main-cell strong,
+.xml-value-cell strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.xml-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.xml-party-cell {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.xml-party-cell strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.xml-party-cell span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.xml-party-cell small,
+.xml-value-cell span {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.xml-action-cell {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.xml-action-cell .btn {
+  width: 78px;
+}
+
+.xml-empty-state {
+  padding: 28px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .text-center {
@@ -105,9 +161,9 @@ body.light-mode .results-table tbody tr:hover {
 
 .cnpj-badge {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 10.5px;
   background: rgba(255, 255, 255, 0.03);
-  padding: 3px 6px;
+  padding: 4px 7px;
   border-radius: 6px;
   color: var(--text-secondary);
   border: 1px solid var(--card-border);
@@ -123,7 +179,7 @@ body.light-mode .cnpj-badge {
   max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .tipo-badge {
@@ -173,17 +229,18 @@ body.light-mode .cnpj-badge {
 
 .descricao-texto {
   max-width: 100%;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .descricao-texto.expanded {
   max-width: none;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
 }
 
 .table-footer {

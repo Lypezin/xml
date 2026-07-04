@@ -120,10 +120,6 @@ body.light-mode .main-content {
   justify-content: flex-end;
 }
 
-.results-table td {
-  vertical-align: top;
-}
-
 .cnpj-badge {
   white-space: nowrap;
 }
@@ -151,30 +147,25 @@ body.light-mode .main-content {
     font-size: 19px;
   }
 
-  .results-table {
-    font-size: 11px;
-  }
-
-  .results-table th,
-  .results-table td {
-    padding: 9px 6px;
-  }
-
-  .results-table th:nth-child(3),
-  .results-table td:nth-child(3),
-  .results-table th:nth-child(5),
-  .results-table td:nth-child(5) {
+  .xml-list-head {
     display: none;
   }
 
-  .results-table th:nth-child(1),
-  .results-table td:nth-child(1) { width: 12%; }
-  .results-table th:nth-child(2),
-  .results-table td:nth-child(2) { width: 18%; }
-  .results-table th:nth-child(4),
-  .results-table td:nth-child(4) { width: 34%; }
-  .results-table th:nth-child(6),
-  .results-table td:nth-child(6) { width: 24%; }
-  .results-table th:nth-child(7),
-  .results-table td:nth-child(7) { width: 12%; }
+  .xml-item {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .xml-party-cell {
+    grid-template-columns: 1fr;
+  }
+
+  .xml-action-cell {
+    justify-content: stretch;
+  }
+
+  .xml-action-cell .btn {
+    width: 100%;
+  }
 }

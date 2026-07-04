@@ -16,6 +16,18 @@ const { onlyDigits } = require('../utils/cert');
 
 const router = express.Router();
 
+function clampListLimit(limit) {
+  const parsed = Number(limit || 15);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 15;
+  return Math.min(parsed, 15);
+}
+
+function clampListOffset(offset) {
+  const parsed = Number(offset || 0);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return parsed;
+}
+
 function getUniqueXmlKey(item) {
   const metadata = item.metadata || {};
   const chave = String(item.chave || metadata.chave || '').trim();
@@ -134,8 +146,8 @@ router.get('/list-documents', async (req, res) => {
       cnpj: '',
       partyCnpj: receiverCnpj,
       partyRole: 'tomador',
-      limit: limit || null,
-      offset: offset || null
+      limit: clampListLimit(limit),
+      offset: clampListOffset(offset)
     });
 
     return res.json({ success: true, documents: result.documents, total: result.total });

@@ -130,6 +130,15 @@ create index if not exists sync_state_lookup_idx
 create index if not exists documents_certificate_environment_nsu_desc_idx
   on xml_nfse.documents (certificate_id, environment, nsu desc);
 
+create index if not exists documents_tomador_lookup_idx
+  on xml_nfse.documents (certificate_id, environment, tomador_cnpj, nsu desc);
+
+create index if not exists documents_prestador_lookup_idx
+  on xml_nfse.documents (certificate_id, environment, prestador_cnpj, nsu desc);
+
+create index if not exists documents_emissao_lookup_idx
+  on xml_nfse.documents (certificate_id, environment, data_emissao desc);
+
 create index if not exists documents_chave_idx
   on xml_nfse.documents (chave);
 
@@ -1210,7 +1219,7 @@ begin
     from ranked
     where dedupe_rank = 1
     order by nsu desc
-    limit coalesce(p_limit, 100000)
+    limit least(greatest(coalesce(p_limit, 15), 1), 50)
     offset coalesce(p_offset, 0)
   )
   select coalesce(jsonb_agg(to_jsonb(filtered.*)), '[]'::jsonb)

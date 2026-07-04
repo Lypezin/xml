@@ -1,7 +1,7 @@
-// Renderização de Documentos na Tabela do Dashboard
+// Renderizacao dos XMLs sincronizados na lista paginada.
 
 window.AppUiTable = {
-  pageSize: 100,
+  pageSize: 15,
   currentPage: 1,
   documents: [],
   remoteTotal: 0,
@@ -90,6 +90,7 @@ window.AppUiTable = {
   renderCurrentPage() {
     if (!tableBody) return;
     tableBody.innerHTML = '';
+
     const mode = selectSearchMode ? selectSearchMode.value : 'asc';
     const orderedDocs = [...this.documents].sort((a, b) => {
       const aNsu = Number(a.nsu || 0);
@@ -100,57 +101,51 @@ window.AppUiTable = {
     const totalItems = this.remoteMode ? this.remoteTotal : orderedDocs.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / this.pageSize));
     this.currentPage = Math.min(Math.max(this.currentPage, 1), totalPages);
-    const start = this.remoteMode ? ((this.currentPage - 1) * this.pageSize) : ((this.currentPage - 1) * this.pageSize);
+    const start = (this.currentPage - 1) * this.pageSize;
     const pageDocs = this.remoteMode ? orderedDocs : orderedDocs.slice(start, start + this.pageSize);
 
     if (pageDocs.length === 0) {
-      tableBody.innerHTML = '<tr id="empty-row"><td colspan="7" class="text-center">Nenhum documento sincronizado ainda.</td></tr>';
+      tableBody.innerHTML = '<div id="empty-row" class="xml-empty-state">Nenhum documento sincronizado ainda.</div>';
       this.updatePagination(totalItems, 0, 0);
       return;
     }
 
     pageDocs.forEach(doc => {
-      const tr = document.createElement('tr');
+      const item = document.createElement('article');
+      item.className = 'xml-item';
       const valorFormatado = window.AppUtils.formatCurrency(doc.valorServico);
       const isEvento = String(doc.tipo || '').toUpperCase() === 'EVENTO' || doc.status === 'Evento';
       const eventoDetalhe = isEvento
         ? [doc.eventoDescricao, doc.eventoMotivo].filter(v => v && v !== 'N/A').join(' - ')
         : '';
 
-      tr.innerHTML = `
-        <td>
-          <strong>${doc.nsu}</strong>
-          <div class="helper-text">${doc.tipo || 'N/A'}</div>
-        </td>
-        <td>
-          <span class="tipo-badge ${doc.tipo.toLowerCase()}">${doc.tipo}</span>
-          <span class="status-badge ${doc.status === 'Evento' ? 'event' : 'ok'}">${doc.status || 'Autorizada'}</span>
-          ${eventoDetalhe ? `<div class="helper-text text-warning">${eventoDetalhe}</div>` : ''}
-          <div class="helper-text">NFS-e: ${doc.numeroNfse || 'N/A'}</div>
-          <div class="helper-text">DPS: ${doc.numeroDps || 'N/A'} / Série ${doc.serieDps || 'N/A'}</div>
-        </td>
-        <td><span class="cnpj-badge wrap">${doc.chave}</span></td>
-        <td>
-          <div><strong>Prestador</strong>: ${doc.prestadorNome || 'N/A'}</div>
-          <div class="helper-text">CNPJ: ${doc.prestadorCnpj || 'N/A'}</div>
-          <div style="height: 6px;"></div>
-          <div><strong>Tomador</strong>: ${doc.tomadorNome || 'N/A'}</div>
-          <div class="helper-text">CNPJ: ${doc.tomadorCnpj || 'Não cadastrado'}</div>
-        </td>
-        <td>
+      item.innerHTML = `
+        <div class="xml-main-cell">
+          <div class="xml-title-row">
+            <span class="tipo-badge ${String(doc.tipo || 'nfse').toLowerCase()}">${doc.tipo || 'NFSE'}</span>
+            <span class="status-badge ${doc.status === 'Evento' ? 'event' : 'ok'}">${doc.status || 'Autorizada'}</span>
+          </div>
+          <strong>NSU ${doc.nsu || 'N/A'}</strong>
+          <span class="helper-text">NFS-e ${doc.numeroNfse || 'N/A'} | DPS ${doc.numeroDps || 'N/A'} / Serie ${doc.serieDps || 'N/A'}</span>
+          <span class="cnpj-badge wrap">${doc.chave || 'Chave nao informada'}</span>
+        </div>
+        <div class="xml-party-cell">
+          <div><strong>Prestador</strong><span>${doc.prestadorNome || 'N/A'}</span><small>${doc.prestadorCnpj || 'N/A'}</small></div>
+          <div><strong>Tomador</strong><span>${doc.tomadorNome || 'N/A'}</span><small>${doc.tomadorCnpj || 'Nao cadastrado'}</small></div>
+        </div>
+        <div class="xml-service-cell">
           <div class="descricao-texto expanded" title="${eventoDetalhe || doc.descricao || 'N/A'}">${eventoDetalhe || doc.descricao || 'N/A'}</div>
-          <div class="helper-text">Município: ${doc.municipioPrestacao || 'N/A'}</div>
-          <div class="helper-text">Cód. tributação: ${doc.codigoTributacao || 'N/A'}</div>
-          <div class="helper-text">${doc.eventoMotivo && doc.eventoMotivo !== 'N/A' ? doc.eventoMotivo : doc.tributacaoNacional || ''}</div>
-        </td>
-        <td>
+          <span class="helper-text">Municipio: ${doc.municipioPrestacao || 'N/A'}</span>
+          <span class="helper-text">Cod. tributacao: ${doc.codigoTributacao || 'N/A'}</span>
+        </div>
+        <div class="xml-value-cell">
           <strong>${valorFormatado}</strong>
-          <div class="helper-text">Emissão: ${window.AppUtils.formatDate(doc.dataEmissao)}</div>
-          <div class="helper-text">Competência: ${window.AppUtils.formatDate(doc.competencia)}</div>
-          <div class="helper-text">Processamento: ${window.AppUtils.formatDate(doc.dataProcessamento)}</div>
-        </td>
-        <td>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="download-xml" data-token="${doc.token}" style="display:inline-flex; align-items:center; text-decoration:none; padding:4px 8px; gap: 4px;">
+          <span>Emissao: ${window.AppUtils.formatDate(doc.dataEmissao)}</span>
+          <span>Competencia: ${window.AppUtils.formatDate(doc.competencia)}</span>
+          <span>Processamento: ${window.AppUtils.formatDate(doc.dataProcessamento)}</span>
+        </div>
+        <div class="xml-action-cell">
+          <button type="button" class="btn btn-secondary btn-sm" data-action="download-xml" data-token="${doc.token}" ${doc.token ? '' : 'disabled'}>
             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
@@ -158,9 +153,9 @@ window.AppUiTable = {
             </svg>
             <span>XML</span>
           </button>
-        </td>
+        </div>
       `;
-      tableBody.appendChild(tr);
+      tableBody.appendChild(item);
     });
 
     this.updatePagination(totalItems, start + 1, start + pageDocs.length);

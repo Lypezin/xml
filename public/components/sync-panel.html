@@ -94,17 +94,23 @@
 
   <section class="data-grid-card">
     <div class="results-header">
-      <div><h2>Tabela de XMLs sincronizados</h2><p class="results-subtitle">Historico persistido no Supabase. Cada pagina carrega ate 100 XMLs.</p></div>
+      <div><h2>XMLs sincronizados</h2><p class="results-subtitle">Historico persistido no Supabase. A visualizacao carrega 15 XMLs por pagina.</p></div>
       <div class="results-actions">
         <button class="btn btn-secondary btn-sm text-danger" id="btn-clear-downloads"><span>Limpar sessao</span></button>
         <button class="btn btn-success" id="btn-download-zip" disabled><span>Baixar ZIP da tabela</span></button>
       </div>
     </div>
-    <div class="table-wrapper">
-      <table class="results-table" id="results-table">
-        <thead><tr><th>NSU</th><th>Documento</th><th>Chave</th><th>Participantes</th><th>Servico</th><th>Valor e data</th><th>XML</th></tr></thead>
-        <tbody id="table-body"><tr id="empty-row"><td colspan="7" class="text-center">Nenhum documento sincronizado ainda.</td></tr></tbody>
-      </table>
+    <div class="xml-list-wrapper" id="results-table">
+      <div class="xml-list-head">
+        <span>Documento</span>
+        <span>Participantes</span>
+        <span>Servico</span>
+        <span>Valores</span>
+        <span>Download</span>
+      </div>
+      <div class="xml-list" id="table-body">
+        <div id="empty-row" class="xml-empty-state">Nenhum documento sincronizado ainda.</div>
+      </div>
     </div>
     <div class="results-actions table-footer">
       <span class="results-subtitle" id="history-count-label">0 XMLs sincronizados</span>
