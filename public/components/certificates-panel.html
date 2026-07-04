@@ -1,57 +1,77 @@
 <div id="view-certificado-content" class="tab-content" style="display: none;">
-  <div class="split-grid">
-    <!-- Left Column: Certificados Cadastrados -->
-    <div class="split-col-left">
-      <section class="card">
-        <div class="card-header">
-          <h2>Certificados Cadastrados</h2>
-        </div>
-        <div class="cert-list-panel" style="border: none; background: transparent; padding: 0; margin-bottom: 0;">
-          <div class="cert-list-header" style="margin-bottom: 16px;">
-            <span id="cert-count-label" style="font-weight: 600; font-size: 13px;">0 certificados</span>
-          </div>
-          <div id="cert-list" class="cert-list">
-            <div class="empty-cert-list">Nenhum certificado cadastrado.</div>
-          </div>
-        </div>
-      </section>
+  <section class="dashboard-hero compact-page-hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Identidade fiscal</span>
+      <h2>Certificados digitais</h2>
+      <p>Gerencie certificados A1 usados na conexao mTLS com a NFS-e Nacional.</p>
     </div>
+    <div class="hero-status-strip">
+      <div><span>Tipo</span><strong>A1 PFX/P12</strong></div>
+      <div><span>Armazenamento</span><strong>Criptografado</strong></div>
+    </div>
+  </section>
 
-    <!-- Right Column: Active status and Upload Form -->
-    <div class="split-col-right">
-      <!-- Active Cert Panel (hidden/shown by class active on cert-active-state-view) -->
-      <div id="cert-active-state-view" class="cert-state" style="margin-bottom: 24px;">
-        <section class="card">
-          <div class="card-header">
-            <h2>Certificado Ativo</h2>
+  <div class="certificates-layout">
+    <section class="card certificates-list-card">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Cofre</span>
+          <h2>Certificados cadastrados</h2>
+        </div>
+        <span class="panel-count" id="cert-count-label">0 certificados</span>
+      </div>
+      <div class="cert-list-panel">
+        <div id="cert-list" class="cert-list">
+          <div class="empty-cert-list">Nenhum certificado cadastrado.</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="certificates-side">
+      <div id="cert-active-state-view" class="cert-state">
+        <section class="card active-cert-card">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Em uso</span>
+              <h2>Certificado ativo</h2>
+            </div>
           </div>
-          <div class="success-banner" style="margin-bottom: 20px;">
+          <div class="success-banner">
             <svg class="success-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
             <div>
-              <h3 id="active-cert-name-view" style="font-size: 14px; font-weight: 700;">Certificado Ativo</h3>
-              <p id="active-cert-cnpj-view" style="font-size: 12px; margin-top: 2px;">CNPJ: --</p>
+              <h3 id="active-cert-name-view">Certificado ativo</h3>
+              <p id="active-cert-cnpj-view">CNPJ: --</p>
             </div>
           </div>
-          <div style="display: flex; gap: 12px;">
-            <button class="btn btn-secondary" id="btn-diagnose-cert-view" style="flex: 1;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-              <span>Diagnosticar Certificado</span>
+          <div class="cert-action-row">
+            <button class="btn btn-secondary" id="btn-diagnose-cert-view">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <span>Diagnosticar</span>
             </button>
-            <button class="btn btn-danger" id="btn-replace-cert-view" style="flex: 1;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              <span>Remover Certificado</span>
+            <button class="btn btn-danger" id="btn-replace-cert-view">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Remover</span>
             </button>
           </div>
         </section>
       </div>
 
-      <!-- Upload Form (always visible) -->
       <div id="cert-upload-state-view">
-        <section class="card">
-          <div class="card-header">
-            <h2>Upload de Novo Certificado A1 (.pfx / .p12)</h2>
+        <section class="card upload-cert-card">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Novo arquivo</span>
+              <h2>Adicionar certificado A1</h2>
+            </div>
           </div>
           <form id="form-cert-view" enctype="multipart/form-data">
             <div class="drop-zone" id="drop-zone-view">
@@ -64,20 +84,24 @@
               <input type="file" id="file-cert-view" name="pfx" accept=".pfx,.p12" style="display: none;">
               <div id="file-name-preview-view" class="file-name-preview"></div>
             </div>
-            
+
             <div class="input-group">
-              <label for="passphrase-view">Senha do Certificado:</label>
-              <input type="password" id="passphrase-view" placeholder="Senha de segurança do PFX" required>
+              <label for="passphrase-view">Senha do certificado</label>
+              <input type="password" id="passphrase-view" placeholder="Senha de seguranca do PFX" required>
             </div>
 
             <div class="input-group">
-              <label for="cert-cnpj-view">CNPJ da empresa titular (Opcional):</label>
+              <label for="cert-cnpj-view">CNPJ da empresa titular</label>
               <input type="text" id="cert-cnpj-view" placeholder="Deixe vazio para extrair automaticamente do certificado">
             </div>
 
-            <button type="submit" class="btn btn-primary" id="btn-save-cert-view" style="width: 100%;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-              <span>Salvar e Validar Certificado</span>
+            <button type="submit" class="btn btn-primary btn-full" id="btn-save-cert-view">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span>Salvar e validar certificado</span>
             </button>
           </form>
         </section>

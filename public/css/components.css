@@ -44,10 +44,10 @@ body.light-mode .file-name-preview {
 
 .cert-list-panel {
   border: 1px solid var(--card-border);
-  background: var(--input-bg);
+  background: var(--surface-muted);
   border-radius: var(--border-radius);
   padding: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .cert-list-header {
@@ -89,8 +89,7 @@ body.light-mode .file-name-preview {
 }
 
 .cert-list-item:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
+  border-color: var(--border-strong);
 }
 
 body.light-mode .cert-list-item:hover {
@@ -122,6 +121,8 @@ body.light-mode .cert-list-item:hover {
 
 .cert-list-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   flex-shrink: 0;
 }

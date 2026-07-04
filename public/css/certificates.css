@@ -1,4 +1,40 @@
 /* Certificate Drop Zone & Active State Styles */
+.compact-page-hero {
+  padding-top: 8px;
+}
+
+.certificates-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.05fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.certificates-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.certificates-list-card,
+.active-cert-card,
+.upload-cert-card {
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 .cert-state {
   display: none;
@@ -27,7 +63,7 @@
   background: var(--surface-muted);
   cursor: pointer;
   transition: var(--transition);
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .drop-zone:hover,
@@ -66,4 +102,15 @@ body.light-mode .drop-zone.dragover .drop-zone-icon-svg {
 
 body.light-mode .drop-zone-text strong {
   color: var(--primary);
+}
+
+.cert-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cert-action-row .btn,
+.btn-full {
+  width: 100%;
 }
