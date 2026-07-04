@@ -10,7 +10,7 @@ function getDefaultSchedulerSettings() {
     autoSyncIntervalHours: 12,
     autoSyncEnvironment: 'producao',
     autoSyncMaxBatchesPerRun: 1,
-    autoSyncDelaySeconds: 5
+    autoSyncDelaySeconds: 2
   };
 }
 
@@ -22,7 +22,7 @@ function normalizeSchedulerSettings(input = {}) {
     autoSyncIntervalHours: Math.max(1, Number(input.autoSyncIntervalHours) || 12),
     autoSyncEnvironment: input.autoSyncEnvironment === 'homologacao' ? 'homologacao' : 'producao',
     autoSyncMaxBatchesPerRun: Math.max(1, Math.min(Number(input.autoSyncMaxBatchesPerRun) || 1, 5)),
-    autoSyncDelaySeconds: Math.max(2, Math.min(Number(input.autoSyncDelaySeconds) || 5, 3600))
+    autoSyncDelaySeconds: 2
   };
 }
 

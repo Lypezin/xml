@@ -3,11 +3,12 @@
     <div class="overview-copy">
       <span class="eyebrow">Operacao NFS-e</span>
       <h2>XMLs persistidos por unidade</h2>
-      <p>Selecione uma unidade e visualize os XMLs salvos no Supabase com paginacao leve, mesmo em bases grandes.</p>
+      <p>Selecione uma unidade, filtre os XMLs salvos no Supabase e baixe somente o recorte que interessa para a operacao.</p>
     </div>
     <div class="overview-metrics">
-      <div class="metric-card"><div class="metric-data"><span class="metric-label">Cursor NSU</span><h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3></div></div>
-      <div class="metric-card"><div class="metric-data"><span class="metric-label">Historico salvo</span><h3 class="metric-value" id="stat-total-notas">0</h3></div></div>
+      <div class="metric-card"><div class="metric-data"><span class="metric-label">Total de notas</span><h3 class="metric-value" id="stat-total-notas">0</h3><span class="helper-text">Filtro atual</span></div></div>
+      <div class="metric-card"><div class="metric-data"><span class="metric-label">Valor total</span><h3 class="metric-value text-primary" id="stat-total-value">R$ 0,00</h3><span class="helper-text">Notas exibidas no filtro</span></div></div>
+      <div class="metric-card"><div class="metric-data"><span class="metric-label">Cursor NSU</span><h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3><span class="helper-text">Ultima varredura</span></div></div>
       <div class="metric-card"><div class="metric-data"><span class="metric-label">XMLs no Supabase</span><h3 class="metric-value text-success" id="stat-storage-payloads">0</h3><span class="helper-text" id="stat-storage-size">Permanentes</span></div></div>
     </div>
   </section>
@@ -30,6 +31,7 @@
     <input type="number" id="scheduler-interval" value="12" min="1" max="168" style="display: none;">
     <select id="scheduler-env" style="display: none;"><option value="producao" selected>Producao</option></select>
     <input type="number" id="scheduler-max-batches" value="1" min="1" max="5" style="display: none;">
+    <input type="number" id="scheduler-delay-seconds" value="2" min="2" max="2" style="display: none;">
     <button class="btn btn-primary btn-sm" id="btn-save-scheduler" style="display: none;">Salvar config.</button>
     <button class="btn btn-secondary btn-sm" id="btn-run-scheduler-now" style="display: none;">Atualizar agora</button>
     <div style="display: none;">
@@ -43,24 +45,22 @@
 
   <section class="operations-grid single-operation-grid">
     <article class="operation-card primary-operation">
-      <div>
+      <div class="operation-intro">
         <span class="eyebrow">Varredura</span>
         <h2>Sincronizacao por NSU</h2>
-        <p>Execute a busca sequencial do CNPJ certificado/unidade selecionada. Cada lote encontrado e salvo entra na lista persistida abaixo.</p>
+        <p>A varredura sempre parte do ultimo NSU recebido salvo para o certificado/unidade selecionada, com intervalo fixo de 2s por lote.</p>
+        <input type="number" id="start-nsu" value="0" min="0" style="display: none;">
       </div>
-      <div class="sync-form-grid">
-        <div class="nsu-control">
-          <label for="start-nsu">NSU inicial</label>
-          <input type="number" id="start-nsu" value="0" min="0">
-          <div class="inline-actions">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-use-saved-nsu">Ultimo recebido</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-use-national-nsu">Ultimo nacional</button>
-          </div>
+      <div class="sync-policy-grid">
+        <div class="sync-policy-item">
+          <span>Origem</span>
+          <strong>Ultimo recebido salvo</strong>
+          <small>Sem ajuste manual antes de iniciar.</small>
         </div>
-        <div class="nsu-control">
-          <label for="scheduler-delay-seconds">Segundos por lote</label>
-          <input type="number" id="scheduler-delay-seconds" value="5" min="2" max="3600">
-          <span class="helper-text">Pausa entre chamadas para reduzir risco de bloqueio.</span>
+        <div class="sync-policy-item">
+          <span>Intervalo</span>
+          <strong>2 segundos</strong>
+          <small>Pausa fixa entre chamadas em lote.</small>
         </div>
       </div>
       <div class="progress-container">
@@ -86,11 +86,21 @@
 
   <section class="data-grid-card">
     <div class="results-header">
-      <div><h2>XMLs da unidade selecionada</h2><p class="results-subtitle">Consulta direta do Supabase por certificado/unidade. Mostra 15 XMLs por pagina sem carregar o historico inteiro.</p></div>
+      <div><h2>XMLs da unidade selecionada</h2><p class="results-subtitle">Consulta direta do Supabase por certificado/unidade. Mostra 10 XMLs por pagina sem carregar o historico inteiro.</p></div>
       <div class="results-actions">
         <button class="btn btn-secondary btn-sm text-danger" id="btn-clear-downloads"><span>Limpar temporarios</span></button>
         <button class="btn btn-success" id="btn-download-zip" disabled><span>Baixar ZIP da lista</span></button>
       </div>
+    </div>
+    <div class="results-filter-bar">
+      <div class="input-group search-field">
+        <label for="history-search">Buscar na tabela</label>
+        <input type="search" id="history-search" placeholder="Valor, CNPJ ou nome">
+      </div>
+      <label class="toggle-row" for="include-cancelled">
+        <input type="checkbox" id="include-cancelled">
+        <span>Mostrar canceladas</span>
+      </label>
     </div>
     <div class="xml-list-wrapper" id="results-table">
       <div class="xml-list-head">

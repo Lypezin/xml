@@ -170,7 +170,19 @@ async function deleteUnit(id) {
   });
 }
 
-async function listRemoteDocuments({ certificateId, environment, startDate, endDate, cnpj, partyCnpj = '', partyRole = 'tomador', limit = null, offset = null }) {
+async function listRemoteDocuments({
+  certificateId,
+  environment,
+  startDate,
+  endDate,
+  cnpj,
+  partyCnpj = '',
+  partyRole = 'tomador',
+  search = '',
+  includeCancelled = false,
+  limit = null,
+  offset = null
+}) {
   const result = await supabaseRpc('xml_nfse_list_documents', {
     p_certificate_id: certificateId,
     p_environment: normalizeEnvironment(environment),
@@ -179,15 +191,18 @@ async function listRemoteDocuments({ certificateId, environment, startDate, endD
     p_cnpj_consulta: cnpj || '',
     p_party_cnpj: partyCnpj || '',
     p_party_role: partyRole || 'tomador',
+    p_search: search || '',
+    p_include_cancelled: Boolean(includeCancelled),
     p_limit: limit === null ? null : Number(limit),
     p_offset: offset === null ? null : Number(offset)
   });
   if (Array.isArray(result)) {
-    return { documents: result, total: result.length };
+    return { documents: result, total: result.length, totalValue: 0 };
   }
   return {
     documents: Array.isArray(result?.documents) ? result.documents : [],
-    total: Number(result?.total || 0)
+    total: Number(result?.total || 0),
+    totalValue: Number(result?.totalValue || result?.total_value || 0)
   };
 }
 

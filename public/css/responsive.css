@@ -128,7 +128,7 @@
     grid-template-columns: 1fr 1fr;
   }
   .overview-metrics {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
   .rules-dashboard-grid,
   .rules-flow {
@@ -154,6 +154,8 @@
   .overview-metrics,
   .toolbar-grid,
   .operations-grid,
+  .sync-policy-grid,
+  .results-filter-bar,
   .rules-dashboard-grid,
   .rules-flow {
     grid-template-columns: 1fr;

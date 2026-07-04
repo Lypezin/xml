@@ -17,6 +17,7 @@
   gap: 16px;
   transition: var(--transition);
   box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 
 .metric-card:hover {
@@ -70,6 +71,7 @@ body.light-mode .metric-card:hover .metric-icon svg {
 .metric-data {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .metric-label {
@@ -88,6 +90,8 @@ body.light-mode .metric-card:hover .metric-icon svg {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .metric-divider {

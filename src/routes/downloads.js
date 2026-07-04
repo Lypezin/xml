@@ -17,9 +17,9 @@ const { onlyDigits } = require('../utils/cert');
 const router = express.Router();
 
 function clampListLimit(limit) {
-  const parsed = Number(limit || 15);
-  if (!Number.isFinite(parsed) || parsed <= 0) return 15;
-  return Math.min(parsed, 15);
+  const parsed = Number(limit || 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 10;
+  return Math.min(parsed, 10);
 }
 
 function clampListOffset(offset) {
@@ -130,7 +130,19 @@ router.post('/clear-downloads', async (req, res) => {
 
 router.get('/list-documents', async (req, res) => {
   try {
-    const { certificateId, environment = 'producao', startDate, endDate, cnpj, partyCnpj, partyRole, limit, offset } = req.query;
+    const {
+      certificateId,
+      environment = 'producao',
+      startDate,
+      endDate,
+      cnpj,
+      partyCnpj,
+      partyRole,
+      search = '',
+      includeCancelled = 'false',
+      limit,
+      offset
+    } = req.query;
     const cert = await resolveCertificateForRequest(certificateId);
     if (!cert) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado.' });
@@ -146,11 +158,20 @@ router.get('/list-documents', async (req, res) => {
       cnpj: '',
       partyCnpj: receiverCnpj,
       partyRole: 'tomador',
+      search,
+      includeCancelled: String(includeCancelled).toLowerCase() === 'true',
       limit: clampListLimit(limit),
       offset: clampListOffset(offset)
     });
 
-    return res.json({ success: true, documents: result.documents, total: result.total });
+    return res.json({
+      success: true,
+      documents: result.documents,
+      total: result.total,
+      summary: {
+        totalValue: result.totalValue || 0
+      }
+    });
   } catch (err) {
     console.error('Erro ao listar documentos:', err);
     return res.status(500).json({ success: false, error: err.message });
@@ -173,7 +194,17 @@ router.get('/storage-summary', async (req, res) => {
 
 router.post('/download-period-zip', async (req, res) => {
   try {
-    const { certificateId, environment = 'producao', startDate, endDate, cnpj, partyCnpj, partyRole } = req.body;
+    const {
+      certificateId,
+      environment = 'producao',
+      startDate,
+      endDate,
+      cnpj,
+      partyCnpj,
+      partyRole,
+      search = '',
+      includeCancelled = 'false'
+    } = req.body;
     const cert = await resolveCertificateForRequest(certificateId);
     if (!cert) {
       return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
@@ -188,7 +219,9 @@ router.post('/download-period-zip', async (req, res) => {
       endDate: endDate || null,
       cnpj: '',
       partyCnpj: receiverCnpj,
-      partyRole: 'tomador'
+      partyRole: 'tomador',
+      search,
+      includeCancelled: String(includeCancelled).toLowerCase() === 'true'
     });
     const documents = dedupeXmlItems(result.documents || []);
 

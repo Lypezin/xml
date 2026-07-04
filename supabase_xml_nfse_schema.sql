@@ -1046,6 +1046,8 @@ grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authe
 grant execute on function public.xml_nfse_storage_summary(text, text, text) to anon, authenticated;
 
 drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer);
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, integer, integer);
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, integer, integer);
 
 create or replace function public.xml_nfse_list_documents(
   p_secret text,
@@ -1056,6 +1058,8 @@ create or replace function public.xml_nfse_list_documents(
   p_cnpj_consulta text default '',
   p_party_cnpj text default '',
   p_party_role text default 'tomador',
+  p_search text default '',
+  p_include_cancelled boolean default false,
   p_limit integer default null,
   p_offset integer default null
 )
@@ -1065,10 +1069,17 @@ security definer
 set search_path = xml_nfse, public, extensions
 as $$
 declare
-  rows_data jsonb;
-  total_count integer;
+  result_data jsonb;
+  search_term text := lower(trim(coalesce(p_search, '')));
+  search_digits text := regexp_replace(coalesce(p_search, ''), '\D', '', 'g');
+  search_decimal text := replace(lower(trim(coalesce(p_search, ''))), ',', '.');
+  search_numeric numeric;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
+
+  if search_decimal ~ '^[0-9]+(\.[0-9]+)?$' then
+    search_numeric := search_decimal::numeric;
+  end if;
 
   with enriched as (
     select
@@ -1124,109 +1135,71 @@ begin
           and regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
         )
       )
+      and (
+        p_include_cancelled
+        or not (
+          lower(coalesce(d.effective_metadata ->> 'status', '')) like '%cancel%'
+          or lower(coalesce(d.effective_metadata ->> 'eventoDescricao', '')) like '%cancel%'
+          or lower(coalesce(d.effective_metadata ->> 'eventoMotivo', '')) like '%cancel%'
+          or lower(coalesce(d.tipo, '')) like '%cancel%'
+        )
+      )
+      and (
+        search_term = ''
+        or lower(coalesce(d.effective_prestador_nome, '')) like '%' || search_term || '%'
+        or lower(coalesce(d.effective_tomador_nome, '')) like '%' || search_term || '%'
+        or (search_digits <> '' and regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') like '%' || search_digits || '%')
+        or (search_digits <> '' and regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') like '%' || search_digits || '%')
+        or (search_numeric is not null and coalesce(d.effective_valor_servico, 0) = search_numeric)
+        or coalesce(d.effective_valor_servico, 0)::text like '%' || search_decimal || '%'
+      )
   ),
   ranked as (
     select
-      filtered.*,
+      filtered.id,
+      filtered.certificate_id,
+      filtered.environment,
+      filtered.nsu,
+      filtered.tipo,
+      filtered.chave,
+      filtered.numero_nfse,
+      filtered.effective_data_emissao as data_emissao,
+      filtered.effective_prestador_cnpj as prestador_cnpj,
+      filtered.effective_prestador_nome as prestador_nome,
+      filtered.effective_tomador_cnpj as tomador_cnpj,
+      filtered.effective_tomador_nome as tomador_nome,
+      filtered.effective_valor_servico as valor_servico,
+      filtered.effective_municipio_prestacao as municipio_prestacao,
+      filtered.effective_codigo_tributacao as codigo_tributacao,
+      filtered.file_name,
+      filtered.xml_sha256,
+      filtered.effective_metadata as metadata,
+      filtered.first_seen_at,
+      filtered.last_seen_at,
       row_number() over (
         partition by case
           when nullif(filtered.chave, '') is not null and filtered.chave <> 'N/A' then filtered.chave
           else filtered.id::text
         end
         order by case when filtered.tipo = 'EVENTO' then 1 else 0 end, filtered.nsu desc
-      ) as dedupe_rank
+    ) as dedupe_rank
     from filtered
-  )
-  select count(*) into total_count
-  from ranked
-  where dedupe_rank = 1;
-
-  with enriched as (
-    select
-      d.*,
-      coalesce(d.data_emissao, base.data_emissao) as effective_data_emissao,
-      coalesce(d.prestador_cnpj, base.prestador_cnpj) as effective_prestador_cnpj,
-      coalesce(d.prestador_nome, base.prestador_nome) as effective_prestador_nome,
-      coalesce(d.tomador_cnpj, base.tomador_cnpj) as effective_tomador_cnpj,
-      coalesce(d.tomador_nome, base.tomador_nome) as effective_tomador_nome,
-      coalesce(d.valor_servico, base.valor_servico) as effective_valor_servico,
-      coalesce(d.municipio_prestacao, base.municipio_prestacao) as effective_municipio_prestacao,
-      coalesce(d.codigo_tributacao, base.codigo_tributacao) as effective_codigo_tributacao,
-      d.metadata || jsonb_strip_nulls(jsonb_build_object(
-        'prestadorCnpj', coalesce(d.metadata ->> 'prestadorCnpj', base.prestador_cnpj),
-        'prestadorNome', coalesce(d.metadata ->> 'prestadorNome', base.prestador_nome),
-        'tomadorCnpj', coalesce(d.metadata ->> 'tomadorCnpj', base.tomador_cnpj),
-        'tomadorNome', coalesce(d.metadata ->> 'tomadorNome', base.tomador_nome),
-        'valorServico', coalesce(d.metadata ->> 'valorServico', base.valor_servico::text),
-        'municipioPrestacao', coalesce(d.metadata ->> 'municipioPrestacao', base.municipio_prestacao),
-        'codigoTributacao', coalesce(d.metadata ->> 'codigoTributacao', base.codigo_tributacao)
-      )) as effective_metadata
-    from xml_nfse.documents d
-    left join lateral (
-      select b.*
-      from xml_nfse.documents b
-      where b.certificate_id = d.certificate_id
-        and b.environment = d.environment
-        and b.chave = d.chave
-        and b.tipo <> 'EVENTO'
-      order by b.nsu desc
-      limit 1
-    ) base on true
   ),
-  filtered as (
-    select
-      d.id,
-      d.certificate_id,
-      d.environment,
-      d.nsu,
-      d.tipo,
-      d.chave,
-      d.numero_nfse,
-      d.effective_data_emissao as data_emissao,
-      d.effective_prestador_cnpj as prestador_cnpj,
-      d.effective_prestador_nome as prestador_nome,
-      d.effective_tomador_cnpj as tomador_cnpj,
-      d.effective_tomador_nome as tomador_nome,
-      d.effective_valor_servico as valor_servico,
-      d.effective_municipio_prestacao as municipio_prestacao,
-      d.effective_codigo_tributacao as codigo_tributacao,
-      d.file_name,
-      d.xml_sha256,
-      d.effective_metadata as metadata,
-      d.first_seen_at,
-      d.last_seen_at
-    from enriched d
-    where d.certificate_id = p_certificate_id
-      and d.environment = p_environment
-      and (p_start_date is null or d.effective_data_emissao >= p_start_date)
-      and (p_end_date is null or d.effective_data_emissao <= p_end_date)
-      and (
-        coalesce(p_cnpj_consulta, '') = ''
-        or regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_cnpj_consulta, '\D', '', 'g')
-      )
-      and (
-        coalesce(p_party_cnpj, '') = ''
-        or (
-          coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
-          and regexp_replace(coalesce(d.effective_prestador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
-        )
-        or (
-          coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
-          and regexp_replace(coalesce(d.effective_tomador_cnpj, ''), '\D', '', 'g') = regexp_replace(p_party_cnpj, '\D', '', 'g')
-        )
-      )
+  deduped as (
+    select *
+    from ranked
+    where dedupe_rank = 1
   ),
-  ranked as (
+  totals as (
     select
-      filtered.*,
-      row_number() over (
-        partition by case
-          when nullif(filtered.chave, '') is not null and filtered.chave <> 'N/A' then filtered.chave
-          else filtered.id::text
+      count(*)::integer as total_count,
+      coalesce(sum(
+        case
+          when valor_servico >= 0 and valor_servico < 1000000000 then valor_servico
+          else 0
         end
-        order by case when filtered.tipo = 'EVENTO' then 1 else 0 end, filtered.nsu desc
-      ) as dedupe_rank
-    from filtered
+      ), 0)::numeric as total_value
+    from deduped
   ),
   page_rows as (
     select
@@ -1250,21 +1223,24 @@ begin
       metadata,
       first_seen_at,
       last_seen_at
-    from ranked
-    where dedupe_rank = 1
+    from deduped
     order by nsu desc
     limit coalesce(p_limit, 100000)
     offset coalesce(p_offset, 0)
   )
-  select coalesce(jsonb_agg(to_jsonb(filtered.*)), '[]'::jsonb)
-  into rows_data
-  from page_rows filtered;
+  select jsonb_build_object(
+    'documents', coalesce((select jsonb_agg(to_jsonb(page_rows.*)) from page_rows), '[]'::jsonb),
+    'total', coalesce(totals.total_count, 0),
+    'totalValue', coalesce(totals.total_value, 0)
+  )
+  into result_data
+  from totals;
 
-  return jsonb_build_object('documents', rows_data, 'total', total_count);
+  return coalesce(result_data, jsonb_build_object('documents', '[]'::jsonb, 'total', 0, 'totalValue', 0));
 end;
 $$;
 
-grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, integer, integer) to anon, authenticated;
+grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, integer, integer) to anon, authenticated;
 grant execute on function public.xml_nfse_list_units(text) to anon, authenticated;
 grant execute on function public.xml_nfse_upsert_unit(text, uuid, text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_delete_unit(text, uuid) to anon, authenticated;

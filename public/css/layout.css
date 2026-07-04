@@ -186,7 +186,7 @@ body.light-mode .input-group select:focus {
 
 .overview-strip {
   display: grid;
-  grid-template-columns: minmax(280px, 0.95fr) minmax(520px, 1.6fr);
+  grid-template-columns: minmax(300px, 0.8fr) minmax(620px, 1.8fr);
   gap: 18px;
   align-items: stretch;
 }
@@ -236,7 +236,7 @@ body.light-mode .input-group select:focus {
 
 .overview-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -276,11 +276,11 @@ body.light-mode .input-group select:focus {
 }
 
 .operation-card {
-  padding: 18px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 220px;
+  min-height: 0;
 }
 
 .operation-card h2,
@@ -294,10 +294,39 @@ body.light-mode .input-group select:focus {
   border-color: rgba(20, 184, 166, 0.22);
 }
 
-.sync-form-grid {
+.sync-form-grid,
+.sync-policy-grid {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
   gap: 14px;
+}
+
+.operation-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.sync-policy-item {
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  background: var(--input-bg);
+  padding: 14px;
+  min-width: 0;
+}
+
+.sync-policy-item span,
+.sync-policy-item small {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.sync-policy-item strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 15px;
+  margin: 3px 0;
 }
 
 .nsu-control label {

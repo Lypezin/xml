@@ -133,6 +133,8 @@ window.AppSyncController = {
         cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
         partyCnpj: unitFilterParams.partyCnpj,
         partyRole: unitFilterParams.partyRole,
+        search: historySearch ? historySearch.value.trim() : '',
+        includeCancelled: includeCancelled?.checked ? 'true' : 'false',
         limit,
         offset: (safePage - 1) * limit
       });
@@ -142,7 +144,7 @@ window.AppSyncController = {
         return;
       }
 
-      window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage);
+      window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage, data.summary?.totalValue || 0);
       btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
       const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
       window.AppUi.log(`Historico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
@@ -150,6 +152,28 @@ window.AppSyncController = {
     } catch (err) {
       window.AppUi.log(`Erro ao carregar historico: ${err.message}`, 'warning');
     }
+  },
+
+  async loadSavedStartNsu() {
+    const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
+    const unitFilterParams = this.getSelectedUnitFilter();
+    const cnpjConsulta = unitFilterParams.partyCnpj || (inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '');
+
+    const data = await window.AppApi.fetchSyncState({
+      environment: selectEnvironment ? selectEnvironment.value : 'producao',
+      cnpjConsulta,
+      certificateId: certId
+    });
+
+    const lastReceivedNsu = Number(data.state?.last_received_nsu || 0);
+    const lastNsu = Number(data.state?.last_nsu || 0);
+    const savedNsu = lastReceivedNsu || lastNsu || 0;
+    inputStartNsu.value = savedNsu;
+    window.currentNsu = savedNsu;
+    window.maxNsu = Math.max(window.maxNsu || 0, savedNsu);
+    statNsuAtual.innerText = String(savedNsu);
+    statNsuMax.innerText = String(window.maxNsu || savedNsu);
+    return savedNsu;
   },
 
   async checkCertStatus() {
@@ -372,7 +396,7 @@ window.AppSyncController = {
         inputStartNsu.value = window.currentNsu;
       }
 
-      const safeDelaySeconds = Math.max(2, Number(schedulerDelaySeconds?.value || 5));
+      const safeDelaySeconds = 2;
       const safeDelayMs = safeDelaySeconds * 1000;
       window.AppUi.log(`Aguardando ${safeDelaySeconds}s antes do proximo bloco...`, 'warning');
       window.queryLoopTimer = setTimeout(() => {

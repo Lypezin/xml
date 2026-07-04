@@ -1,10 +1,11 @@
 // Renderizacao dos XMLs sincronizados na lista paginada.
 
 window.AppUiTable = {
-  pageSize: 15,
+  pageSize: 10,
   currentPage: 1,
   documents: [],
   remoteTotal: 0,
+  remoteTotalValue: 0,
   remoteMode: false,
 
   normalizeDocument(doc) {
@@ -58,9 +59,10 @@ window.AppUiTable = {
     return Array.from(byKey.values());
   },
 
-  setDocuments(docs, total = null, page = 1) {
+  setDocuments(docs, total = null, page = 1, totalValue = 0) {
     this.documents = this.dedupeDocuments((docs || []).map(doc => this.normalizeDocument(doc)));
     this.remoteTotal = total === null ? this.documents.length : Number(total || 0);
+    this.remoteTotalValue = Number(totalValue || 0);
     this.remoteMode = total !== null;
     this.currentPage = page;
     this.renderCurrentPage();
@@ -167,6 +169,7 @@ window.AppUiTable = {
     if (btnHistoryPrev) btnHistoryPrev.disabled = this.currentPage <= 1;
     if (btnHistoryNext) btnHistoryNext.disabled = this.currentPage >= Math.ceil(Math.max(total, 1) / this.pageSize);
     if (statTotalNotas) statTotalNotas.innerText = total;
+    if (statTotalValue) statTotalValue.innerText = window.AppUtils.formatCurrency(this.remoteTotalValue || 0);
   },
 
   nextPage() {

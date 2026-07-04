@@ -29,6 +29,14 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function debounce(fn, delayMs = 300) {
+  let timer = null;
+  return (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delayMs);
+  };
+}
+
 window.AppEvents = {
   bindEvents() {
     window.AppEventsCert.bindCertEvents();
@@ -71,7 +79,7 @@ window.AppEvents = {
       });
     }
 
-    btnStart.addEventListener('click', () => {
+    btnStart.addEventListener('click', async () => {
       if (window.isQuerying) {
         window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
         if (window.queryLoopTimer) {
@@ -95,20 +103,27 @@ window.AppEvents = {
         
         if (!wasPaused) {
           window.totalDownloaded = 0;
-          const mode = selectSearchMode ? selectSearchMode.value : 'asc';
-          window.currentNsu = parseInt(inputStartNsu.value) || 0;
+          const mode = 'asc';
           window.isCrawlerActive = false;
           window.crawlerVisited = new Set();
           window.crawlerQueue = [];
-          window.currentCrawlerCnpj = inputCnpjConsulta.value.trim();
+          const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
+          window.currentCrawlerCnpj = unitFilterParams.partyCnpj || inputCnpjConsulta.value.trim();
           window.AppUi.updateCrawlerUI();
-          
+
+          try {
+            const savedNsu = await window.AppSyncController.loadSavedStartNsu();
+            window.AppUi.log(`Iniciando varredura a partir do ultimo NSU recebido salvo: ${savedNsu}.`);
+          } catch (err) {
+            window.currentNsu = 0;
+            inputStartNsu.value = 0;
+            window.AppUi.log(`Nao foi possivel carregar o ultimo NSU salvo (${err.message}). Iniciando do NSU 0.`, 'warning');
+          }
+
           if (mode === 'desc' && window.currentNsu === 0) {
             window.AppUi.log(`Descobrindo NSU mais recente na Receita Federal para busca reversa...`);
             window.AppSyncController.discoverAndStart(runId);
             return;
-          } else {
-            window.AppUi.log(`Iniciando nova busca em lote a partir do NSU ${window.currentNsu}...`);
           }
         } else {
           window.AppUi.log(`Retomando busca a partir do NSU ${window.currentNsu}...`);
@@ -177,7 +192,9 @@ window.AppEvents = {
           endDate: downloadEndDate?.value || null,
           cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
           partyCnpj: unitFilterParams.partyCnpj,
-          partyRole: unitFilterParams.partyRole
+          partyRole: unitFilterParams.partyRole,
+          search: historySearch ? historySearch.value.trim() : '',
+          includeCancelled: includeCancelled?.checked ? 'true' : 'false'
         });
         window.AppUi.log('ZIP da tabela baixado com sucesso.', 'success');
       } catch (err) {
@@ -213,6 +230,14 @@ window.AppEvents = {
 
     if (unitPartyRole) {
       unitPartyRole.addEventListener('change', () => window.AppSyncController.loadPersistedHistory());
+    }
+
+    if (historySearch) {
+      historySearch.addEventListener('input', debounce(() => window.AppSyncController.loadPersistedHistory(1), 350));
+    }
+
+    if (includeCancelled) {
+      includeCancelled.addEventListener('change', () => window.AppSyncController.loadPersistedHistory(1));
     }
 
     if (btnSaveUnit) {
@@ -373,7 +398,7 @@ window.AppEvents = {
             autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
             autoSyncEnvironment: selectEnvironment?.value || schedulerEnv?.value || 'producao',
             autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
-            autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 5)
+            autoSyncDelaySeconds: 2
           };
           const data = await window.AppApi.saveSchedulerSettings(settings);
           if (!data.success) throw new Error(data.error || 'Nao foi possivel salvar o agendamento.');
@@ -398,11 +423,11 @@ window.AppEvents = {
             autoSyncIntervalHours: Number(schedulerInterval?.value || 12),
             autoSyncEnvironment: selectEnvironment?.value || schedulerEnv?.value || 'producao',
             autoSyncMaxBatchesPerRun: Number(schedulerMaxBatches?.value || 1),
-            autoSyncDelaySeconds: Number(schedulerDelaySeconds?.value || 5)
+            autoSyncDelaySeconds: 2
           };
           await window.AppApi.saveSchedulerSettings(settings);
 
-          const delaySeconds = Math.max(2, Number(settings.autoSyncDelaySeconds || 5));
+          const delaySeconds = 2;
           let finished = false;
           let cycles = 0;
 
@@ -462,7 +487,9 @@ window.AppEvents = {
             endDate,
             cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
             partyCnpj: unitFilterParams.partyCnpj,
-            partyRole: unitFilterParams.partyRole
+            partyRole: unitFilterParams.partyRole,
+            search: historySearch ? historySearch.value.trim() : '',
+            includeCancelled: includeCancelled?.checked ? 'true' : 'false'
           });
           window.AppUi.log('ZIP do periodo baixado com sucesso.', 'success');
         } catch (err) {
