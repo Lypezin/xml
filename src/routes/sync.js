@@ -195,7 +195,8 @@ router.post('/reset-nsu', async (req, res) => {
       p_environment: requestEnvironment,
       p_cnpj_consulta: requestCnpjConsulta,
       p_last_nsu: 0,
-      p_max_nsu_seen: 0
+      p_max_nsu_seen: 0,
+      p_status: 'idle'
     });
 
     return res.json({ success: true });
