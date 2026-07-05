@@ -196,6 +196,7 @@ window.AppSyncController = {
         activeCertName.innerText = `Arquivo: ${data.filename}`;
         activeCertCnpj.innerText = `CNPJ: ${data.cnpj || 'Não informado'}`;
         btnStart.disabled = false;
+        if (window.btnResetNsu) window.btnResetNsu.disabled = false;
         window.AppUi.log(`Certificado ativo CNPJ: ${data.cnpj}`);
         if (indicator && txt) {
           indicator.className = 'status-indicator online';
@@ -207,6 +208,7 @@ window.AppSyncController = {
         certUploadState.classList.add('active');
         certActiveState.classList.remove('active');
         btnStart.disabled = true;
+        if (window.btnResetNsu) window.btnResetNsu.disabled = true;
         window.AppUi.log('Nenhum certificado carregado.', 'warning');
         if (indicator && txt) {
           indicator.className = 'status-indicator offline';
@@ -279,6 +281,7 @@ window.AppSyncController = {
     window.isPaused = false;
     window.AppUi.setBtnStartActive(false, false);
     btnPause.disabled = true;
+    if (window.btnResetNsu) window.btnResetNsu.disabled = false;
   },
 
   async runQueryLoop(runId = window.activeQueryRunId) {

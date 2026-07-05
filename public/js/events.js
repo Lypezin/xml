@@ -89,6 +89,7 @@ window.AppEvents = {
         window.isPaused = true;
         window.AppUi.setBtnStartActive(false, true);
         btnPause.disabled = true;
+        if (window.btnResetNsu) window.btnResetNsu.disabled = false;
         window.AppUi.log('Sincronização pausada pelo usuário.', 'warning');
         window.isQuerying = false;
       } else {
@@ -100,6 +101,7 @@ window.AppEvents = {
         alertSyncSuccess.style.display = 'none';
         window.AppUi.setBtnStartActive(true);
         btnPause.disabled = false;
+        if (window.btnResetNsu) window.btnResetNsu.disabled = true;
         
         if (!wasPaused) {
           window.totalDownloaded = 0;
@@ -142,6 +144,7 @@ window.AppEvents = {
       window.isPaused = true;
       window.AppUi.setBtnStartActive(false, true);
       btnPause.disabled = true;
+      if (window.btnResetNsu) window.btnResetNsu.disabled = false;
       window.AppUi.log('Sincronização pausada pelo usuário.', 'warning');
       window.isQuerying = false;
     });
