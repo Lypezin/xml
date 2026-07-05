@@ -153,8 +153,8 @@ window.AppUiTable = {
           <span class="cnpj-badge wrap">${doc.chave || 'Chave não informada'}</span>
         </div>
         <div class="xml-party-cell">
-          <div><strong>Prestador</strong><span>${doc.prestadorNome || 'N/A'}</span><small>${doc.prestadorCnpj || 'N/A'}</small></div>
-          <div><strong>Tomador</strong><span>${doc.tomadorNome || 'N/A'}</span><small>${doc.tomadorCnpj || 'Não cadastrado'}</small></div>
+          <div><strong>Prestador</strong><span>${doc.prestadorNome || 'N/A'}</span><small>${window.AppUtils.formatCnpj(doc.prestadorCnpj) || 'N/A'}</small></div>
+          <div><strong>Tomador</strong><span>${doc.tomadorNome || 'N/A'}</span><small>${window.AppUtils.formatCnpj(doc.tomadorCnpj) || 'Não cadastrado'}</small></div>
         </div>
         <div class="xml-service-cell">
           <div class="descricao-texto expanded" title="${eventoDetalhe || doc.descricao || 'N/A'}">${eventoDetalhe || doc.descricao || 'N/A'}</div>

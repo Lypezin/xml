@@ -41,6 +41,13 @@ window.AppUtils = {
     return `${match[3]}/${match[2]}/${match[1]}`;
   },
 
+  formatCnpj(value) {
+    if (!value || String(value).trim() === 'N/A' || String(value).trim() === 'Não Informado') return value;
+    const digits = String(value).replace(/\D/g, '');
+    if (digits.length !== 14) return value;
+    return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  },
+
   formatInteger(value) {
     return Number(value || 0).toLocaleString('pt-BR');
   },
