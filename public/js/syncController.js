@@ -429,43 +429,45 @@ window.AppSyncController = {
     return name;
   },
 
-  async loadDashboard() {
+  async loadDashboard(retryCount = 0) {
     if (!dashboardCitiesGrid) return;
 
-    if (window.dashStatCities) window.dashStatCities.innerHTML = `<div class="skeleton-shimmer" style="width: 40px; height: 26px; vertical-align: middle;"></div>`;
-    if (window.dashStatActive) window.dashStatActive.innerHTML = `<div class="skeleton-shimmer" style="width: 40px; height: 26px; vertical-align: middle;"></div>`;
-    if (window.dashStatXmls) window.dashStatXmls.innerHTML = `<div class="skeleton-shimmer" style="width: 80px; height: 26px; vertical-align: middle;"></div>`;
+    if (retryCount === 0) {
+      if (window.dashStatCities) window.dashStatCities.innerHTML = `<div class="skeleton-shimmer" style="width: 40px; height: 26px; vertical-align: middle;"></div>`;
+      if (window.dashStatActive) window.dashStatActive.innerHTML = `<div class="skeleton-shimmer" style="width: 40px; height: 26px; vertical-align: middle;"></div>`;
+      if (window.dashStatXmls) window.dashStatXmls.innerHTML = `<div class="skeleton-shimmer" style="width: 80px; height: 26px; vertical-align: middle;"></div>`;
 
-    let skeletonHtml = '';
-    for (let i = 0; i < 4; i++) {
-      skeletonHtml += `
-        <div class="city-card skeleton-row" style="opacity: ${1 - (i * 0.15)}; cursor: default;">
-          <div class="city-card-header">
-            <div>
-              <div class="skeleton-shimmer" style="width: 130px; height: 18px; border-radius: 4px;"></div>
-              <div class="skeleton-shimmer" style="width: 110px; height: 12px; margin-top: 6px; border-radius: 4px;"></div>
+      let skeletonHtml = '';
+      for (let i = 0; i < 4; i++) {
+        skeletonHtml += `
+          <div class="city-card skeleton-row" style="opacity: ${1 - (i * 0.15)}; cursor: default;">
+            <div class="city-card-header">
+              <div>
+                <div class="skeleton-shimmer" style="width: 130px; height: 18px; border-radius: 4px;"></div>
+                <div class="skeleton-shimmer" style="width: 110px; height: 12px; margin-top: 6px; border-radius: 4px;"></div>
+              </div>
+            </div>
+            <div class="city-card-stats" style="margin-top: auto;">
+              <div class="city-card-stat-item">
+                <div class="skeleton-shimmer" style="width: 60px; height: 10px; border-radius: 4px;"></div>
+                <div class="skeleton-shimmer" style="width: 40px; height: 16px; margin-top: 4px; border-radius: 4px;"></div>
+              </div>
+              <div class="skeleton-shimmer" style="width: 140px; height: 16px; border-radius: 4px; align-self: flex-end;"></div>
             </div>
           </div>
-          <div class="city-card-stats" style="margin-top: auto;">
-            <div class="city-card-stat-item">
-              <div class="skeleton-shimmer" style="width: 60px; height: 10px; border-radius: 4px;"></div>
-              <div class="skeleton-shimmer" style="width: 40px; height: 16px; margin-top: 4px; border-radius: 4px;"></div>
-            </div>
-            <div class="skeleton-shimmer" style="width: 140px; height: 16px; border-radius: 4px; align-self: flex-end;"></div>
-          </div>
-        </div>
-      `;
+        `;
+      }
+
+      dashboardCitiesGrid.innerHTML = skeletonHtml;
+      dashboardCitiesGrid.style.display = 'grid';
+      if (dashboardLoader) dashboardLoader.style.display = 'none';
     }
-
-    dashboardCitiesGrid.innerHTML = skeletonHtml;
-    dashboardCitiesGrid.style.display = 'grid';
-    if (dashboardLoader) dashboardLoader.style.display = 'none';
 
     if (btnRefreshDashboard) {
       btnRefreshDashboard.classList.add('loading');
       btnRefreshDashboard.onclick = (e) => {
         e.preventDefault();
-        this.loadDashboard();
+        this.loadDashboard(0);
       };
     }
 
@@ -529,11 +531,31 @@ window.AppSyncController = {
         dashboardCitiesGrid.appendChild(card);
       });
 
-      dashboardLoader.style.display = 'none';
+      if (dashboardLoader) dashboardLoader.style.display = 'none';
       dashboardCitiesGrid.style.display = 'grid';
     } catch (err) {
-      dashboardLoader.innerHTML = `<span class="text-danger">Falha ao carregar painel: ${err.message}</span>`;
-      window.AppUi.log(`Erro ao carregar Dashboard: ${err.message}`, 'warning');
+      console.warn(`Tentativa ${retryCount + 1} de carregar o painel falhou: ${err.message}`);
+      if (retryCount < 2) {
+        window.AppUi.log('O banco de dados está iniciando. Retentando conectar em 3s...', 'warning');
+        setTimeout(() => {
+          this.loadDashboard(retryCount + 1);
+        }, 3000);
+      } else {
+        dashboardCitiesGrid.innerHTML = `
+          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-top: 20px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 48px; height: 48px; color: var(--danger); margin-bottom: 16px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Conexão com o Banco de Dados Indisponível</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); max-width: 400px; margin-bottom: 20px;">O banco de dados do Supabase pode estar hibernando ou iniciando. Por favor, aguarde um momento ou clique abaixo.</p>
+            <button class="btn btn-primary" onclick="window.AppSyncController.loadDashboard(0)">Tentar Novamente</button>
+          </div>
+        `;
+        if (window.dashStatCities) window.dashStatCities.innerText = '0';
+        if (window.dashStatActive) window.dashStatActive.innerText = '0';
+        if (window.dashStatXmls) window.dashStatXmls.innerText = '0';
+        window.AppUi.log(`Erro ao carregar Dashboard: ${err.message}`, 'error');
+      }
     } finally {
       if (btnRefreshDashboard) btnRefreshDashboard.classList.remove('loading');
     }

@@ -139,43 +139,18 @@ router.get('/dashboard-summary', async (req, res) => {
           };
         });
 
-        return res.json({
-          success: true,
-          summary
-        });
-      }
-    } catch (rpcErr) {
-      console.error('RPC xml_nfse_get_dashboard_summary falhou:', rpcErr);
-    }
-
-    let certificates = [];
-    if (useRemoteCertificateStorage()) {
-      certificates = await listRemoteCertificates();
-      const envCert = getEnvCertificate();
-      if (certificates.length === 0 && envCert) {
-        certificates = [envCert];
-      }
+      return res.json({
+        success: true,
+        summary
+      });
     } else {
-      const index = getCertificatesIndex();
-      certificates = index.certificates || [];
+      throw new Error('Banco de dados não retornou um formato de array.');
     }
-
-    const summary = certificates.map((cert) => {
-      return {
-        certificateId: cert.id,
-        filename: cert.filename || cert.originalName || 'certificado.pfx',
-        cnpj: cert.cnpj || 'Não cadastrado',
-        active: Boolean(cert.active),
-        totalXmls: 0,
-        lastUpdate: 'Erro de conexão com o banco de dados (tente atualizar)'
-      };
-    });
-
-    return res.json({
-      success: true,
-      summary
-    });
-  } catch (err) {
+  } catch (rpcErr) {
+    console.error('RPC xml_nfse_get_dashboard_summary falhou:', rpcErr);
+    throw rpcErr;
+  }
+} catch (err) {
     console.error('Erro na rota /dashboard-summary:', err);
     return res.status(500).json({
       success: false,

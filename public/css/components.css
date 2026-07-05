@@ -496,4 +496,7 @@ body:not(.light-mode) .skeleton-shimmer {
   border-radius: 6px;
   border: 1px solid var(--card-border);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
