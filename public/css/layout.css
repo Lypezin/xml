@@ -1,5 +1,19 @@
 /* App Layout, Content Area, Navbar and Grid Structural Styles - Minimalist SaaS Clean */
 
+/* Typography - Modern Geometric Outfit Font for Headings */
+h1, h2, h3, h4, h5, h6,
+.navbar-title h1,
+.brand-text h2,
+.city-card-title,
+.hero-copy h2,
+.panel-heading h3,
+.results-header h2,
+.overview-metrics .metric-value,
+.metric-value {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.02em;
+}
+
 .glass-bg {
   position: fixed;
   top: 0;

@@ -20,6 +20,15 @@
   box-shadow: var(--shadow-sm);
 }
 
+.btn:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;

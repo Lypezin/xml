@@ -4,14 +4,21 @@
   top: 0;
   height: 100vh;
   width: 240px;
-  background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--card-border);
+  background-color: rgba(9, 9, 11, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   padding: 20px 16px;
   flex-shrink: 0;
   z-index: 10;
   transition: var(--transition);
+}
+
+body.light-mode .sidebar {
+  background-color: rgba(255, 255, 255, 0.75);
+  border-right: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .sidebar-brand {
@@ -76,12 +83,14 @@ body.light-mode .brand-icon {
 }
 
 .nav-item.active {
-  background: var(--surface-muted);
-  color: var(--text-primary);
+  background: var(--primary);
+  color: var(--bg-color);
   font-weight: 600;
-  border-left: 3px solid var(--primary);
-  border-radius: 0 var(--border-radius) var(--border-radius) 0;
-  padding-left: 9px;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-item.active .nav-icon-svg {
+  color: var(--bg-color);
 }
 
 .nav-icon-svg {
