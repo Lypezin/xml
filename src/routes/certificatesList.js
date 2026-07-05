@@ -145,7 +145,7 @@ router.get('/dashboard-summary', async (req, res) => {
         });
       }
     } catch (rpcErr) {
-      console.warn('RPC xml_nfse_get_dashboard_summary não encontrado ou falhou, usando fallback local:', rpcErr.message);
+      console.error('RPC xml_nfse_get_dashboard_summary falhou:', rpcErr);
     }
 
     let certificates = [];
@@ -167,7 +167,7 @@ router.get('/dashboard-summary', async (req, res) => {
         cnpj: cert.cnpj || 'Não cadastrado',
         active: Boolean(cert.active),
         totalXmls: 0,
-        lastUpdate: 'Atualize o SQL no Supabase para ver os dados'
+        lastUpdate: 'Erro de conexão com o banco de dados (tente atualizar)'
       };
     });
 

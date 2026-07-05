@@ -53,20 +53,37 @@ window.AppApi = {
     }
 
     if (!refreshSessionPromise) {
-      refreshSessionPromise = originalFetch(`${window.authConfig.supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
-        method: 'POST',
-        headers: {
-          apikey: window.authConfig.publishableKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ refresh_token: session.refresh_token })
-      })
-        .then(async res => {
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) return null;
-          window.AppUtils.saveAuthSession(data);
-          return data;
-        })
+      const runRefreshWithRetry = async (retries = 3, delay = 2000) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            const res = await originalFetch(`${window.authConfig.supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+              method: 'POST',
+              headers: {
+                apikey: window.authConfig.publishableKey,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ refresh_token: session.refresh_token })
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              throw new Error(data.error_description || data.error || 'Erro no refresh');
+            }
+
+            window.AppUtils.saveAuthSession(data);
+            return data;
+          } catch (err) {
+            if (attempt < retries) {
+              console.warn(`Refresh token falhou (tentativa ${attempt}/${retries}), tentando novamente em ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+            return null;
+          }
+        }
+      };
+
+      refreshSessionPromise = runRefreshWithRetry()
         .finally(() => {
           refreshSessionPromise = null;
         });

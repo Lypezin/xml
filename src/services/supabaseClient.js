@@ -53,28 +53,37 @@ async function getSupabaseUserFromToken(token) {
   }
 }
 
-async function supabaseRpc(functionName, params = {}) {
+async function supabaseRpc(functionName, params = {}, retries = 3, delay = 2000) {
   const config = getSupabaseConfig();
   if (!config) return null;
 
-  try {
-    const res = await axios.post(
-      `${config.url}/rest/v1/rpc/${functionName}`,
-      {
-        p_secret: config.appSecret,
-        ...params
-      },
-      {
-        headers: {
-          apikey: config.key,
-          'Content-Type': 'application/json'
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await axios.post(
+        `${config.url}/rest/v1/rpc/${functionName}`,
+        {
+          p_secret: config.appSecret,
+          ...params
+        },
+        {
+          headers: {
+            apikey: config.key,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
         }
+      );
+      return res.data;
+    } catch (err) {
+      const isNetworkOr5xx = !err.response || (err.response.status >= 500);
+      if (attempt < retries && isNetworkOr5xx) {
+        console.warn(`RPC ${functionName} falhou (tentativa ${attempt}/${retries}). Retentando em ${delay}ms... Erro: ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
       }
-    );
-    return res.data;
-  } catch (err) {
-    console.error(`Erro ao chamar RPC ${functionName}:`, err.response?.data || err.message);
-    throw err;
+      console.error(`Erro ao chamar RPC ${functionName} apos ${attempt} tentativas:`, err.response?.data || err.message);
+      throw err;
+    }
   }
 }
 
