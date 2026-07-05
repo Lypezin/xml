@@ -1288,14 +1288,22 @@ begin
       count(*)::integer as total_count,
       (
         select coalesce(
-          metadata ->> 'dataEmissaoCompleta',
-          case when data_emissao is not null then to_char(data_emissao, 'YYYY-MM-DD') else to_char(first_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS') end
+          d.metadata ->> 'dataEmissaoCompleta',
+          (
+            select substring(p.xml_content from '<(?:[a-zA-Z0-9]+:)?(?:dhEmit|dhEmi|dhProc|DataEmissao|dataEmissao)>([^<]+)')
+            from xml_nfse.xml_payloads p
+            where p.certificate_id = d.certificate_id
+              and p.environment = d.environment
+              and p.nsu = d.nsu
+            limit 1
+          ),
+          case when d.data_emissao is not null then to_char(d.data_emissao, 'YYYY-MM-DD') else to_char(d.first_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS') end
         )
-        from xml_nfse.documents
-        where certificate_id = c.id
-          and environment = 'producao'
-          and tipo <> 'EVENTO'
-        order by data_emissao desc nulls last, nsu desc
+        from xml_nfse.documents d
+        where d.certificate_id = c.id
+          and d.environment = 'producao'
+          and d.tipo <> 'EVENTO'
+        order by d.data_emissao desc nulls last, d.nsu desc
         limit 1
       ) as last_date
     from xml_nfse.documents
