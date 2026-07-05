@@ -1,8 +1,8 @@
-/* UI Components and Sub-Panels - Modern SaaS Premium */
+/* UI Components and Sub-Panels - Minimalist SaaS Clean */
 .file-name-preview {
   margin-top: 6px;
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--primary-hover);
   font-family: 'JetBrains Mono', monospace;
 }
@@ -16,23 +16,23 @@ body.light-mode .file-name-preview {
   background: var(--success-bg);
   border: 1px solid var(--success-border);
   border-radius: var(--border-radius);
-  padding: 16px 20px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .success-icon-svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: var(--success);
   flex-shrink: 0;
 }
 
 .success-banner h3 {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
@@ -54,15 +54,15 @@ body.light-mode .file-name-preview {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .cert-list-header h3 {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--text-primary);
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .cert-list-header span,
@@ -74,7 +74,7 @@ body.light-mode .file-name-preview {
 .cert-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .cert-list-item {
@@ -82,7 +82,7 @@ body.light-mode .file-name-preview {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px;
+  padding: 12px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
@@ -91,30 +91,28 @@ body.light-mode .file-name-preview {
 
 .cert-list-item:hover {
   border-color: var(--border-strong);
-  transform: translateY(-1px);
 }
 
 .cert-list-item.active {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-glow);
 }
 
 .cert-list-main {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .cert-list-main strong {
   font-size: 13px;
   color: var(--text-primary);
   overflow-wrap: anywhere;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .cert-list-main span {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-secondary);
 }
 
@@ -122,33 +120,25 @@ body.light-mode .file-name-preview {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 /* Progress & Alerts */
 .progress-container {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .progress-bar-wrapper {
   background: var(--input-bg);
-  height: 8px;
+  height: 6px;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--card-border);
 }
 
-@keyframes progressGlow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
 .progress-bar {
-  background: linear-gradient(90deg, var(--secondary) 0%, var(--primary) 50%, var(--secondary) 100%);
-  background-size: 200% auto;
-  animation: progressGlow 3s linear infinite;
+  background: var(--secondary);
   height: 100%;
   border-radius: 10px;
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -159,16 +149,16 @@ body.light-mode .file-name-preview {
   justify-content: space-between;
   font-size: 12px;
   color: var(--text-secondary);
-  margin-top: 10px;
-  font-weight: 600;
+  margin-top: 8px;
+  font-weight: 500;
 }
 
 .alert-box {
   border-radius: var(--border-radius);
-  padding: 12px 16px;
-  font-size: 13px;
-  margin-top: 16px;
-  line-height: 1.5;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  margin-top: 14px;
+  line-height: 1.4;
   border: 1px solid transparent;
   font-weight: 500;
 }
@@ -194,37 +184,35 @@ body.light-mode .file-name-preview {
 }
 
 .console-log {
-  background: #020617;
+  background: #09090b;
   border: 1px solid var(--card-border);
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 6px;
+  padding: 12px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11.5px;
-  color: #cbd5e1;
+  font-size: 11px;
+  color: #e4e4e7;
   overflow-y: auto;
-  height: 160px;
+  height: 150px;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+  gap: 6px;
 }
 
 body.light-mode .console-log {
-  background: #f1f5f9;
-  color: #0f172a;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: #f4f4f5;
+  color: #09090b;
 }
 
 .log-line {
-  line-height: 1.5;
+  line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-all;
 }
 
-.log-line.system { color: #64748b; }
+.log-line.system { color: var(--text-muted); }
 .log-line.success { color: #10b981; }
 .log-line.warning { color: #f59e0b; }
 .log-line.error { color: #ef4444; }
 
-body.light-mode .log-line.system { color: #475569; }
+body.light-mode .log-line.system { color: #71717a; }
