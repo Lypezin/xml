@@ -23,13 +23,24 @@ window.currentCrawlerCnpj = '';
 async function initializeAuthenticatedApp() {
   await window.AppApi.loadAuthConfig();
 
+  const updateEnvBadge = () => {
+    const selectEnv = window.selectEnvironment;
+    if (!selectEnv) return;
+    const envText = selectEnv.value === 'producao' ? 'Produção' : 'Homologação';
+    const statAmbiente = document.getElementById('stat-ambiente');
+    if (statAmbiente) {
+      statAmbiente.innerText = envText;
+      statAmbiente.className = selectEnv.value === 'producao' ? 'metric-value text-primary' : 'metric-value text-warning';
+    }
+  };
+
   if (!window.authConfig.authRequired) {
     if (window.appLayout) window.appLayout.style.display = 'flex';
     if (window.authScreen) window.authScreen.style.display = 'none';
     window.AppSyncController.checkCertStatus();
     if (window.loadSchedulerSettings) window.loadSchedulerSettings();
     window.AppUi.updateProgress(0, 0);
-    window.selectEnvironment.dispatchEvent(new Event('change'));
+    updateEnvBadge();
     if (window.navDashboard) {
       window.AppUi.switchTab(window.navDashboard, window.viewDashboardContent, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
     }
@@ -48,7 +59,7 @@ async function initializeAuthenticatedApp() {
   window.AppSyncController.checkCertStatus();
   if (window.loadSchedulerSettings) window.loadSchedulerSettings();
   window.AppUi.updateProgress(0, 0);
-  window.selectEnvironment.dispatchEvent(new Event('change'));
+  updateEnvBadge();
   if (window.navDashboard) {
     window.AppUi.switchTab(window.navDashboard, window.viewDashboardContent, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
   }

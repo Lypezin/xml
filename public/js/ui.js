@@ -166,6 +166,11 @@ window.AppUi = {
     if (activeContent === viewDashboardContent && window.AppSyncController?.loadDashboard) {
       window.AppSyncController.loadDashboard();
     }
+
+    if (activeContent === viewDownloadContent && window.AppSyncController) {
+      window.AppSyncController.loadPersistedHistory();
+      window.AppSyncController.loadStorageSummary();
+    }
   },
 
   updateSchedulerUI(settings) {

@@ -202,8 +202,10 @@ window.AppSyncController = {
           indicator.className = 'status-indicator online';
           txt.innerText = `Certificado Ativo: ${data.cnpj}`;
         }
-        this.loadPersistedHistory();
-        this.loadStorageSummary();
+        if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
+          this.loadPersistedHistory();
+          this.loadStorageSummary();
+        }
       } else {
         certUploadState.classList.add('active');
         certActiveState.classList.remove('active');
@@ -428,9 +430,36 @@ window.AppSyncController = {
   },
 
   async loadDashboard() {
-    if (!dashboardLoader || !dashboardCitiesGrid) return;
-    dashboardLoader.style.display = 'block';
-    dashboardCitiesGrid.style.display = 'none';
+    if (!dashboardCitiesGrid) return;
+
+    if (window.dashStatCities) window.dashStatCities.innerHTML = `<div class="skeleton-shimmer" style="width: 40px; height: 26px; vertical-align: middle;"></div>`;
+    if (window.dashStatActive) window.dashStatActive.innerHTML = `<div class="skeleton-shimmer" style="width: 40px; height: 26px; vertical-align: middle;"></div>`;
+    if (window.dashStatXmls) window.dashStatXmls.innerHTML = `<div class="skeleton-shimmer" style="width: 80px; height: 26px; vertical-align: middle;"></div>`;
+
+    let skeletonHtml = '';
+    for (let i = 0; i < 4; i++) {
+      skeletonHtml += `
+        <div class="city-card skeleton-row" style="opacity: ${1 - (i * 0.15)}; cursor: default;">
+          <div class="city-card-header">
+            <div>
+              <div class="skeleton-shimmer" style="width: 130px; height: 18px; border-radius: 4px;"></div>
+              <div class="skeleton-shimmer" style="width: 110px; height: 12px; margin-top: 6px; border-radius: 4px;"></div>
+            </div>
+          </div>
+          <div class="city-card-stats" style="margin-top: auto;">
+            <div class="city-card-stat-item">
+              <div class="skeleton-shimmer" style="width: 60px; height: 10px; border-radius: 4px;"></div>
+              <div class="skeleton-shimmer" style="width: 40px; height: 16px; margin-top: 4px; border-radius: 4px;"></div>
+            </div>
+            <div class="skeleton-shimmer" style="width: 140px; height: 16px; border-radius: 4px; align-self: flex-end;"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    dashboardCitiesGrid.innerHTML = skeletonHtml;
+    dashboardCitiesGrid.style.display = 'grid';
+    if (dashboardLoader) dashboardLoader.style.display = 'none';
 
     if (btnRefreshDashboard) {
       btnRefreshDashboard.classList.add('loading');

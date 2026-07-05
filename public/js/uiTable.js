@@ -73,17 +73,50 @@ window.AppUiTable = {
 
   showLoading() {
     if (!tableBody) return;
-    tableBody.innerHTML = `
-      <div class="xml-empty-state">
-        <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" style="margin: 0 auto 12px; display: block; color: var(--text-muted);">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.25"></circle>
-          <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <span>Buscando documentos salvos...</span>
-      </div>
-    `;
-    if (statTotalNotas) statTotalNotas.innerHTML = `<span class="pulse-loading">...</span>`;
-    if (statTotalValue) statTotalValue.innerHTML = `<span class="pulse-loading">...</span>`;
+    
+    let skeletonHtml = '';
+    for (let i = 0; i < 3; i++) {
+      skeletonHtml += `
+        <div class="xml-item skeleton-row" style="opacity: ${1 - (i * 0.25)};">
+          <div class="xml-main-cell">
+            <div class="skeleton-shimmer" style="width: 120px; height: 16px;"></div>
+            <div class="skeleton-shimmer" style="width: 80px; height: 12px; margin-top: 6px;"></div>
+          </div>
+          <div class="xml-party-cell">
+            <div>
+              <div class="skeleton-shimmer" style="width: 100px; height: 14px;"></div>
+              <div class="skeleton-shimmer" style="width: 80px; height: 10px; margin-top: 6px;"></div>
+            </div>
+            <div>
+              <div class="skeleton-shimmer" style="width: 100px; height: 14px;"></div>
+              <div class="skeleton-shimmer" style="width: 80px; height: 10px; margin-top: 6px;"></div>
+            </div>
+          </div>
+          <div class="xml-service-cell">
+            <div class="skeleton-shimmer" style="width: 160px; height: 14px;"></div>
+            <div class="skeleton-shimmer" style="width: 90px; height: 10px; margin-top: 6px;"></div>
+          </div>
+          <div class="xml-value-cell">
+            <div class="skeleton-shimmer" style="width: 70px; height: 16px;"></div>
+          </div>
+          <div class="xml-action-cell" style="align-items: flex-end;">
+            <div class="skeleton-shimmer" style="width: 60px; height: 26px; border-radius: 6px;"></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    tableBody.innerHTML = skeletonHtml;
+
+    if (window.statTotalNotas) {
+      window.statTotalNotas.innerHTML = `<div class="skeleton-shimmer" style="width: 45px; height: 24px; vertical-align: middle;"></div>`;
+    }
+    if (window.statTotalValue) {
+      window.statTotalValue.innerHTML = `<div class="skeleton-shimmer" style="width: 100px; height: 24px; vertical-align: middle;"></div>`;
+    }
+    if (window.statStoragePayloads) {
+      window.statStoragePayloads.innerHTML = `<div class="skeleton-shimmer" style="width: 50px; height: 20px; vertical-align: middle;"></div>`;
+    }
   },
 
   appendDocumentsToTable(docs) {

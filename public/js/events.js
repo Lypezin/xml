@@ -75,7 +75,9 @@ window.AppEvents = {
     if (selectCertificate) {
       selectCertificate.addEventListener('change', async () => {
         await window.AppSyncController.selectCertificateById(selectCertificate.value);
-        window.AppSyncController.loadPersistedHistory();
+        if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
+          window.AppSyncController.loadPersistedHistory();
+        }
       });
     }
 
@@ -276,7 +278,9 @@ window.AppEvents = {
       if (selectEnvironment.offsetParent !== null) {
         window.AppUi.log(`Ambiente alterado para: ${envText}`);
       }
-      window.AppSyncController.loadPersistedHistory();
+      if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
+        window.AppSyncController.loadPersistedHistory();
+      }
     });
 
     if (inputCnpjConsulta) {
