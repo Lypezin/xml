@@ -170,7 +170,7 @@ window.AppSyncController = {
 
     const lastReceivedNsu = Number(data.state?.last_received_nsu || 0);
     const lastNsu = Number(data.state?.last_nsu || 0);
-    const savedNsu = lastReceivedNsu || lastNsu || 0;
+    const savedNsu = data.state ? lastNsu : lastReceivedNsu;
     inputStartNsu.value = savedNsu;
     window.currentNsu = savedNsu;
     window.maxNsu = Math.max(window.maxNsu || 0, savedNsu);
