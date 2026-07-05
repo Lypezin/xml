@@ -146,6 +146,43 @@ window.AppEvents = {
       window.isQuerying = false;
     });
 
+    if (window.btnResetNsu) {
+      window.btnResetNsu.addEventListener('click', async () => {
+        if (!confirm('Tem certeza que deseja zerar o histórico de NSU e começar do 0 para este certificado/unidade?')) return;
+        
+        window.btnResetNsu.disabled = true;
+        try {
+          const certId = window.selectCertificate.value;
+          const env = window.selectEnvironment.value;
+          const cnpj = window.inputCnpjConsulta.value;
+          
+          if (!certId) {
+            window.AppUi.log('Selecione um certificado primeiro.', 'error');
+            return;
+          }
+          
+          const response = await fetch('/api/reset-nsu', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ certificateId: certId, environment: env, cnpjConsulta: cnpj })
+          });
+          
+          const result = await response.json();
+          if (result.success) {
+            window.AppUi.log('Histórico de NSU zerado com sucesso. Você pode iniciar a varredura a partir do 0.', 'success');
+            window.inputStartNsu.value = '0';
+            window.currentNsu = 0;
+          } else {
+            window.AppUi.log(`Erro ao zerar NSU: ${result.error}`, 'error');
+          }
+        } catch (err) {
+          window.AppUi.log(`Erro na requisição: ${err.message}`, 'error');
+        } finally {
+          window.btnResetNsu.disabled = false;
+        }
+      });
+    }
+
     tableBody.addEventListener('click', async (e) => {
       const xmlButton = e.target.closest('button[data-action="download-xml"]');
       const pdfButton = e.target.closest('button[data-action="download-pdf"]');

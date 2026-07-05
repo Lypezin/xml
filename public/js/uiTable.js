@@ -315,26 +315,26 @@ window.AppUiTable = {
       <table>
         <thead>
           <tr>
-            \${headers.map(h => `<th>\${h}</th>`).join('')}
+            ${headers.map(h => `<th>${h}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
-          \${rows.map(row => `
+          ${rows.map(row => `
             <tr>
-              <td class="center">\${row[0]}</td>
-              <td class="center">\${row[1]}</td>
-              <td>\${row[2]}</td>
-              <td class="center">\${row[3]}</td>
-              <td class="center">\${row[4]}</td>
-              <td class="center">\${row[5]}</td>
-              <td>\${row[6]}</td>
-              <td>\${row[7]}</td>
-              <td>\${row[8]}</td>
-              <td>\${row[9]}</td>
-              <td class="num">\${row[10]}</td>
-              <td>\${row[11]}</td>
-              <td>\${row[12]}</td>
-              <td class="center">\${row[13]}</td>
+              <td class="center">${row[0]}</td>
+              <td class="center">${row[1]}</td>
+              <td>${row[2]}</td>
+              <td class="center">${row[3]}</td>
+              <td class="center">${row[4]}</td>
+              <td class="center">${row[5]}</td>
+              <td>${row[6]}</td>
+              <td>${row[7]}</td>
+              <td>${row[8]}</td>
+              <td>${row[9]}</td>
+              <td class="num">${row[10]}</td>
+              <td>${row[11]}</td>
+              <td>${row[12]}</td>
+              <td class="center">${row[13]}</td>
             </tr>
           `).join('')}
         </tbody>

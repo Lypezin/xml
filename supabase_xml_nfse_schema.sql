@@ -1144,7 +1144,9 @@ begin
       select distinct on (certificate_id, environment, chave)
         certificate_id, environment, chave, true as is_cancelled
       from xml_nfse.documents
-      where tipo = 'EVENTO'
+      where certificate_id = p_certificate_id
+        and environment = p_environment
+        and tipo = 'EVENTO'
         and (
           lower(coalesce(metadata ->> 'status', '')) like '%cancel%'
           or lower(coalesce(metadata ->> 'eventoDescricao', '')) like '%cancel%'

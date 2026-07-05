@@ -37,6 +37,7 @@ window.AppUiElements = {
     window.inputLimiteNotas = document.getElementById('limite-notas');
     window.btnStart = document.getElementById('btn-start');
     window.btnPause = document.getElementById('btn-pause');
+    window.btnResetNsu = document.getElementById('btn-reset-nsu');
 
     window.progressBar = document.getElementById('progress-bar');
     window.progressText = document.getElementById('progress-text');

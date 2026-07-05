@@ -174,4 +174,35 @@ router.get('/sync-state', async (req, res) => {
   });
 });
 
+router.post('/reset-nsu', async (req, res) => {
+  try {
+    const { certificateId, environment, cnpjConsulta } = req.body;
+    
+    if (!certificateId) {
+      return res.status(400).json({ success: false, error: 'certificateId é obrigatório.' });
+    }
+
+    const selectedCertificate = await resolveCertificateForRequest(certificateId);
+    if (!selectedCertificate) {
+      return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
+    }
+
+    const requestCnpjConsulta = onlyDigits(cnpjConsulta) || onlyDigits(selectedCertificate?.cnpj) || '';
+    const requestEnvironment = normalizeEnvironment(environment);
+
+    await supabaseRpc('xml_nfse_update_sync_state', {
+      p_certificate_id: selectedCertificate.id,
+      p_environment: requestEnvironment,
+      p_cnpj_consulta: requestCnpjConsulta,
+      p_last_nsu: 0,
+      p_max_nsu_seen: 0
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao zerar NSU no Supabase:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
