@@ -103,6 +103,50 @@ router.post('/select-certificate', async (req, res) => {
 
 router.get('/dashboard-summary', async (req, res) => {
   try {
+    try {
+      const summaryData = await supabaseRpc('xml_nfse_get_dashboard_summary', {});
+      if (Array.isArray(summaryData)) {
+        const summary = summaryData.map(city => {
+          let lastUpdate = city.lastUpdate || 'Sem XMLs';
+          if (lastUpdate && lastUpdate !== 'Sem XMLs') {
+            const rawStr = String(lastUpdate).trim();
+            if (rawStr.includes('T')) {
+              const parts = rawStr.split('T');
+              const datePart = parts[0];
+              const timePart = parts[1].split(/[+-Z]/)[0];
+              const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+              if (match) {
+                lastUpdate = `${match[3]}/${match[2]}/${match[1]} às ${timePart}`;
+              } else {
+                lastUpdate = `${datePart} às ${timePart}`;
+              }
+            } else {
+              const match = rawStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+              if (match) {
+                lastUpdate = `${match[3]}/${match[2]}/${match[1]}`;
+              }
+            }
+          }
+
+          return {
+            certificateId: city.certificateId,
+            filename: city.filename,
+            cnpj: city.cnpj,
+            active: Boolean(city.active),
+            totalXmls: Number(city.totalXmls || 0),
+            lastUpdate
+          };
+        });
+
+        return res.json({
+          success: true,
+          summary
+        });
+      }
+    } catch (rpcErr) {
+      console.warn('RPC xml_nfse_get_dashboard_summary não encontrado ou falhou, usando fallback local:', rpcErr.message);
+    }
+
     let certificates = [];
     if (useRemoteCertificateStorage()) {
       certificates = await listRemoteCertificates();
@@ -134,13 +178,29 @@ router.get('/dashboard-summary', async (req, res) => {
 
           const latestDoc = result.documents?.[0];
           let lastUpdate = 'Sem XMLs';
-          if (latestDoc && latestDoc.data_emissao) {
-            const rawDate = String(latestDoc.data_emissao).split('T')[0];
-            const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (match) {
-              lastUpdate = `${match[3]}/${match[2]}/${match[1]}`;
-            } else {
-              lastUpdate = rawDate;
+          if (latestDoc) {
+            const meta = latestDoc.metadata || {};
+            const completeDate = meta.dataEmissaoCompleta || latestDoc.data_emissao;
+            if (completeDate) {
+              const rawStr = String(completeDate).trim();
+              if (rawStr.includes('T')) {
+                const parts = rawStr.split('T');
+                const datePart = parts[0];
+                const timePart = parts[1].split(/[+-Z]/)[0];
+                const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (match) {
+                  lastUpdate = `${match[3]}/${match[2]}/${match[1]} às ${timePart}`;
+                } else {
+                  lastUpdate = `${datePart} às ${timePart}`;
+                }
+              } else {
+                const match = rawStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (match) {
+                  lastUpdate = `${match[3]}/${match[2]}/${match[1]}`;
+                } else {
+                  lastUpdate = rawStr;
+                }
+              }
             }
           }
 

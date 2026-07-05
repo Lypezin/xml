@@ -101,6 +101,8 @@ async function syncSupabaseDocument({ certificateId, environment, doc }) {
       tomadorNome: doc.tomadorNome,
       valorServico: normalizeCurrencyForPersistence(doc.valorServico),
       dataEmissao: doc.dataEmissao,
+      dataEmissaoCompleta: doc.dataEmissaoCompleta || doc.dataEmissao,
+      descricao: doc.descricao || doc.descricaoServico || 'N/A',
       municipioPrestacao: doc.municipioPrestacao,
       codigoTributacao: doc.codigoTributacao,
       competencia: doc.competencia,

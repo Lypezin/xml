@@ -429,12 +429,30 @@ window.AppSyncController = {
     dashboardLoader.style.display = 'block';
     dashboardCitiesGrid.style.display = 'none';
 
+    if (btnRefreshDashboard) {
+      btnRefreshDashboard.classList.add('loading');
+      btnRefreshDashboard.onclick = (e) => {
+        e.preventDefault();
+        this.loadDashboard();
+      };
+    }
+
     try {
       const data = await window.AppApi.fetchDashboardSummary();
       if (!data.success) throw new Error(data.error || 'Erro ao carregar dados do painel.');
 
+      // Calcular Métricas Gerais
+      const citiesList = data.summary || [];
+      const totalCities = citiesList.length;
+      const activeCities = citiesList.filter(c => c.active).length;
+      const totalXmls = citiesList.reduce((sum, c) => sum + Number(c.totalXmls || 0), 0);
+
+      if (dashStatCities) dashStatCities.innerText = window.AppUtils.formatInteger(totalCities);
+      if (dashStatActive) dashStatActive.innerText = window.AppUtils.formatInteger(activeCities);
+      if (dashStatXmls) dashStatXmls.innerText = window.AppUtils.formatInteger(totalXmls);
+
       dashboardCitiesGrid.innerHTML = '';
-      (data.summary || []).forEach(city => {
+      citiesList.forEach(city => {
         const card = document.createElement('div');
         card.className = `city-card ${city.active ? 'active' : ''}`;
         const cityName = this.cleanFilenameToCityName(city.filename);
@@ -452,7 +470,7 @@ window.AppSyncController = {
               <span class="city-card-stat-label">XMLs no Supabase</span>
               <span class="city-card-stat-value success">${window.AppUtils.formatInteger(city.totalXmls)}</span>
             </div>
-            <span class="city-card-date">Último: ${city.lastUpdate}</span>
+            <span class="city-card-date" title="Última nota emitida em ${city.lastUpdate}">Última: ${city.lastUpdate}</span>
           </div>
         `;
 
@@ -484,6 +502,8 @@ window.AppSyncController = {
     } catch (err) {
       dashboardLoader.innerHTML = `<span class="text-danger">Falha ao carregar painel: ${err.message}</span>`;
       window.AppUi.log(`Erro ao carregar Dashboard: ${err.message}`, 'warning');
+    } finally {
+      if (btnRefreshDashboard) btnRefreshDashboard.classList.remove('loading');
     }
   }
 };

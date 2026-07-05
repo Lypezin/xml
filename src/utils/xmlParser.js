@@ -109,6 +109,7 @@ function parseXmlMetadata(xmlString, nsu) {
                       xmlString.match(/<dEmi>([^<]+)<\/dEmi>/i);
     if (dataMatch) {
       metadata.dataEmissao = dataMatch[1].split('T')[0];
+      metadata.dataEmissaoCompleta = dataMatch[1];
     }
 
     const descMatch = xmlString.match(/<xDescServ>([^<]+)<\/xDescServ>/i) ||
@@ -120,7 +121,9 @@ function parseXmlMetadata(xmlString, nsu) {
       metadata.status = 'Evento';
       metadata.eventoDescricao = extractTag(eventSection, 'xDesc') || metadata.eventoDescricao;
       metadata.eventoMotivo = extractTag(eventSection, 'xMotivo') || metadata.eventoMotivo;
-      metadata.dataEmissao = normalizeDate(extractTag(eventSection, 'dhEvento') || extractTag(xmlString, 'dhProc'));
+      const rawDate = extractTag(eventSection, 'dhEvento') || extractTag(xmlString, 'dhProc');
+      metadata.dataEmissao = normalizeDate(rawDate);
+      metadata.dataEmissaoCompleta = rawDate;
       metadata.descricaoServico = metadata.eventoDescricao !== 'N/A' ? metadata.eventoDescricao : metadata.descricaoServico;
     }
 

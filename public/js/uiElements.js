@@ -77,6 +77,10 @@ window.AppUiElements = {
 
     window.dashboardCitiesGrid = document.getElementById('dashboard-cities-grid');
     window.dashboardLoader = document.getElementById('dashboard-loader');
+    window.btnRefreshDashboard = document.getElementById('btn-refresh-dashboard');
+    window.dashStatCities = document.getElementById('dash-stat-cities');
+    window.dashStatActive = document.getElementById('dash-stat-active');
+    window.dashStatXmls = document.getElementById('dash-stat-xmls');
 
     window.pageTitle = document.getElementById('page-title');
     window.pageSubtitle = document.getElementById('page-subtitle');

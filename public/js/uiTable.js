@@ -10,6 +10,9 @@ window.AppUiTable = {
 
   normalizeDocument(doc) {
     const metadata = doc.metadata || {};
+    const fallbackDesc = doc.codigo_tributacao || doc.codigoTributacao || metadata.codigoTributacao
+      ? `Serviço Tributação: ${doc.codigo_tributacao || doc.codigoTributacao || metadata.codigoTributacao}`
+      : 'Serviço NFS-e Geral';
     return {
       nsu: doc.nsu,
       tipo: doc.tipo || metadata.tipo || 'NFSE',
@@ -22,7 +25,7 @@ window.AppUiTable = {
       prestadorNome: doc.prestadorNome || doc.prestador_nome || metadata.prestadorNome || 'N/A',
       tomadorCnpj: doc.tomadorCnpj || doc.tomador_cnpj || metadata.tomadorCnpj || 'N/A',
       tomadorNome: doc.tomadorNome || doc.tomador_nome || metadata.tomadorNome || 'N/A',
-      descricao: doc.descricao || metadata.descricao || metadata.descricaoServico || 'N/A',
+      descricao: doc.descricao || metadata.descricao || metadata.descricaoServico || fallbackDesc,
       municipioPrestacao: doc.municipioPrestacao || doc.municipio_prestacao || metadata.municipioPrestacao || 'N/A',
       codigoTributacao: doc.codigoTributacao || doc.codigo_tributacao || metadata.codigoTributacao || 'N/A',
       eventoDescricao: doc.eventoDescricao || metadata.eventoDescricao || 'N/A',
@@ -31,7 +34,7 @@ window.AppUiTable = {
       valorServico: doc.valorServico || doc.valor_servico || metadata.valorServico || '0.00',
       dataEmissao: doc.dataEmissao || doc.data_emissao || metadata.dataEmissao || 'N/A',
       competencia: doc.competencia || metadata.competencia || 'N/A',
-      dataProcessamento: doc.dataProcessamento || metadata.dataProcessamento || 'N/A',
+      dataProcessamento: doc.dataProcessamento || metadata.dataProcessamento || doc.first_seen_at || doc.firstSeenAt || doc.created_at || 'N/A',
       token: metadata.token || doc.token || '',
       arquivo: doc.arquivo || doc.file_name || metadata.arquivo || ''
     };

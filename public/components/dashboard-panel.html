@@ -1,14 +1,45 @@
 <div id="view-dashboard-content" class="tab-content active dashboard-overview">
-  <section class="dashboard-hero">
+  <!-- Cabeçalho do Dashboard -->
+  <div class="dashboard-header-flex">
     <div class="hero-copy">
-      <span class="eyebrow">Visão Geral</span>
-      <h2>Painel de Controle</h2>
+      <span class="eyebrow">Monitoramento Geral</span>
+      <h2>Painel de Controle das Cidades</h2>
     </div>
-  </section>
+    <button id="btn-refresh-dashboard" class="btn btn-secondary btn-icon-only" title="Atualizar dados do Painel">
+      <svg class="refresh-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Métricas Gerais -->
+  <div class="dashboard-metrics-summary" id="dashboard-metrics-summary">
+    <div class="mini-metric-card">
+      <div class="metric-icon">🏢</div>
+      <div class="metric-info">
+        <span class="metric-label">Cidades Cadastradas</span>
+        <span class="metric-number" id="dash-stat-cities">0</span>
+      </div>
+    </div>
+    <div class="mini-metric-card">
+      <div class="metric-icon">🟢</div>
+      <div class="metric-info">
+        <span class="metric-label">Cidades Ativas</span>
+        <span class="metric-number" id="dash-stat-active">0</span>
+      </div>
+    </div>
+    <div class="mini-metric-card">
+      <div class="metric-icon">📄</div>
+      <div class="metric-info">
+        <span class="metric-label">Total de XMLs</span>
+        <span class="metric-number" id="dash-stat-xmls">0</span>
+      </div>
+    </div>
+  </div>
 
   <!-- Loader/Spinner durante o carregamento inicial -->
   <div id="dashboard-loader" class="xml-empty-state" style="margin-top: 40px;">
-    <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" style="margin: 0 auto 12px; display: block; color: var(--text-muted);">
+    <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" style="margin: 0 auto 12px; display: block; color: var(--primary);">
       <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.25"></circle>
       <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>

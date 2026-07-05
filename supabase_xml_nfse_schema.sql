@@ -1257,3 +1257,47 @@ grant execute on function public.xml_nfse_list_units(text) to anon, authenticate
 grant execute on function public.xml_nfse_upsert_unit(text, uuid, text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_delete_unit(text, uuid) to anon, authenticated;
 
+
+-- ==================================================
+-- Função otimizada para o Dashboard de Cidades
+-- ==================================================
+create or replace function public.xml_nfse_get_dashboard_summary(p_secret text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  result_json jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  select jsonb_agg(jsonb_build_object(
+    'certificateId', c.id,
+    'filename', c.filename,
+    'cnpj', c.cnpj,
+    'active', c.active,
+    'totalXmls', coalesce(d.total_count, 0),
+    'lastUpdate', coalesce(d.last_date, 'Sem XMLs')
+  ))
+  into result_json
+  from xml_nfse.certificates c
+  left join lateral (
+    select 
+      count(*)::integer as total_count,
+      (
+        select coalesce(metadata ->> 'dataEmissaoCompleta', data_emissao::text)
+        from xml_nfse.documents
+        where certificate_id = c.id
+        order by nsu desc
+        limit 1
+      ) as last_date
+    from xml_nfse.documents
+    where certificate_id = c.id
+  ) d on true;
+
+  return coalesce(result_json, '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.xml_nfse_get_dashboard_summary(text) to anon, authenticated;
