@@ -390,7 +390,9 @@ body.light-mode .log-line.system { color: #71717a; }
 .city-card-stats {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 24px;
   border-top: 1px dashed var(--card-border);
   padding-top: 14px;
@@ -426,4 +428,5 @@ body.light-mode .log-line.system { color: #71717a; }
   padding: 4px 8px;
   border-radius: 6px;
   border: 1px solid var(--card-border);
+  white-space: nowrap;
 }
