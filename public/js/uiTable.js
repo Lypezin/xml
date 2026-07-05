@@ -132,8 +132,13 @@ window.AppUiTable = {
     if (pageDocs.length === 0) {
       tableBody.innerHTML = '<div id="empty-row" class="xml-empty-state">Nenhum documento sincronizado ainda.</div>';
       this.updatePagination(totalItems, 0, 0);
+      if (window.btnDownloadZip) window.btnDownloadZip.disabled = true;
+      if (window.btnExportExcel) window.btnExportExcel.disabled = true;
       return;
     }
+
+    if (window.btnDownloadZip) window.btnDownloadZip.disabled = false;
+    if (window.btnExportExcel) window.btnExportExcel.disabled = false;
 
     pageDocs.forEach(doc => {
       const item = document.createElement('article');
@@ -221,5 +226,69 @@ window.AppUiTable = {
     }
     this.currentPage -= 1;
     this.renderCurrentPage();
+  },
+
+  exportToExcel() {
+    if (!this.documents || this.documents.length === 0) {
+      alert('Nenhum documento disponível para exportar.');
+      return;
+    }
+
+    const headers = [
+      'NSU',
+      'Tipo',
+      'Chave',
+      'Numero NFSe',
+      'Status',
+      'Data Emissao',
+      'CNPJ Prestador',
+      'Nome Prestador',
+      'CNPJ Tomador',
+      'Nome Tomador',
+      'Valor Servico',
+      'Descricao',
+      'Municipio',
+      'Codigo Tributacao'
+    ];
+
+    const rows = this.documents.map(doc => {
+      const normalized = this.normalizeDocument(doc);
+      return [
+        normalized.nsu || '',
+        normalized.tipo || '',
+        normalized.chave || '',
+        normalized.numeroNfse || '',
+        normalized.status || '',
+        normalized.dataEmissao || '',
+        normalized.prestadorCnpj || '',
+        normalized.prestadorNome || '',
+        normalized.tomadorCnpj || '',
+        normalized.tomadorNome || '',
+        normalized.valorServico || '0.00',
+        normalized.descricao ? normalized.descricao.replace(/\r?\n|\r/g, ' ').replace(/"/g, '""') : '',
+        normalized.municipioPrestacao || '',
+        normalized.codigoTributacao || ''
+      ];
+    });
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(';'))
+    ].join('\r\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const certSelect = document.getElementById('certificate-select');
+    const cityName = certSelect && certSelect.selectedIndex >= 0 ? certSelect.options[certSelect.selectedIndex].text.split(' - ')[1] || 'relatorio' : 'relatorio';
+    const cleanCityName = cityName.replace(/\.(pfx|p12|cert|key)$/i, '').replace(/[_-]+/g, ' ').trim();
+    
+    link.setAttribute('download', `NFS-e_Excel_${cleanCityName.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 };

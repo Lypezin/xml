@@ -1286,7 +1286,7 @@ begin
     select 
       count(*)::integer as total_count,
       (
-        select coalesce(metadata ->> 'dataEmissaoCompleta', data_emissao::text)
+        select coalesce(metadata ->> 'dataEmissaoCompleta', to_char(first_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS'))
         from xml_nfse.documents
         where certificate_id = c.id
         order by nsu desc

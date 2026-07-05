@@ -180,7 +180,10 @@ router.get('/dashboard-summary', async (req, res) => {
           let lastUpdate = 'Sem XMLs';
           if (latestDoc) {
             const meta = latestDoc.metadata || {};
-            const completeDate = meta.dataEmissaoCompleta || latestDoc.data_emissao;
+            let completeDate = meta.dataEmissaoCompleta || latestDoc.first_seen_at || latestDoc.firstSeenAt || latestDoc.data_emissao;
+            if (completeDate instanceof Date) {
+              completeDate = completeDate.toISOString();
+            }
             if (completeDate) {
               const rawStr = String(completeDate).trim();
               if (rawStr.includes('T')) {

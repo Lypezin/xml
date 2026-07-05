@@ -170,12 +170,12 @@ window.AppEvents = {
     });
 
     if (btnClearDownloads) btnClearDownloads.addEventListener('click', async () => {
-      if (!confirm('Limpar apenas arquivos temporarios? Os XMLs permanentes no Supabase serao preservados.')) return;
+      if (!confirm('Limpar apenas arquivos temporários? Os XMLs permanentes no banco de dados serão preservados.')) return;
 
       try {
         const data = await window.AppApi.clearDownloads();
         if (data.success) {
-          window.AppUi.log(`Temporarios limpos. ${data.count} XML(s) removido(s); Supabase preservado.`);
+          window.AppUi.log(`Temporários limpos. ${data.count} XML(s) removido(s); banco de dados preservado.`);
           window.totalDownloaded = 0;
           btnDownloadZip.disabled = true;
           window.AppUi.updateProgress(0, 0);
@@ -191,9 +191,16 @@ window.AppEvents = {
       }
     });
 
+    if (btnExportExcel) {
+      btnExportExcel.addEventListener('click', () => {
+        window.AppUiTable.exportToExcel();
+      });
+    }
+
     btnDownloadZip.addEventListener('click', async () => {
       window.AppUi.log('Gerando ZIP com os XMLs persistidos da tabela atual...');
       btnDownloadZip.disabled = true;
+      if (btnExportExcel) btnExportExcel.disabled = true;
       try {
         const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
         await window.AppApi.downloadPeriodZip({
@@ -211,7 +218,9 @@ window.AppEvents = {
       } catch (err) {
         window.AppUi.log(`Erro ao baixar ZIP: ${err.message}`, 'error');
       } finally {
-        btnDownloadZip.disabled = !window.AppUiTable?.documents?.length;
+        const hasDocs = !window.AppUiTable?.documents?.length;
+        btnDownloadZip.disabled = hasDocs;
+        if (btnExportExcel) btnExportExcel.disabled = hasDocs;
       }
     });
 
@@ -380,7 +389,7 @@ window.AppEvents = {
     if (navDownload) {
       navDownload.addEventListener('click', (e) => {
         e.preventDefault();
-        window.AppUi.switchTab(navDownload, viewDownloadContent, 'XML Sigma', 'XMLs NFS-e persistidos por certificado e unidade');
+        window.AppUi.switchTab(navDownload, viewDownloadContent, 'XMLs por Unidade', 'XMLs NFS-e persistidos por certificado e unidade');
       });
     }
     if (navCertificado) {

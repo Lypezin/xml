@@ -3,12 +3,7 @@
     <div class="hero-copy">
       <span class="eyebrow">Operação NFS-e</span>
       <h2>Central de XMLs por unidade</h2>
-      <p>Varra, filtre e baixe XMLs NFS-e persistidos no Supabase com controles enxutos para operação em lote.</p>
-    </div>
-    <div class="hero-status-strip">
-      <div><span>Ambiente</span><strong>Produção</strong></div>
-      <div><span>Modo</span><strong>Último NSU recebido</strong></div>
-      <div><span>Intervalo</span><strong>2s por lote</strong></div>
+      <p>Varra, filtre e baixe XMLs NFS-e persistidos com controles enxutos para operação em lote.</p>
     </div>
   </section>
 
@@ -16,7 +11,7 @@
     <div class="metric-card"><div class="metric-data"><span class="metric-label">Total de notas</span><h3 class="metric-value" id="stat-total-notas">0</h3><span class="helper-text">Filtro atual</span></div></div>
     <div class="metric-card metric-card-primary"><div class="metric-data"><span class="metric-label">Valor total</span><h3 class="metric-value text-primary" id="stat-total-value">R$ 0,00</h3><span class="helper-text">Notas exibidas no filtro</span></div></div>
     <div class="metric-card"><div class="metric-data"><span class="metric-label">Cursor NSU</span><h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3><span class="helper-text">Última varredura</span></div></div>
-    <div class="metric-card"><div class="metric-data"><span class="metric-label">XMLs no Supabase</span><h3 class="metric-value text-success" id="stat-storage-payloads">0</h3><span class="helper-text" id="stat-storage-size">Permanentes</span></div></div>
+    <div class="metric-card"><div class="metric-data"><span class="metric-label">Total XMLs</span><h3 class="metric-value text-success" id="stat-storage-payloads">0</h3><span class="helper-text" id="stat-storage-size">Permanentes</span></div></div>
   </section>
 
   <section class="operation-layout">
@@ -68,10 +63,6 @@
           <button class="btn btn-warning" id="btn-pause" disabled><span>Pausar</span></button>
         </div>
       </div>
-      <div class="sync-policy-grid">
-        <div class="sync-policy-item"><span>Origem</span><strong>Último recebido salvo</strong></div>
-        <div class="sync-policy-item"><span>Intervalo</span><strong>2 segundos</strong></div>
-      </div>
       <div class="progress-container">
         <div class="progress-bar-wrapper"><div class="progress-bar" id="progress-bar" style="width: 0%;"></div></div>
         <div class="progress-labels"><span id="progress-text">Aguardando comando...</span><span id="progress-percentage">0%</span></div>
@@ -86,6 +77,7 @@
     <div class="results-header">
       <div><h2>XMLs da unidade selecionada</h2></div>
       <div class="results-actions">
+        <button class="btn btn-secondary" id="btn-export-excel" disabled><span>Exportar Excel</span></button>
         <button class="btn btn-success" id="btn-download-zip" disabled><span>Baixar ZIP da lista</span></button>
       </div>
     </div>

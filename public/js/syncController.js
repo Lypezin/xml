@@ -467,7 +467,7 @@ window.AppSyncController = {
           </div>
           <div class="city-card-stats">
             <div class="city-card-stat-item">
-              <span class="city-card-stat-label">XMLs no Supabase</span>
+              <span class="city-card-stat-label">Total XMLs</span>
               <span class="city-card-stat-value success">${window.AppUtils.formatInteger(city.totalXmls)}</span>
             </div>
             <span class="city-card-date" title="Última nota emitida em ${city.lastUpdate}">Última: ${city.lastUpdate}</span>
@@ -476,7 +476,7 @@ window.AppSyncController = {
 
         card.addEventListener('click', async () => {
           if (city.active) {
-            window.AppUi.switchTab(navDownload, viewDownloadContent, 'XML Sigma', 'XMLs NFS-e persistidos por certificado e unidade');
+            window.AppUi.switchTab(navDownload, viewDownloadContent, 'XMLs por Unidade', 'XMLs NFS-e persistidos por certificado e unidade');
             return;
           }
 
@@ -485,7 +485,7 @@ window.AppSyncController = {
             const res = await window.AppApi.selectCertificate(city.certificateId);
             if (res.success) {
               await window.AppSyncController.checkCertStatus();
-              window.AppUi.switchTab(navDownload, viewDownloadContent, 'XML Sigma', 'XMLs NFS-e persistidos por certificado e unidade');
+              window.AppUi.switchTab(navDownload, viewDownloadContent, 'XMLs por Unidade', 'XMLs NFS-e persistidos por certificado e unidade');
             } else {
               window.AppUi.log('Erro ao selecionar o certificado.', 'error');
             }
