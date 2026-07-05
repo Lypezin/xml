@@ -160,75 +160,16 @@ router.get('/dashboard-summary', async (req, res) => {
       certificates = index.certificates || [];
     }
 
-    const summary = await Promise.all(
-      certificates.map(async (cert) => {
-        try {
-          const result = await listRemoteDocuments({
-            certificateId: cert.id,
-            environment: 'producao',
-            startDate: null,
-            endDate: null,
-            cnpj: '',
-            partyCnpj: '',
-            partyRole: 'tomador',
-            search: '',
-            includeCancelled: true,
-            limit: 1,
-            offset: 0
-          });
-
-          const latestDoc = result.documents?.[0];
-          let lastUpdate = 'Sem XMLs';
-          if (latestDoc) {
-            const meta = latestDoc.metadata || {};
-            let completeDate = meta.dataEmissaoCompleta || latestDoc.first_seen_at || latestDoc.firstSeenAt || latestDoc.data_emissao;
-            if (completeDate instanceof Date) {
-              completeDate = completeDate.toISOString();
-            }
-            if (completeDate) {
-              const rawStr = String(completeDate).trim();
-              if (rawStr.includes('T')) {
-                const parts = rawStr.split('T');
-                const datePart = parts[0];
-                const timePart = parts[1].split(/[+-Z]/)[0];
-                const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (match) {
-                  lastUpdate = `${match[3]}/${match[2]}/${match[1]} às ${timePart}`;
-                } else {
-                  lastUpdate = `${datePart} às ${timePart}`;
-                }
-              } else {
-                const match = rawStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (match) {
-                  lastUpdate = `${match[3]}/${match[2]}/${match[1]}`;
-                } else {
-                  lastUpdate = rawStr;
-                }
-              }
-            }
-          }
-
-          return {
-            certificateId: cert.id,
-            filename: cert.filename || cert.originalName || 'certificado.pfx',
-            cnpj: cert.cnpj || 'Não cadastrado',
-            active: Boolean(cert.active),
-            totalXmls: Number(result.total || 0),
-            lastUpdate
-          };
-        } catch (err) {
-          console.error(`Erro ao obter resumo para o certificado ${cert.id}:`, err);
-          return {
-            certificateId: cert.id,
-            filename: cert.filename || cert.originalName || 'certificado.pfx',
-            cnpj: cert.cnpj || 'Não cadastrado',
-            active: Boolean(cert.active),
-            totalXmls: 0,
-            lastUpdate: 'Erro ao consultar'
-          };
-        }
-      })
-    );
+    const summary = certificates.map((cert) => {
+      return {
+        certificateId: cert.id,
+        filename: cert.filename || cert.originalName || 'certificado.pfx',
+        cnpj: cert.cnpj || 'Não cadastrado',
+        active: Boolean(cert.active),
+        totalXmls: 0,
+        lastUpdate: 'Atualize o SQL no Supabase para ver os dados'
+      };
+    });
 
     return res.json({
       success: true,
