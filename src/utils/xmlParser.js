@@ -1,13 +1,13 @@
 const crypto = require('crypto');
 
 function extractTag(xmlString, tagName) {
-  const match = xmlString.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
-  return match ? match[1].trim() : null;
+  const match = xmlString.match(new RegExp(`<([a-zA-Z0-9]+:)?${tagName}[^>]*>([\\s\\S]*?)<\\/\\1?${tagName}>`, 'i'));
+  return match ? match[2].trim() : null;
 }
 
 function extractSection(xmlString, tagName) {
-  const match = xmlString.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
-  return match ? match[1] : null;
+  const match = xmlString.match(new RegExp(`<([a-zA-Z0-9]+:)?${tagName}[^>]*>([\\s\\S]*?)<\\/\\1?${tagName}>`, 'i'));
+  return match ? match[2] : null;
 }
 
 function normalizeDate(value) {
@@ -103,10 +103,12 @@ function parseXmlMetadata(xmlString, nsu) {
                      xmlString.match(/<vLiq>([^<]+)<\/vLiq>/i);
     if (valMatch) metadata.valorServico = valMatch[1];
 
-    const dataMatch = xmlString.match(/<dhEmit>([^<]+)<\/dhEmit>/i) || 
-                      xmlString.match(/<dhEmi>([^<]+)<\/dhEmi>/i) ||
-                      xmlString.match(/<dhProc>([^<]+)<\/dhProc>/i) ||
-                      xmlString.match(/<dEmi>([^<]+)<\/dEmi>/i);
+    const dataMatch = xmlString.match(/<(?:[a-zA-Z0-9]+:)?dhEmit>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dhEmit>/i) || 
+                      xmlString.match(/<(?:[a-zA-Z0-9]+:)?dhEmi>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dhEmi>/i) ||
+                      xmlString.match(/<(?:[a-zA-Z0-9]+:)?dhProc>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dhProc>/i) ||
+                      xmlString.match(/<(?:[a-zA-Z0-9]+:)?dEmi>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dEmi>/i) ||
+                      xmlString.match(/<(?:[a-zA-Z0-9]+:)?DataEmissao>([^<]+)<\/(?:[a-zA-Z0-9]+:)?DataEmissao>/i) ||
+                      xmlString.match(/<(?:[a-zA-Z0-9]+:)?dataEmissao>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dataEmissao>/i);
     if (dataMatch) {
       metadata.dataEmissao = dataMatch[1].split('T')[0];
       metadata.dataEmissaoCompleta = dataMatch[1];

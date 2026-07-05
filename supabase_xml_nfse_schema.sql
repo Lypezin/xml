@@ -1287,11 +1287,15 @@ begin
     select 
       count(*)::integer as total_count,
       (
-        select coalesce(metadata ->> 'dataEmissaoCompleta', to_char(first_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS'))
+        select coalesce(
+          metadata ->> 'dataEmissaoCompleta',
+          case when data_emissao is not null then to_char(data_emissao, 'YYYY-MM-DD') else to_char(first_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS') end
+        )
         from xml_nfse.documents
         where certificate_id = c.id
           and environment = 'producao'
-        order by nsu desc
+          and tipo <> 'EVENTO'
+        order by data_emissao desc nulls last, nsu desc
         limit 1
       ) as last_date
     from xml_nfse.documents
