@@ -123,6 +123,10 @@ window.AppSyncController = {
     const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
     if (!certId || !window.AppApi?.listDocuments || !window.AppUiTable?.setDocuments) return;
 
+    if (window.AppUiTable.showLoading) {
+      window.AppUiTable.showLoading();
+    }
+
     try {
       const safePage = Math.max(1, Number(page || 1));
       const limit = window.AppUiTable.pageSize || 100;
@@ -134,7 +138,7 @@ window.AppSyncController = {
         partyCnpj: unitFilterParams.partyCnpj,
         partyRole: unitFilterParams.partyRole,
         search: historySearch ? historySearch.value.trim() : '',
-        includeCancelled: includeCancelled?.checked ? 'true' : 'false',
+        includeCancelled: includeCancelled?.checked ? 'false' : 'true',
         limit,
         offset: (safePage - 1) * limit
       });

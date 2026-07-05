@@ -61,7 +61,6 @@
         <div class="operation-intro">
           <span class="eyebrow">Varredura</span>
           <h2>Sincronizacao por NSU</h2>
-          <p>A varredura sempre parte do ultimo NSU recebido salvo para o certificado/unidade selecionada.</p>
           <input type="number" id="start-nsu" value="0" min="0" style="display: none;">
         </div>
         <div class="action-buttons">
@@ -70,8 +69,8 @@
         </div>
       </div>
       <div class="sync-policy-grid">
-        <div class="sync-policy-item"><span>Origem</span><strong>Ultimo recebido salvo</strong><small>Sem ajuste manual antes de iniciar.</small></div>
-        <div class="sync-policy-item"><span>Intervalo</span><strong>2 segundos</strong><small>Pausa fixa entre chamadas em lote.</small></div>
+        <div class="sync-policy-item"><span>Origem</span><strong>Ultimo recebido salvo</strong></div>
+        <div class="sync-policy-item"><span>Intervalo</span><strong>2 segundos</strong></div>
       </div>
       <div class="progress-container">
         <div class="progress-bar-wrapper"><div class="progress-bar" id="progress-bar" style="width: 0%;"></div></div>
@@ -85,7 +84,7 @@
 
   <section class="data-grid-card">
     <div class="results-header">
-      <div><h2>XMLs da unidade selecionada</h2><p class="results-subtitle">Consulta direta do Supabase por certificado/unidade. Mostra 10 XMLs por pagina sem carregar o historico inteiro.</p></div>
+      <div><h2>XMLs da unidade selecionada</h2></div>
       <div class="results-actions">
         <button class="btn btn-success" id="btn-download-zip" disabled><span>Baixar ZIP da lista</span></button>
       </div>
@@ -97,7 +96,7 @@
       </div>
       <label class="toggle-row" for="include-cancelled">
         <input type="checkbox" id="include-cancelled">
-        <span>Mostrar canceladas</span>
+        <span>Ocultar canceladas</span>
       </label>
     </div>
     <div class="xml-list-wrapper" id="results-table">

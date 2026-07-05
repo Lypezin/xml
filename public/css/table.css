@@ -299,3 +299,22 @@
   align-items: center;
   margin-top: 16px;
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.pulse-loading {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  color: var(--text-muted);
+}
