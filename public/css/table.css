@@ -80,7 +80,7 @@
 }
 
 .xml-list-wrapper {
-  overflow: hidden;
+  overflow-x: auto;
   border-radius: var(--border-radius);
   border: 1px solid var(--card-border);
   background: var(--card-bg);

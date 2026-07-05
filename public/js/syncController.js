@@ -50,7 +50,7 @@ window.AppSyncController = {
         certificateId: certId || '',
         environment: selectEnvironment ? selectEnvironment.value : ''
       });
-      if (!data.success) throw new Error(data.error || 'Nao foi possivel carregar armazenamento.');
+      if (!data.success) throw new Error(data.error || 'Não foi possível carregar armazenamento.');
 
       const summary = data.summary || {};
       statStoragePayloads.innerText = window.AppUtils.formatInteger(summary.totalPayloads || 0);
@@ -111,7 +111,7 @@ window.AppSyncController = {
     if (!window.AppApi?.listUnits) return;
     try {
       const data = await window.AppApi.listUnits();
-      if (!data.success) throw new Error(data.error || 'Nao foi possivel carregar unidades.');
+      if (!data.success) throw new Error(data.error || 'Não foi possível carregar unidades.');
       window.units = data.units || [];
       this.renderUnitSelector();
     } catch (err) {
@@ -144,17 +144,16 @@ window.AppSyncController = {
       });
 
       if (!data.success) {
-        window.AppUi.log(`Erro ao carregar historico: ${data.error}`, 'warning');
+        window.AppUi.log(`Erro ao carregar histórico: ${data.error}`, 'warning');
         return;
       }
 
       window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage, data.summary?.totalValue || 0);
       btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
       const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
-      window.AppUi.log(`Historico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
-      this.loadStorageSummary();
+      window.AppUi.log(`Histórico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
     } catch (err) {
-      window.AppUi.log(`Erro ao carregar historico: ${err.message}`, 'warning');
+      window.AppUi.log(`Erro ao carregar histórico: ${err.message}`, 'warning');
     }
   },
 
@@ -332,7 +331,7 @@ window.AppSyncController = {
       statNsuAtual.innerText = ultNSU;
       
       if (documentos && documentos.length > 0) {
-        window.AppUi.log(`Lote processado! ${novos} novo(s), ${existentes} ja existiam, ${documentos.length} recebido(s) no lote.`, novos > 0 ? 'success' : 'warning');
+        window.AppUi.log(`Lote processado! ${novos} novo(s), ${existentes} já existiam, ${documentos.length} recebido(s) no lote.`, novos > 0 ? 'success' : 'warning');
         window.totalDownloaded += novos;
         btnDownloadZip.disabled = false;
         await this.loadPersistedHistory(1);

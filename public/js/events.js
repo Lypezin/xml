@@ -113,11 +113,11 @@ window.AppEvents = {
 
           try {
             const savedNsu = await window.AppSyncController.loadSavedStartNsu();
-            window.AppUi.log(`Iniciando varredura a partir do ultimo NSU recebido salvo: ${savedNsu}.`);
+            window.AppUi.log(`Iniciando varredura a partir do último NSU recebido salvo: ${savedNsu}.`);
           } catch (err) {
             window.currentNsu = 0;
             inputStartNsu.value = 0;
-            window.AppUi.log(`Nao foi possivel carregar o ultimo NSU salvo (${err.message}). Iniciando do NSU 0.`, 'warning');
+            window.AppUi.log(`Não foi possível carregar o último NSU salvo (${err.message}). Iniciando do NSU 0.`, 'warning');
           }
 
           if (mode === 'desc' && window.currentNsu === 0) {
@@ -263,7 +263,7 @@ window.AppEvents = {
             city: unitCity ? unitCity.value.trim() : '',
             state: unitState ? unitState.value.trim() : ''
           });
-          if (!data.success) throw new Error(data.error || 'Nao foi possivel salvar a unidade.');
+          if (!data.success) throw new Error(data.error || 'Não foi possível salvar a unidade.');
           await window.AppSyncController.loadUnits();
           if (unitFilter && data.unit?.cnpj) unitFilter.value = data.unit.cnpj;
           window.AppSyncController.fillUnitFormFromSelection();
@@ -289,7 +289,7 @@ window.AppEvents = {
         btnDeleteUnit.disabled = true;
         try {
           const data = await window.AppApi.deleteUnit(selected.unitId);
-          if (!data.success) throw new Error(data.error || 'Nao foi possivel remover a unidade.');
+          if (!data.success) throw new Error(data.error || 'Não foi possível remover a unidade.');
           if (unitFilter) unitFilter.value = '';
           await window.AppSyncController.loadUnits();
           window.AppSyncController.fillUnitFormFromSelection();
@@ -338,14 +338,14 @@ window.AppEvents = {
     if (btnUseNationalNsu) {
       btnUseNationalNsu.addEventListener('click', async () => {
         btnUseNationalNsu.disabled = true;
-        window.AppUi.log('Consultando ADN para descobrir o ultimo NSU nacional...', 'warning');
+        window.AppUi.log('Consultando ADN para descobrir o último NSU nacional...', 'warning');
         try {
           const data = await window.AppApi.discoverNsu({
             environment: selectEnvironment ? selectEnvironment.value : 'producao',
             cnpjConsulta: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
             certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId
           });
-          if (!data.success) throw new Error(data.error || 'Nao foi possivel descobrir o ultimo NSU.');
+          if (!data.success) throw new Error(data.error || 'Não foi possível descobrir o último NSU.');
           const nationalNsu = Number(data.maxNSU || 0);
           inputStartNsu.value = nationalNsu;
           window.currentNsu = nationalNsu;
@@ -412,7 +412,7 @@ window.AppEvents = {
             autoSyncDelaySeconds: 2
           };
           const data = await window.AppApi.saveSchedulerSettings(settings);
-          if (!data.success) throw new Error(data.error || 'Nao foi possivel salvar o agendamento.');
+          if (!data.success) throw new Error(data.error || 'Não foi possível salvar o agendamento.');
           window.AppUi.updateSchedulerUI(data.settings);
           window.AppUi.log('Agendamento salvo com sucesso.', 'success');
         } catch (err) {
@@ -427,7 +427,7 @@ window.AppEvents = {
       btnRunSchedulerNow.addEventListener('click', async () => {
         btnRunSchedulerNow.disabled = true;
         if (btnSaveScheduler) btnSaveScheduler.disabled = true;
-        window.AppUi.log('Iniciando atualizacao manual segura...');
+        window.AppUi.log('Iniciando atualização manual segura...');
         try {
           const settings = {
             autoSyncEnabled: false,
@@ -445,7 +445,7 @@ window.AppEvents = {
           while (!finished) {
             cycles += 1;
             const data = await window.AppApi.runSchedulerNow();
-            if (!data.success) throw new Error(data.error || 'Nao foi possivel executar a atualizacao.');
+            if (!data.success) throw new Error(data.error || 'Não foi possível executar a atualização.');
 
             const result = data.result || {};
             if (result.error) throw new Error(result.error);

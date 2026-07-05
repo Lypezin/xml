@@ -2,13 +2,13 @@
   <section class="rules-hero card">
     <div>
       <span class="eyebrow">NFS-e Nacional</span>
-      <h2>Regras operacionais para distribuicao de XMLs</h2>
+      <h2>Regras operacionais para distribuição de XMLs</h2>
     </div>
     <div class="rules-source">
       <strong>Fontes consultadas</strong>
-      <span>Portal Gov.br NFS-e - Documentacao Atual</span>
+      <span>Portal Gov.br NFS-e - Documentação Atual</span>
       <span>Manual de API ADN para Contribuintes</span>
-      <span>Manual de API ADN para Municipios</span>
+      <span>Manual de API ADN para Municípios</span>
     </div>
   </section>
 
@@ -16,17 +16,17 @@
     <article class="rule-card">
       <span class="rule-index">01</span>
       <h3>Consulta por NSU</h3>
-      <p>A distribuicao e feita a partir de um Numero Sequencial Unico. O sistema deve guardar o ultimo NSU recebido e continuar do proximo ponto, sem recomecar toda a varredura sem necessidade.</p>
+      <p>A distribuição é feita a partir de um Número Sequencial Unico. O sistema deve guardar o último NSU recebido e continuar do próximo ponto, sem recomeçar toda a varredura sem necessidade.</p>
     </article>
     <article class="rule-card">
       <span class="rule-index">02</span>
-      <h3>Lote maximo da API</h3>
-      <p>A documentacao do ADN descreve retorno em lotes de ate 50 documentos fiscais por chamada. A tela usa paginacao menor para visualizacao, mas a varredura respeita a dinamica de lotes da API.</p>
+      <h3>Lote máximo</h3>
+      <p>A documentação do ADN descreve retorno em lotes de até 50 documentos fiscais por chamada. A tela usa paginação menor para visualização, mas a varredura respeita a dinâmica de lotes da API.</p>
     </article>
     <article class="rule-card">
       <span class="rule-index">03</span>
       <h3>Ordem dos documentos</h3>
-      <p>O NSU segue a disponibilizacao no ambiente nacional. Ele nao deve ser tratado como ordenacao perfeita por data de emissao; eventos e notas podem aparecer conforme recepcao pelo ADN.</p>
+      <p>O NSU segue a disponibilização no ambiente nacional. Ele não deve ser tratado como ordenação perfeita por data de emissao; eventos e notas podem aparecer conforme recepção pelo ADN.</p>
     </article>
     <article class="rule-card">
       <span class="rule-index">04</span>
@@ -36,33 +36,33 @@
     <article class="rule-card">
       <span class="rule-index">05</span>
       <h3>NFS-e e eventos</h3>
-      <p>Eventos vinculados, como cancelamento, fazem parte do ciclo de vida da NFS-e e podem aparecer na distribuicao. A lista consolida a nota principal quando ha documento e evento relacionados.</p>
+      <p>Eventos vinculados, como cancelamento, fazem parte do ciclo de vida da NFS-e e podem aparecer na distribuição. A lista consolida a nota principal quando há documento e evento relacionados.</p>
     </article>
     <article class="rule-card">
       <span class="rule-index">06</span>
       <h3>Certificado digital</h3>
-      <p>A chamada usa mTLS com certificado ICP-Brasil A1 em arquivo PFX/P12. O certificado define a identidade fiscal e limita quais documentos podem ser acessados.</p>
+      <p>A chamada usa mTLS com certificado ICP-Brasil A1 em arquivo PFX/P12. O certificado define a identidade fiscal e limita quais documentos podem ser acessados pela conexão.</p>
     </article>
     <article class="rule-card">
       <span class="rule-index">07</span>
       <h3>Consumo indevido</h3>
-      <p>Consultas repetidas, muito rapidas ou insistentes apos fim de fila podem gerar rejeicao/bloqueio temporario. Use a pausa por lote e evite reiniciar varreduras completas sem necessidade.</p>
+      <p>Consultas repetidas, muito rápidas ou insistentes após fim de fila podem gerar rejeição/bloqueio temporário. Use a pausa por lote e evite reiniciar varreduras completas sem necessidade.</p>
     </article>
     <article class="rule-card">
       <span class="rule-index">08</span>
-      <h3>Persistencia local do sistema</h3>
-      <p>A visualizacao de XMLs e feita a partir do Supabase, com limit/offset. Isso permite navegar milhares de registros por unidade sem carregar todo o historico no navegador.</p>
+      <h3>Persistência local</h3>
+      <p>A visualização de XMLs é feita a partir do Supabase, com limit/offset. Isso permite navegar milhares de registros por unidade sem carregar todo o histórico no navegador.</p>
     </article>
   </section>
 
   <section class="card rules-flow-card">
-    <div class="card-header"><h2>Fluxo recomendado de operacao</h2></div>
+    <div class="card-header"><h2>Fluxo recomendado de operação</h2></div>
     <div class="rules-flow">
       <div><strong>1. Cadastre o certificado</strong><span>Valide senha, CNPJ e validade antes de iniciar.</span></div>
       <div><strong>2. Selecione a unidade</strong><span>Use o CNPJ da unidade desejada para filtrar a base persistida.</span></div>
-      <div><strong>3. Use ultimo recebido</strong><span>Retome do NSU salvo para evitar chamadas redundantes.</span></div>
-      <div><strong>4. Execute com pausa fixa</strong><span>O sistema aguarda 2 segundos entre lotes para reduzir pressao na API.</span></div>
-      <div><strong>5. Navegue pela lista</strong><span>A tabela carrega 10 XMLs por pagina diretamente do Supabase.</span></div>
+      <div><strong>3. Use último recebido</strong><span>Retome do NSU salvo para evitar chamadas redundantes.</span></div>
+      <div><strong>4. Execute com pausa fixa</strong><span>O sistema aguarda 2 segundos entre lotes para reduzir pressão na API.</span></div>
+      <div><strong>5. Navegue pela lista</strong><span>A tabela carrega 10 XMLs por páginas diretamente do Supabase.</span></div>
     </div>
   </section>
 

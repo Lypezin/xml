@@ -123,7 +123,7 @@ window.AppEventsCert = {
 
         try {
           const data = await window.AppApi.diagnoseCertificate(certificateId, env);
-          window.AppUi.log(`PFX: descriptografado=${data.success ? 'sim' : 'nao'} | Titular=${data.pfx?.subject || 'N/A'}`);
+          window.AppUi.log(`PFX: descriptografado=${data.success ? 'sim' : 'não'} | Titular=${data.pfx?.subject || 'N/A'}`);
           if (data.success) {
             window.AppUi.log(`PFX Válido: CNPJ=${data.pfx?.cnpjExtracted} | Validade=${data.pfx?.validUntil}`, 'success');
           } else {

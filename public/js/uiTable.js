@@ -150,21 +150,21 @@ window.AppUiTable = {
           </div>
           <strong>NSU ${doc.nsu || 'N/A'}</strong>
           <span class="helper-text">NFS-e ${doc.numeroNfse || 'N/A'} | DPS ${doc.numeroDps || 'N/A'} / Serie ${doc.serieDps || 'N/A'}</span>
-          <span class="cnpj-badge wrap">${doc.chave || 'Chave nao informada'}</span>
+          <span class="cnpj-badge wrap">${doc.chave || 'Chave não informada'}</span>
         </div>
         <div class="xml-party-cell">
           <div><strong>Prestador</strong><span>${doc.prestadorNome || 'N/A'}</span><small>${doc.prestadorCnpj || 'N/A'}</small></div>
-          <div><strong>Tomador</strong><span>${doc.tomadorNome || 'N/A'}</span><small>${doc.tomadorCnpj || 'Nao cadastrado'}</small></div>
+          <div><strong>Tomador</strong><span>${doc.tomadorNome || 'N/A'}</span><small>${doc.tomadorCnpj || 'Não cadastrado'}</small></div>
         </div>
         <div class="xml-service-cell">
           <div class="descricao-texto expanded" title="${eventoDetalhe || doc.descricao || 'N/A'}">${eventoDetalhe || doc.descricao || 'N/A'}</div>
-          <span class="helper-text">Municipio: ${doc.municipioPrestacao || 'N/A'}</span>
-          <span class="helper-text">Cod. tributacao: ${doc.codigoTributacao || 'N/A'}</span>
+          <span class="helper-text">Município: ${doc.municipioPrestacao || 'N/A'}</span>
+          <span class="helper-text">Cod. tributação: ${doc.codigoTributacao || 'N/A'}</span>
         </div>
         <div class="xml-value-cell">
           <strong>${valorFormatado}</strong>
-          <span>Emissao: ${window.AppUtils.formatDate(doc.dataEmissao)}</span>
-          <span>Competencia: ${window.AppUtils.formatDate(doc.competencia)}</span>
+          <span>Emissão: ${window.AppUtils.formatDate(doc.dataEmissao)}</span>
+          <span>Competência: ${window.AppUtils.formatDate(doc.competencia)}</span>
           <span>Processamento: ${window.AppUtils.formatDate(doc.dataProcessamento)}</span>
         </div>
         <div class="xml-action-cell">
