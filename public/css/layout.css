@@ -176,7 +176,7 @@
 
 .input-group input:focus,
 .input-group select:focus {
-  border-color: var(--border-strong);
+  border-color: var(--primary);
   box-shadow: 0 0 0 2px var(--primary-glow);
 }
 

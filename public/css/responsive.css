@@ -174,7 +174,7 @@ body.light-mode .card,
 body.light-mode .metric-card,
 body.light-mode .cert-status-badge,
 body.light-mode .footer-status {
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 body.light-mode .main-content {
@@ -182,15 +182,16 @@ body.light-mode .main-content {
 }
 
 .navbar {
-  align-items: flex-start;
+  align-items: center;
 }
 
 .navbar-title h1 {
-  font-size: 24px;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .navbar-title p {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .metric-card,
@@ -200,13 +201,14 @@ body.light-mode .main-content {
 
 .card h2,
 .results-header h2 {
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .results-header {
-  gap: 18px;
+  gap: 12px;
 }
 
 .results-actions {
