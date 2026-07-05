@@ -39,30 +39,30 @@
 }
 
 .btn-success {
-  background: #10b981;
+  background: var(--success);
   color: #ffffff;
 }
 
 .btn-success:hover:not(:disabled) {
-  background: #059669;
+  background: var(--success-hover);
 }
 
 .btn-warning {
-  background: #f59e0b;
+  background: var(--warning);
   color: #ffffff;
 }
 
 .btn-warning:hover:not(:disabled) {
-  background: #d97706;
+  background: var(--warning-hover);
 }
 
 .btn-danger {
-  background: #ef4444;
+  background: var(--danger);
   color: #ffffff;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #dc2626;
+  background: var(--danger-hover);
 }
 
 .btn-secondary {

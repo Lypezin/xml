@@ -19,14 +19,17 @@
   --secondary-hover: #059669;
   
   --success: #10b981;
+  --success-hover: #059669;
   --success-bg: rgba(16, 185, 129, 0.05);
   --success-border: rgba(16, 185, 129, 0.15);
   
   --warning: #f59e0b;
+  --warning-hover: #d97706;
   --warning-bg: rgba(245, 158, 11, 0.05);
   --warning-border: rgba(245, 158, 11, 0.15);
   
   --danger: #ef4444;
+  --danger-hover: #dc2626;
   --danger-bg: rgba(239, 68, 68, 0.05);
   --danger-border: rgba(239, 68, 68, 0.15);
   
@@ -65,14 +68,17 @@ body.light-mode {
   --secondary-hover: #0f766e;
   
   --success: #10b981;
+  --success-hover: #059669;
   --success-bg: rgba(16, 185, 129, 0.05);
   --success-border: rgba(16, 185, 129, 0.12);
   
   --warning: #f59e0b;
+  --warning-hover: #d97706;
   --warning-bg: rgba(245, 158, 11, 0.05);
   --warning-border: rgba(245, 158, 11, 0.12);
   
   --danger: #ef4444;
+  --danger-hover: #dc2626;
   --danger-bg: rgba(239, 68, 68, 0.05);
   --danger-border: rgba(239, 68, 68, 0.12);
   

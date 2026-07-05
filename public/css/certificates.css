@@ -68,8 +68,8 @@
 
 .drop-zone:hover,
 .drop-zone.dragover {
-  border-color: var(--border-strong);
-  background: var(--surface-muted);
+  border-color: var(--primary);
+  background: var(--primary-glow);
 }
 
 .drop-zone-icon-svg {

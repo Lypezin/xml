@@ -118,7 +118,7 @@
   padding: 14px 16px;
   min-height: 90px;
   border-bottom: 1px solid var(--card-border);
-  transition: var(--transition);
+  transition: background-color var(--transition-normal);
   background: transparent;
 }
 
@@ -126,8 +126,12 @@
   border-bottom: none;
 }
 
-.xml-item:hover {
+.xml-item:nth-child(even) {
   background: var(--surface-muted);
+}
+
+.xml-item:hover {
+  background: var(--primary-glow) !important;
 }
 
 .xml-main-cell,
