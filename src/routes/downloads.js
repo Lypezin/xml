@@ -330,7 +330,7 @@ router.post('/download-period-zip', async (req, res) => {
     }
 
     const totalMatched = Number(result.total || documents.length);
-    if (totalMatched > MAX_ZIP_DOCUMENTS) {
+    if (IS_VERCEL && totalMatched > MAX_ZIP_DOCUMENTS) {
       return res.status(400).json({
         success: false,
         error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} XMLs. Para evitar travamentos ou limite de payload na Vercel, baixe no máximo ${MAX_ZIP_DOCUMENTS.toLocaleString('pt-BR')} por ZIP usando os filtros de período ou unidade.`

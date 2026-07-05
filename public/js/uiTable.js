@@ -238,21 +238,35 @@ window.AppUiTable = {
       'NSU',
       'Tipo',
       'Chave',
-      'Numero NFSe',
+      'Número NFS-e',
       'Status',
-      'Data Emissao',
+      'Data Emissão',
       'CNPJ Prestador',
       'Nome Prestador',
       'CNPJ Tomador',
       'Nome Tomador',
-      'Valor Servico',
-      'Descricao',
-      'Municipio',
-      'Codigo Tributacao'
+      'Valor Serviço',
+      'Descrição',
+      'Município',
+      'Código Tributação'
     ];
 
     const rows = this.documents.map(doc => {
       const normalized = this.normalizeDocument(doc);
+      
+      const rawPrestadorCnpj = normalized.prestadorCnpj || '';
+      const prestadorCnpj = rawPrestadorCnpj.length === 14 
+        ? window.AppUtils.formatCnpj(rawPrestadorCnpj) 
+        : rawPrestadorCnpj;
+
+      const rawTomadorCnpj = normalized.tomadorCnpj || '';
+      const tomadorCnpj = rawTomadorCnpj.length === 14 
+        ? window.AppUtils.formatCnpj(rawTomadorCnpj) 
+        : rawTomadorCnpj;
+
+      let cleanDesc = normalized.descricao || '';
+      cleanDesc = cleanDesc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
       return [
         normalized.nsu || '',
         normalized.tipo || '',
@@ -260,23 +274,76 @@ window.AppUiTable = {
         normalized.numeroNfse || '',
         normalized.status || '',
         normalized.dataEmissao || '',
-        normalized.prestadorCnpj || '',
+        prestadorCnpj,
         normalized.prestadorNome || '',
-        normalized.tomadorCnpj || '',
+        tomadorCnpj,
         normalized.tomadorNome || '',
         normalized.valorServico || '0.00',
-        normalized.descricao ? normalized.descricao.replace(/\r?\n|\r/g, ' ').replace(/"/g, '""') : '',
+        cleanDesc,
         normalized.municipioPrestacao || '',
         normalized.codigoTributacao || ''
       ];
     });
 
-    const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(';'))
-    ].join('\r\n');
+    let html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <!--[if gte mso 9]>
+      <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>Notas NFS-e</x:Name>
+              <x:WorksheetOptions>
+                <x:DisplayGridlines/>
+              </x:WorksheetOptions>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+      </xml>
+      <![endif]-->
+      <style>
+        table { border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; }
+        th { background-color: #0d9488; color: #ffffff; font-weight: bold; border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+        td { border: 1px solid #e2e8f0; padding: 6px 10px; mso-number-format:"\\@"; }
+        .num { mso-number-format:"#,##0.00"; text-align: right; }
+        .center { text-align: center; }
+      </style>
+    </head>
+    <body>
+      <table>
+        <thead>
+          <tr>
+            \${headers.map(h => `<th>\${h}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          \${rows.map(row => `
+            <tr>
+              <td class="center">\${row[0]}</td>
+              <td class="center">\${row[1]}</td>
+              <td>\${row[2]}</td>
+              <td class="center">\${row[3]}</td>
+              <td class="center">\${row[4]}</td>
+              <td class="center">\${row[5]}</td>
+              <td>\${row[6]}</td>
+              <td>\${row[7]}</td>
+              <td>\${row[8]}</td>
+              <td>\${row[9]}</td>
+              <td class="num">\${row[10]}</td>
+              <td>\${row[11]}</td>
+              <td>\${row[12]}</td>
+              <td class="center">\${row[13]}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </body>
+    </html>
+    `;
 
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -285,7 +352,7 @@ window.AppUiTable = {
     const cityName = certSelect && certSelect.selectedIndex >= 0 ? certSelect.options[certSelect.selectedIndex].text.split(' - ')[1] || 'relatorio' : 'relatorio';
     const cleanCityName = cityName.replace(/\.(pfx|p12|cert|key)$/i, '').replace(/[_-]+/g, ' ').trim();
     
-    link.setAttribute('download', `NFS-e_Excel_${cleanCityName.replace(/\s+/g, '_')}.csv`);
+    link.setAttribute('download', `NFS-e_Excel_\${cleanCityName.replace(/\\s+/g, '_')}.xls`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
