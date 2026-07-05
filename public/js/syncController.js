@@ -149,7 +149,7 @@ window.AppSyncController = {
       }
 
       window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage, data.summary?.totalValue || 0);
-      btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
+      if (window.btnDownloadZip) btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
       const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
       window.AppUi.log(`Histórico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
     } catch (err) {
@@ -333,7 +333,7 @@ window.AppSyncController = {
       if (documentos && documentos.length > 0) {
         window.AppUi.log(`Lote processado! ${novos} novo(s), ${existentes} já existiam, ${documentos.length} recebido(s) no lote.`, novos > 0 ? 'success' : 'warning');
         window.totalDownloaded += novos;
-        btnDownloadZip.disabled = false;
+        if (window.btnDownloadZip) btnDownloadZip.disabled = false;
         await this.loadPersistedHistory(1);
         this.loadStorageSummary();
         
