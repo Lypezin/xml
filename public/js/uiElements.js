@@ -65,13 +65,18 @@ window.AppUiElements = {
     window.historySearch = document.getElementById('history-search');
     window.includeCancelled = document.getElementById('include-cancelled');
 
+    window.navDashboard = document.getElementById('nav-dashboard');
     window.navDownload = document.getElementById('nav-download');
     window.navCertificado = document.getElementById('nav-certificado');
     window.navRegras = document.getElementById('nav-regras');
 
+    window.viewDashboardContent = document.getElementById('view-dashboard-content');
     window.viewDownloadContent = document.getElementById('view-download-content');
     window.viewCertificadoContent = document.getElementById('view-certificado-content');
     window.viewRegrasContent = document.getElementById('view-regras-content');
+
+    window.dashboardCitiesGrid = document.getElementById('dashboard-cities-grid');
+    window.dashboardLoader = document.getElementById('dashboard-loader');
 
     window.pageTitle = document.getElementById('page-title');
     window.pageSubtitle = document.getElementById('page-subtitle');

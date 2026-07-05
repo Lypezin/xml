@@ -30,6 +30,9 @@ async function initializeAuthenticatedApp() {
     if (window.loadSchedulerSettings) window.loadSchedulerSettings();
     window.AppUi.updateProgress(0, 0);
     window.selectEnvironment.dispatchEvent(new Event('change'));
+    if (window.navDashboard) {
+      window.AppUi.switchTab(window.navDashboard, window.viewDashboardContent, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
+    }
     return;
   }
 
@@ -46,12 +49,16 @@ async function initializeAuthenticatedApp() {
   if (window.loadSchedulerSettings) window.loadSchedulerSettings();
   window.AppUi.updateProgress(0, 0);
   window.selectEnvironment.dispatchEvent(new Event('change'));
+  if (window.navDashboard) {
+    window.AppUi.switchTab(window.navDashboard, window.viewDashboardContent, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
+  }
 }
 
 async function loadAllComponents() {
   const components = [
     { id: 'auth-screen-container', path: 'components/auth-screen.html' },
     { id: 'sidebar-container', path: 'components/sidebar.html' },
+    { id: 'view-dashboard-container', path: 'components/dashboard-panel.html' },
     { id: 'view-download-container', path: 'components/sync-panel.html' },
     { id: 'view-certificado-container', path: 'components/certificates-panel.html' },
     { id: 'view-regras-container', path: 'components/rules-panel.html' }

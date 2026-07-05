@@ -129,6 +129,11 @@ window.AppApi = {
     return res.json();
   },
 
+  async fetchDashboardSummary() {
+    const res = await fetch('/api/dashboard-summary');
+    return res.json();
+  },
+
   async uploadCertificate(formData) {
     const res = await fetch('/api/upload-certificate', {
       method: 'POST',

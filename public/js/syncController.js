@@ -412,5 +412,78 @@ window.AppSyncController = {
       window.AppUi.log(`Erro crítico: ${err.message}`, 'error');
       this.stopQuerying();
     }
+  },
+
+  cleanFilenameToCityName(filename) {
+    if (!filename) return 'Desconhecido';
+    let name = filename.replace(/\.(pfx|p12|cert|key)$/i, '');
+    name = name.replace(/_\d{14}$/, '');
+    name = name.replace(/\d{14}$/, '');
+    name = name.replace(/[_-]+/g, ' ').trim();
+    name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    return name;
+  },
+
+  async loadDashboard() {
+    if (!dashboardLoader || !dashboardCitiesGrid) return;
+    dashboardLoader.style.display = 'block';
+    dashboardCitiesGrid.style.display = 'none';
+
+    try {
+      const data = await window.AppApi.fetchDashboardSummary();
+      if (!data.success) throw new Error(data.error || 'Erro ao carregar dados do painel.');
+
+      dashboardCitiesGrid.innerHTML = '';
+      (data.summary || []).forEach(city => {
+        const card = document.createElement('div');
+        card.className = `city-card ${city.active ? 'active' : ''}`;
+        const cityName = this.cleanFilenameToCityName(city.filename);
+
+        card.innerHTML = `
+          <div class="city-card-header">
+            <div>
+              <h3 class="city-card-title">${cityName}</h3>
+              <span class="city-card-cnpj">${window.AppUtils.formatCnpj(city.cnpj)}</span>
+            </div>
+            ${city.active ? '<span class="city-card-active-badge">Ativo</span>' : ''}
+          </div>
+          <div class="city-card-stats">
+            <div class="city-card-stat-item">
+              <span class="city-card-stat-label">XMLs no Supabase</span>
+              <span class="city-card-stat-value success">${window.AppUtils.formatInteger(city.totalXmls)}</span>
+            </div>
+            <span class="city-card-date">Último: ${city.lastUpdate}</span>
+          </div>
+        `;
+
+        card.addEventListener('click', async () => {
+          if (city.active) {
+            window.AppUi.switchTab(navDownload, viewDownloadContent, 'XML Sigma', 'XMLs NFS-e persistidos por certificado e unidade');
+            return;
+          }
+
+          window.AppUi.log(`Selecionando certificado para a cidade ${cityName}...`);
+          try {
+            const res = await window.AppApi.selectCertificate(city.certificateId);
+            if (res.success) {
+              await window.AppSyncController.checkCertStatus();
+              window.AppUi.switchTab(navDownload, viewDownloadContent, 'XML Sigma', 'XMLs NFS-e persistidos por certificado e unidade');
+            } else {
+              window.AppUi.log('Erro ao selecionar o certificado.', 'error');
+            }
+          } catch (err) {
+            window.AppUi.log(`Erro ao selecionar o certificado: ${err.message}`, 'error');
+          }
+        });
+
+        dashboardCitiesGrid.appendChild(card);
+      });
+
+      dashboardLoader.style.display = 'none';
+      dashboardCitiesGrid.style.display = 'grid';
+    } catch (err) {
+      dashboardLoader.innerHTML = `<span class="text-danger">Falha ao carregar painel: ${err.message}</span>`;
+      window.AppUi.log(`Erro ao carregar Dashboard: ${err.message}`, 'warning');
+    }
   }
 };

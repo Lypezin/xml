@@ -371,6 +371,12 @@ window.AppEvents = {
       btnHistoryNext.addEventListener('click', () => window.AppUiTable.nextPage());
     }
 
+    if (navDashboard) {
+      navDashboard.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.AppUi.switchTab(navDashboard, viewDashboardContent, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
+      });
+    }
     if (navDownload) {
       navDownload.addEventListener('click', (e) => {
         e.preventDefault();

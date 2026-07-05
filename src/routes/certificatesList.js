@@ -3,7 +3,8 @@ const {
   useRemoteCertificateStorage,
   listRemoteCertificates,
   setRemoteActiveCertificate,
-  syncSupabaseCertificate
+  syncSupabaseCertificate,
+  listRemoteDocuments
 } = require('../services/supabase');
 const {
   getCertificatesIndex,
@@ -98,6 +99,84 @@ router.post('/select-certificate', async (req, res) => {
     activeCertificateId: cert.id,
     certificate: sanitizeCertificate(cert)
   });
+});
+
+router.get('/dashboard-summary', async (req, res) => {
+  try {
+    let certificates = [];
+    if (useRemoteCertificateStorage()) {
+      certificates = await listRemoteCertificates();
+      const envCert = getEnvCertificate();
+      if (certificates.length === 0 && envCert) {
+        certificates = [envCert];
+      }
+    } else {
+      const index = getCertificatesIndex();
+      certificates = index.certificates || [];
+    }
+
+    const summary = await Promise.all(
+      certificates.map(async (cert) => {
+        try {
+          const result = await listRemoteDocuments({
+            certificateId: cert.id,
+            environment: 'producao',
+            startDate: null,
+            endDate: null,
+            cnpj: '',
+            partyCnpj: '',
+            partyRole: 'tomador',
+            search: '',
+            includeCancelled: true,
+            limit: 1,
+            offset: 0
+          });
+
+          const latestDoc = result.documents?.[0];
+          let lastUpdate = 'Sem XMLs';
+          if (latestDoc && latestDoc.data_emissao) {
+            const rawDate = String(latestDoc.data_emissao).split('T')[0];
+            const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (match) {
+              lastUpdate = `${match[3]}/${match[2]}/${match[1]}`;
+            } else {
+              lastUpdate = rawDate;
+            }
+          }
+
+          return {
+            certificateId: cert.id,
+            filename: cert.filename || cert.originalName || 'certificado.pfx',
+            cnpj: cert.cnpj || 'Não cadastrado',
+            active: Boolean(cert.active),
+            totalXmls: Number(result.total || 0),
+            lastUpdate
+          };
+        } catch (err) {
+          console.error(`Erro ao obter resumo para o certificado ${cert.id}:`, err);
+          return {
+            certificateId: cert.id,
+            filename: cert.filename || cert.originalName || 'certificado.pfx',
+            cnpj: cert.cnpj || 'Não cadastrado',
+            active: Boolean(cert.active),
+            totalXmls: 0,
+            lastUpdate: 'Erro ao consultar'
+          };
+        }
+      })
+    );
+
+    return res.json({
+      success: true,
+      summary
+    });
+  } catch (err) {
+    console.error('Erro na rota /dashboard-summary:', err);
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 });
 
 module.exports = router;

@@ -151,10 +151,10 @@ window.AppUi = {
   },
 
   switchTab(activeNav, activeContent, title, subtitle) {
-    [navDownload, navCertificado, navRegras].forEach(nav => {
+    [navDashboard, navDownload, navCertificado, navRegras].forEach(nav => {
       if (nav) nav.classList.remove('active');
     });
-    [viewDownloadContent, viewCertificadoContent, viewRegrasContent].forEach(content => {
+    [viewDashboardContent, viewDownloadContent, viewCertificadoContent, viewRegrasContent].forEach(content => {
       if (content) content.style.display = 'none';
     });
 
@@ -162,6 +162,10 @@ window.AppUi = {
     if (activeContent) activeContent.style.display = 'block';
     if (pageTitle) pageTitle.innerText = title;
     if (pageSubtitle) pageSubtitle.innerText = subtitle;
+
+    if (activeContent === viewDashboardContent && window.AppSyncController?.loadDashboard) {
+      window.AppSyncController.loadDashboard();
+    }
   },
 
   updateSchedulerUI(settings) {
