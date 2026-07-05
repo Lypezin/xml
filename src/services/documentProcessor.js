@@ -104,6 +104,7 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
         descricao: meta.descricaoServico,
         valorServico: meta.valorServico,
         dataEmissao: meta.dataEmissao,
+        dataEmissaoCompleta: meta.dataEmissaoCompleta || meta.dataEmissao,
         dataProcessamento: meta.dataProcessamento,
         competencia: meta.competencia,
         municipioEmissao: meta.municipioEmissao,

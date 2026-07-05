@@ -21,7 +21,10 @@
           <span class="eyebrow">Recorte</span>
           <h2>Certificado, unidade e período</h2>
         </div>
-        <button class="btn btn-success toolbar-action" id="btn-download-period"><span>Baixar ZIP</span></button>
+        <div class="toolbar-actions-group" style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-secondary toolbar-action" id="btn-export-excel" disabled><span>Exportar Excel</span></button>
+          <button class="btn btn-success toolbar-action" id="btn-download-period"><span>Baixar ZIP</span></button>
+        </div>
       </div>
       <div class="toolbar-grid compact-toolbar-grid">
         <div class="input-group certificate-field"><label for="certificate-select">Certificado</label><select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select></div>
@@ -76,10 +79,6 @@
   <section class="data-grid-card">
     <div class="results-header">
       <div><h2>XMLs da unidade selecionada</h2></div>
-      <div class="results-actions">
-        <button class="btn btn-secondary" id="btn-export-excel" disabled><span>Exportar Excel</span></button>
-        <button class="btn btn-success" id="btn-download-zip" disabled><span>Baixar ZIP da lista</span></button>
-      </div>
     </div>
     <div class="results-filter-bar">
       <div class="input-group search-field">

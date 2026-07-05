@@ -6,6 +6,7 @@ const {
   syncSupabaseCertificate,
   listRemoteDocuments
 } = require('../services/supabase');
+const { supabaseRpc } = require('../services/supabaseClient');
 const {
   getCertificatesIndex,
   resolveCertificate,

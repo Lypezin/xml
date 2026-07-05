@@ -66,20 +66,6 @@ window.AppUtils = {
   },
 
   applyTheme(theme) {
-    const themeText = document.getElementById('theme-text');
-    const sunIcon = document.querySelector('.sun-icon');
-    const moonIcon = document.querySelector('.moon-icon');
-    
-    if (theme === 'light') {
-      document.body.classList.add('light-mode');
-      if (themeText) themeText.innerText = 'Modo Escuro';
-      if (sunIcon) sunIcon.style.display = 'none';
-      if (moonIcon) moonIcon.style.display = 'block';
-    } else {
-      document.body.classList.remove('light-mode');
-      if (themeText) themeText.innerText = 'Modo Claro';
-      if (sunIcon) sunIcon.style.display = 'block';
-      if (moonIcon) moonIcon.style.display = 'none';
-    }
+    document.body.classList.add('light-mode');
   }
 };
