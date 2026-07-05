@@ -1297,7 +1297,12 @@ begin
     from xml_nfse.documents
     where certificate_id = c.id
       and environment = 'producao'
-  ) d on true;
+  ) d on true
+  where exists (
+    select 1
+    from xml_nfse.certificate_secrets s
+    where s.certificate_id = c.id
+  );
 
   return coalesce(result_json, '[]'::jsonb);
 end;
