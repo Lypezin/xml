@@ -18,8 +18,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "adm-zip": "^0.5.10",
+    "archiver": "^8.0.0",
     "axios": "^1.6.8",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
     "node-forge": "^1.4.0"

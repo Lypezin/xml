@@ -1,5 +1,6 @@
 const express = require('express');
-const AdmZip = require('adm-zip');
+const archiver = require('archiver');
+const ExcelJS = require('exceljs');
 const axios = require('axios');
 const fs = require('fs');
 const https = require('https');
@@ -19,7 +20,8 @@ const { resolveCertificateForRequest } = require('../services/localCertificates'
 const { getCertificateBuffer, onlyDigits } = require('../utils/cert');
 
 const router = express.Router();
-const MAX_ZIP_DOCUMENTS = 300;
+const MAX_ZIP_DOCUMENTS = 1000;
+const MAX_EXCEL_DOCUMENTS = 5000;
 
 function clampListLimit(limit) {
   const parsed = Number(limit || 10);
@@ -85,7 +87,6 @@ async function resolveCertificateMetadataForList(certificateId) {
       : (certificates.find(item => item.active) || certificates[0]);
     if (cert) return cert;
   }
-
   return resolveCertificateForRequest(certificateId);
 }
 
@@ -197,18 +198,23 @@ router.get('/download-zip', async (req, res) => {
       return res.status(400).json({ error: 'Nenhum XML consultado nesta sessão para compactar.' });
     }
 
-    const zip = new AdmZip();
-    for (const cached of dedupeXmlItems(payloads)) {
-      zip.addFile(cached.fileName, Buffer.from(cached.xmlString, 'utf8'));
-    }
-
-    const zipBuffer = zip.toBuffer();
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_XMLs_Baixados.zip');
-    return res.send(zipBuffer);
+    
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.on('error', err => { throw err; });
+    archive.pipe(res);
+
+    for (const cached of dedupeXmlItems(payloads)) {
+      archive.append(Buffer.from(cached.xmlString, 'utf8'), { name: cached.fileName });
+    }
+
+    await archive.finalize();
   } catch (e) {
     console.error('Erro ao gerar arquivo ZIP:', e);
-    return res.status(500).json({ error: 'Erro ao gerar arquivo ZIP: ' + e.message });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Erro ao gerar arquivo ZIP: ' + e.message });
+    }
   }
 });
 
@@ -290,6 +296,122 @@ router.get('/storage-summary', async (req, res) => {
   }
 });
 
+router.get('/download-excel', async (req, res) => {
+  try {
+    const {
+      certificateId,
+      environment = 'producao',
+      startDate,
+      endDate,
+      cnpj,
+      partyCnpj,
+      search = '',
+      includeCancelled = 'false'
+    } = req.query;
+    
+    const cert = await resolveCertificateMetadataForList(certificateId);
+    if (!cert) {
+      return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
+    }
+
+    const receiverCnpj = onlyDigits(partyCnpj) || onlyDigits(cnpj) || onlyDigits(cert.cnpj);
+
+    const initialResult = await listRemoteDocuments({
+      certificateId: cert.id,
+      environment,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      cnpj: '',
+      partyCnpj: receiverCnpj,
+      partyRole: 'tomador',
+      search,
+      includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+      limit: 10,
+      offset: 0
+    });
+
+    const totalMatched = Number(initialResult.total || 0);
+    if (totalMatched === 0) {
+      return res.status(400).json({ success: false, error: 'Nenhum documento encontrado.' });
+    }
+
+    if (IS_VERCEL && totalMatched > MAX_EXCEL_DOCUMENTS) {
+      return res.status(400).json({
+        success: false,
+        error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} documentos. Para baixar Excel via rede, limite sua busca a no máximo ${MAX_EXCEL_DOCUMENTS.toLocaleString('pt-BR')} registros.`
+      });
+    }
+
+    const fullResult = await listRemoteDocuments({
+      certificateId: cert.id,
+      environment,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      cnpj: '',
+      partyCnpj: receiverCnpj,
+      partyRole: 'tomador',
+      search,
+      includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+      limit: totalMatched,
+      offset: 0
+    });
+    
+    const documents = dedupeXmlItems(fullResult.documents || []);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_Relatorio.xlsx');
+
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
+    const worksheet = workbook.addWorksheet('Notas NFS-e');
+
+    worksheet.columns = [
+      { header: 'NSU', key: 'nsu', width: 10 },
+      { header: 'Tipo', key: 'tipo', width: 15 },
+      { header: 'Chave', key: 'chave', width: 50 },
+      { header: 'Número NFS-e', key: 'numero', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Data Emissão', key: 'dataEmissao', width: 20 },
+      { header: 'CNPJ Prestador', key: 'cnpjPrestador', width: 20 },
+      { header: 'Nome Prestador', key: 'nomePrestador', width: 30 },
+      { header: 'CNPJ Tomador', key: 'cnpjTomador', width: 20 },
+      { header: 'Nome Tomador', key: 'nomeTomador', width: 30 },
+      { header: 'Valor Serviço', key: 'valor', width: 15 },
+      { header: 'Descrição', key: 'descricao', width: 50 },
+      { header: 'Município', key: 'municipio', width: 20 },
+      { header: 'Código Tributação', key: 'codigoTributacao', width: 20 }
+    ];
+
+    worksheet.getRow(1).font = { bold: true };
+
+    for (const doc of documents) {
+      const metadata = doc.metadata || {};
+      worksheet.addRow({
+        nsu: doc.nsu || '',
+        tipo: doc.tipo || metadata.tipo || '',
+        chave: String(doc.chave || metadata.chave || '').trim(),
+        numero: metadata.numeroNfse || doc.numeroNfse || '',
+        status: metadata.status || '',
+        dataEmissao: metadata.dataEmissaoCompleta || doc.dataEmissao || metadata.dataEmissao || '',
+        cnpjPrestador: metadata.prestadorCnpj || '',
+        nomePrestador: metadata.prestadorNome || metadata.prestadorRazaoSocial || '',
+        cnpjTomador: metadata.tomadorCnpj || '',
+        nomeTomador: metadata.tomadorNome || metadata.tomadorRazaoSocial || '',
+        valor: metadata.valorServico ? Number(metadata.valorServico) : 0,
+        descricao: metadata.descricao || '',
+        municipio: metadata.municipioPrestacao || '',
+        codigoTributacao: metadata.codigoTributacao || ''
+      }).commit();
+    }
+
+    await workbook.commit();
+  } catch (err) {
+    console.error('Erro ao gerar Excel:', err);
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+});
+
 router.post('/download-period-zip', async (req, res) => {
   try {
     const {
@@ -333,7 +455,7 @@ router.post('/download-period-zip', async (req, res) => {
     if (IS_VERCEL && totalMatched > MAX_ZIP_DOCUMENTS) {
       return res.status(400).json({
         success: false,
-        error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} XMLs. Para evitar travamentos ou limite de payload na Vercel, baixe no máximo ${MAX_ZIP_DOCUMENTS.toLocaleString('pt-BR')} por ZIP usando os filtros de período ou unidade.`
+        error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} XMLs. Para evitar travamentos de payload na Vercel, baixe no máximo ${MAX_ZIP_DOCUMENTS.toLocaleString('pt-BR')} por ZIP usando os filtros de período ou unidade.`
       });
     }
 
@@ -354,43 +476,47 @@ router.post('/download-period-zip', async (req, res) => {
       documents = dedupeXmlItems(fullResult.documents || []);
     }
 
-    const zip = new AdmZip();
-    let addedCount = 0;
-    const remoteTokens = documents.map(doc => getDocumentToken(doc)).filter(Boolean);
-    const remotePayloads = await getSupabaseXmlPayloads(remoteTokens);
-    const payloadByToken = new Map(remotePayloads.map(payload => [payload.token, payload]));
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_Periodo_XMLs.zip');
+    
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', err => { throw err; });
+    archive.pipe(res);
 
-    for (const doc of documents) {
-      const fileName = doc.file_name || doc.arquivo;
-      if (!fileName) continue;
+    const CHUNK_SIZE = 50;
+    const validDocs = documents.filter(doc => (doc.file_name || doc.arquivo) && getDocumentToken(doc));
+    
+    for (let i = 0; i < validDocs.length; i += CHUNK_SIZE) {
+      const chunk = validDocs.slice(i, i + CHUNK_SIZE);
+      const tokens = chunk.map(doc => getDocumentToken(doc));
+      
+      const remotePayloads = await getSupabaseXmlPayloads(tokens);
+      const payloadByToken = new Map(remotePayloads.map(payload => [payload.token, payload]));
 
-      const localPath = path.join(DOWNLOADS_DIR, fileName);
-      if (!IS_VERCEL && fs.existsSync(localPath)) {
-        zip.addLocalFile(localPath);
-        addedCount++;
-      } else {
-        const token = getDocumentToken(doc);
-        if (token) {
-          const payload = payloadByToken.get(token) || await getSupabaseXmlPayload(token);
+      for (const doc of chunk) {
+        const fileName = doc.file_name || doc.arquivo;
+        const localPath = path.join(DOWNLOADS_DIR, fileName);
+        
+        if (!IS_VERCEL && fs.existsSync(localPath)) {
+          archive.file(localPath, { name: fileName });
+        } else {
+          const payload = payloadByToken.get(getDocumentToken(doc));
           if (payload && payload.xml_content) {
-            zip.addFile(fileName, Buffer.from(payload.xml_content, 'utf8'));
-            addedCount++;
+            archive.append(Buffer.from(payload.xml_content, 'utf8'), { name: fileName });
           }
         }
       }
+      
+      remotePayloads.length = 0; 
+      payloadByToken.clear();
     }
 
-    if (addedCount === 0) {
-      return res.status(400).json({ success: false, error: 'Sem conteúdo XML local/remoto disponível.' });
-    }
-
-    const zipBuffer = zip.toBuffer();
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_Periodo_XMLs.zip');
-    return res.send(zipBuffer);
+    await archive.finalize();
   } catch (err) {
     console.error('Erro ao gerar ZIP:', err);
-    return res.status(500).json({ success: false, error: err.message });
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
   }
 });
 

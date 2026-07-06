@@ -234,8 +234,31 @@ window.AppEvents = {
     });
 
     if (btnExportExcel) {
-      btnExportExcel.addEventListener('click', () => {
-        window.AppUiTable.exportToExcel();
+      btnExportExcel.addEventListener('click', async () => {
+        window.AppUi.log('Gerando Excel com os XMLs persistidos da tabela atual...');
+        btnExportExcel.disabled = true;
+        if (btnDownloadZip) btnDownloadZip.disabled = true;
+        try {
+          const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
+          await window.AppApi.downloadExcel({
+            certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId,
+            environment: selectEnvironment ? selectEnvironment.value : 'producao',
+            startDate: downloadStartDate?.value || null,
+            endDate: downloadEndDate?.value || null,
+            cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+            partyCnpj: unitFilterParams.partyCnpj,
+            partyRole: unitFilterParams.partyRole,
+            search: historySearch ? historySearch.value.trim() : '',
+            includeCancelled: includeCancelled?.checked ? 'true' : 'false'
+          });
+          window.AppUi.log('Excel da tabela baixado com sucesso.', 'success');
+        } catch (err) {
+          window.AppUi.log(`Erro ao baixar Excel: ${err.message}`, 'error');
+        } finally {
+          const hasDocs = !window.AppUiTable?.documents?.length;
+          btnExportExcel.disabled = hasDocs;
+          if (btnDownloadZip) btnDownloadZip.disabled = hasDocs;
+        }
       });
     }
 
