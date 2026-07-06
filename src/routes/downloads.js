@@ -456,9 +456,15 @@ router.get('/download-excel', async (req, res) => {
       row.getCell('valor').alignment = { horizontal: 'right', vertical: 'middle' };
       row.getCell('codigoTributacao').alignment = { horizontal: 'center', vertical: 'middle' };
 
-      // Estilo de fonte e bordas inferiores de grade para todas as células
+      // Estilo de fonte e bordas inferiores de grade para todas as células (com riscado se cancelada)
+      const isCancelled = String(metadata.status || '').toLowerCase().includes('cancel');
       row.eachCell((cell) => {
-        cell.font = { name: 'Segoe UI', size: 10 };
+        cell.font = { 
+          name: 'Segoe UI', 
+          size: 10,
+          strikethrough: isCancelled,
+          color: isCancelled ? { argb: 'FF8C8C8C' } : undefined
+        };
         cell.border = {
           bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } }
         };

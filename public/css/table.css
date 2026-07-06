@@ -322,3 +322,22 @@
   animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   color: var(--text-muted);
 }
+
+/* Estilo para Notas Canceladas */
+.xml-item.cancelled-row {
+  opacity: 0.65;
+}
+
+.xml-item.cancelled-row .xml-main-cell,
+.xml-item.cancelled-row .xml-party-cell,
+.xml-item.cancelled-row .xml-service-cell,
+.xml-item.cancelled-row .xml-value-cell {
+  text-decoration: line-through;
+  text-decoration-color: var(--danger, #ef4444);
+}
+
+.xml-item.cancelled-row .btn,
+.xml-item.cancelled-row .tipo-badge,
+.xml-item.cancelled-row .status-badge {
+  text-decoration: none !important;
+}

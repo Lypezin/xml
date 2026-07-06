@@ -175,7 +175,8 @@ window.AppUiTable = {
 
     pageDocs.forEach(doc => {
       const item = document.createElement('article');
-      item.className = 'xml-item';
+      const isCancelled = String(doc.status || '').toLowerCase().includes('cancel');
+      item.className = isCancelled ? 'xml-item cancelled-row' : 'xml-item';
       const valorFormatado = window.AppUtils.formatCurrency(doc.valorServico);
       const isEvento = String(doc.tipo || '').toUpperCase() === 'EVENTO' || doc.status === 'Evento';
       const hasChave = doc.chave && doc.chave !== 'N/A';
