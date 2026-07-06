@@ -52,7 +52,7 @@ router.post('/fetch-batch', async (req, res) => {
       cnpjConsulta: requestCnpjConsulta,
       startNsu: requestStartNsu
     });
-    supabaseRunId = runResult ? runResult.run_id : null;
+    supabaseRunId = runResult ? (runResult.run_id || runResult) : null;
 
     const result = await executeSyncBatch({
       selectedCertificate,
