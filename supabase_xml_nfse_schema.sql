@@ -1280,7 +1280,7 @@ begin
     'active', c.active,
     'totalXmls', coalesce(
       (
-        select max(nsu)::integer 
+        select count(*)::integer 
         from xml_nfse.documents 
         where certificate_id = c.id and environment = 'producao'
       ), 0
