@@ -53,7 +53,7 @@ async function getSupabaseUserFromToken(token) {
   }
 }
 
-async function supabaseRpc(functionName, params = {}, retries = 3, delay = 2000) {
+async function supabaseRpc(functionName, params = {}, retries = 3, delay = 1000) {
   const config = getSupabaseConfig();
   if (!config) return null;
 
@@ -70,7 +70,7 @@ async function supabaseRpc(functionName, params = {}, retries = 3, delay = 2000)
             apikey: config.key,
             'Content-Type': 'application/json'
           },
-          timeout: 10000
+          timeout: 5000
         }
       );
       return res.data;

@@ -152,9 +152,10 @@ router.get('/dashboard-summary', async (req, res) => {
   }
 } catch (err) {
     console.error('Erro na rota /dashboard-summary:', err);
+    const detail = err.response?.data?.message || err.response?.data?.error || err.message;
     return res.status(500).json({
       success: false,
-      error: err.message
+      error: detail
     });
   }
 });
