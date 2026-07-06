@@ -105,6 +105,14 @@ window.AppEvents = {
         btnPause.disabled = false;
         if (window.btnResetNsu) window.btnResetNsu.disabled = true;
         
+        const overrideNsuCheckbox = document.getElementById('override-nsu');
+        const isOverridden = overrideNsuCheckbox && overrideNsuCheckbox.checked;
+
+        if (isOverridden) {
+          window.currentNsu = parseInt(inputStartNsu.value) || 0;
+          window.AppUi.log(`Varredura iniciada manualmente forçando o NSU inicial: ${window.currentNsu}.`);
+        }
+
         if (!wasPaused) {
           window.totalDownloaded = 0;
           const mode = 'asc';
@@ -115,13 +123,7 @@ window.AppEvents = {
           window.currentCrawlerCnpj = unitFilterParams.partyCnpj || inputCnpjConsulta.value.trim();
           window.AppUi.updateCrawlerUI();
 
-          const overrideNsuCheckbox = document.getElementById('override-nsu');
-          const isOverridden = overrideNsuCheckbox && overrideNsuCheckbox.checked;
-
-          if (isOverridden) {
-            window.currentNsu = parseInt(inputStartNsu.value) || 0;
-            window.AppUi.log(`Varredura iniciada manualmente forçando o NSU inicial: ${window.currentNsu}.`);
-          } else {
+          if (!isOverridden) {
             try {
               const savedNsu = await window.AppSyncController.loadSavedStartNsu();
               window.AppUi.log(`Iniciando varredura a partir do último NSU recebido salvo: ${savedNsu}.`);
@@ -138,7 +140,9 @@ window.AppEvents = {
             return;
           }
         } else {
-          window.AppUi.log(`Retomando busca a partir do NSU ${window.currentNsu}...`);
+          if (!isOverridden) {
+            window.AppUi.log(`Retomando busca a partir do NSU ${window.currentNsu}...`);
+          }
         }
         
         window.AppSyncController.runQueryLoop(runId);
