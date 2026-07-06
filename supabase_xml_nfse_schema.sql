@@ -130,6 +130,10 @@ create index if not exists sync_state_lookup_idx
 create index if not exists documents_certificate_environment_nsu_desc_idx
   on xml_nfse.documents (certificate_id, environment, nsu desc);
 
+create index if not exists documents_count_speed_idx
+  on xml_nfse.documents (certificate_id, environment)
+  where tipo <> 'EVENTO';
+
 create index if not exists documents_tomador_lookup_idx
   on xml_nfse.documents (certificate_id, environment, tomador_cnpj, nsu desc);
 
