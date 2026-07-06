@@ -1241,7 +1241,7 @@ begin
       first_seen_at,
       last_seen_at
     from filtered
-    order by nsu desc
+    order by data_emissao desc, nsu desc
     limit coalesce(p_limit, 100000)
     offset coalesce(p_offset, 0)
   )
