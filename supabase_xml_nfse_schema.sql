@@ -1105,6 +1105,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = xml_nfse, public, extensions
+set statement_timeout = 30000
 as $$
 declare
   result_data jsonb;
@@ -1144,21 +1145,6 @@ begin
       d.first_seen_at,
       d.last_seen_at
     from xml_nfse.documents d
-    left join (
-      select distinct on (certificate_id, environment, chave)
-        certificate_id, environment, chave, true as is_cancelled
-      from xml_nfse.documents
-      where certificate_id = p_certificate_id
-        and environment = p_environment
-        and tipo = 'EVENTO'
-        and (
-          lower(coalesce(metadata ->> 'status', '')) like '%cancel%'
-          or lower(coalesce(metadata ->> 'eventoDescricao', '')) like '%cancel%'
-          or lower(coalesce(metadata ->> 'eventoMotivo', '')) like '%cancel%'
-        )
-    ) ev on ev.certificate_id = d.certificate_id
-        and ev.environment = d.environment
-        and ev.chave = d.chave
     where d.certificate_id = p_certificate_id
       and d.environment = p_environment
       and d.tipo <> 'EVENTO'
@@ -1182,10 +1168,24 @@ begin
       and (
         p_include_cancelled
         or (
-          coalesce(ev.is_cancelled, false) is not true
-          and not (
+          not (
             lower(coalesce(d.metadata ->> 'status', '')) like '%cancel%'
             or lower(coalesce(d.tipo, '')) like '%cancel%'
+          )
+          and not exists (
+            select 1 
+            from xml_nfse.documents ev
+            where ev.certificate_id = d.certificate_id
+              and ev.environment = d.environment
+              and ev.chave = d.chave
+              and ev.tipo = 'EVENTO'
+              and ev.chave is not null
+              and ev.chave <> ''
+              and (
+                lower(coalesce(ev.metadata ->> 'status', '')) like '%cancel%'
+                or lower(coalesce(ev.metadata ->> 'eventoDescricao', '')) like '%cancel%'
+                or lower(coalesce(ev.metadata ->> 'eventoMotivo', '')) like '%cancel%'
+              )
           )
         )
       )
