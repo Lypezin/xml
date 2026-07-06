@@ -1281,8 +1281,14 @@ begin
     'totalXmls', coalesce(
       (
         select count(*)::integer 
-        from xml_nfse.documents 
-        where certificate_id = c.id and environment = 'producao'
+        from xml_nfse.documents d
+        where d.certificate_id = c.id 
+          and d.environment = 'producao'
+          and d.tipo <> 'EVENTO'
+          and (
+            regexp_replace(d.tomador_cnpj, '\D', '', 'g') = regexp_replace(c.cnpj, '\D', '', 'g')
+            or d.tomador_cnpj = c.cnpj
+          )
       ), 0
     ),
     'lastUpdate', coalesce(
