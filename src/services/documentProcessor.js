@@ -39,7 +39,8 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
       const meta = parseXmlMetadata(xmlString, docNsu);
       const tomadorCnpj = onlyDigits(meta.tomadorCnpj);
 
-      if (receivedOnly && receiverCnpj && tomadorCnpj !== receiverCnpj) {
+      const isDocEvento = String(docTipo || '').toUpperCase() === 'EVENTO';
+      if (receivedOnly && receiverCnpj && !isDocEvento && tomadorCnpj !== receiverCnpj) {
         console.log(`[SKIP] NSU ${docNsu} ignorado: documento nao recebido pelo CNPJ ${receiverCnpj}. Tomador extraido: ${tomadorCnpj || 'N/A'}.`);
         continue;
       }
