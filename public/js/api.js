@@ -328,5 +328,31 @@ window.AppApi = {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(objectUrl);
+  },
+
+  async downloadExcel(params) {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`/api/download-excel?${query}`);
+    if (!res.ok) {
+      let message = 'Erro ao baixar Excel.';
+      try {
+        const data = await res.json();
+        message = data.error || message;
+      } catch (err) {
+        message = await res.text() || message;
+      }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = params.startDate && params.endDate
+      ? `NFS-e_Relatorio_${params.startDate}_a_${params.endDate}.xlsx`
+      : 'NFS-e_Relatorio_Tabela.xlsx';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
   }
 };
