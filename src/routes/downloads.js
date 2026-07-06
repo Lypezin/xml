@@ -20,8 +20,8 @@ const { resolveCertificateForRequest } = require('../services/localCertificates'
 const { getCertificateBuffer, onlyDigits } = require('../utils/cert');
 
 const router = express.Router();
-const MAX_ZIP_DOCUMENTS = 1000;
-const MAX_EXCEL_DOCUMENTS = 5000;
+const MAX_ZIP_DOCUMENTS = 300;
+const MAX_EXCEL_DOCUMENTS = 1000;
 
 function clampListLimit(limit) {
   const parsed = Number(limit || 10);
@@ -202,7 +202,12 @@ router.get('/download-zip', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_XMLs_Baixados.zip');
     
     const archive = archiver('zip', { zlib: { level: 9 } });
-    archive.on('error', err => { throw err; });
+    archive.on('error', err => {
+      console.error('Archive stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Erro no stream do ZIP: ' + err.message });
+      }
+    });
     archive.pipe(res);
 
     for (const cached of dedupeXmlItems(payloads)) {
@@ -480,7 +485,12 @@ router.post('/download-period-zip', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_Periodo_XMLs.zip');
     
     const archive = archiver('zip', { zlib: { level: 6 } });
-    archive.on('error', err => { throw err; });
+    archive.on('error', err => {
+      console.error('Archive stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Erro no stream do ZIP: ' + err.message });
+      }
+    });
     archive.pipe(res);
 
     const CHUNK_SIZE = 50;
