@@ -1286,7 +1286,7 @@ begin
           and d.environment = 'producao'
           and d.tipo <> 'EVENTO'
           and (
-            regexp_replace(d.tomador_cnpj, '\D', '', 'g') = regexp_replace(c.cnpj, '\D', '', 'g')
+            d.tomador_cnpj = regexp_replace(c.cnpj, '\D', '', 'g')
             or d.tomador_cnpj = c.cnpj
           )
       ), 0
