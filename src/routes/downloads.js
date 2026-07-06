@@ -58,6 +58,29 @@ function dedupeXmlItems(items) {
   return Array.from(byKey.values());
 }
 
+function formatCnpj(cnpj) {
+  const clean = String(cnpj || '').replace(/\D/g, '');
+  if (clean.length !== 14) return cnpj || '';
+  return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+}
+
+function formatDateBr(dateStr) {
+  if (!dateStr || dateStr === 'N/A') return '';
+  const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateMatch) {
+    return `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}`;
+  }
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    const d = String(parsed.getDate()).padStart(2, '0');
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const y = parsed.getFullYear();
+    return `${d}/${m}/${y}`;
+  }
+  return dateStr;
+}
+
+
 function getDanfseBaseUrl(environment) {
   return environment === 'homologacao'
     ? 'https://adn.producaorestrita.nfse.gov.br/danfse'
@@ -370,42 +393,90 @@ router.get('/download-excel', async (req, res) => {
     const worksheet = workbook.addWorksheet('Notas NFS-e');
 
     worksheet.columns = [
-      { header: 'NSU', key: 'nsu', width: 10 },
-      { header: 'Tipo', key: 'tipo', width: 15 },
+      { header: 'NSU', key: 'nsu', width: 12 },
+      { header: 'Tipo', key: 'tipo', width: 12 },
       { header: 'Chave', key: 'chave', width: 50 },
       { header: 'Número NFS-e', key: 'numero', width: 15 },
       { header: 'Status', key: 'status', width: 15 },
-      { header: 'Data Emissão', key: 'dataEmissao', width: 20 },
-      { header: 'CNPJ Prestador', key: 'cnpjPrestador', width: 20 },
-      { header: 'Nome Prestador', key: 'nomePrestador', width: 30 },
-      { header: 'CNPJ Tomador', key: 'cnpjTomador', width: 20 },
-      { header: 'Nome Tomador', key: 'nomeTomador', width: 30 },
-      { header: 'Valor Serviço', key: 'valor', width: 15 },
+      { header: 'Data Emissão', key: 'dataEmissao', width: 15 },
+      { header: 'CNPJ Prestador', key: 'cnpjPrestador', width: 22 },
+      { header: 'Nome Prestador', key: 'nomePrestador', width: 35 },
+      { header: 'CNPJ Tomador', key: 'cnpjTomador', width: 22 },
+      { header: 'Nome Tomador', key: 'nomeTomador', width: 35 },
+      { header: 'Valor Serviço', key: 'valor', width: 18, style: { numFormat: '"R$ " #,##0.00' } },
       { header: 'Descrição', key: 'descricao', width: 50 },
       { header: 'Município', key: 'municipio', width: 20 },
       { header: 'Código Tributação', key: 'codigoTributacao', width: 20 }
     ];
 
-    worksheet.getRow(1).font = { bold: true };
+    // Estilizar a linha de cabeçalho
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 28;
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Segoe UI', size: 11 };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1F4E78' } // Azul corporativo escuro
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    headerRow.commit();
 
+    let rowIdx = 2;
     for (const doc of documents) {
       const metadata = doc.metadata || {};
-      worksheet.addRow({
+      const row = worksheet.addRow({
         nsu: doc.nsu || '',
         tipo: doc.tipo || metadata.tipo || '',
         chave: String(doc.chave || metadata.chave || '').trim(),
         numero: metadata.numeroNfse || doc.numeroNfse || '',
         status: metadata.status || '',
-        dataEmissao: metadata.dataEmissaoCompleta || doc.dataEmissao || metadata.dataEmissao || '',
-        cnpjPrestador: metadata.prestadorCnpj || '',
+        dataEmissao: formatDateBr(metadata.dataEmissaoCompleta || doc.dataEmissao || metadata.dataEmissao || ''),
+        cnpjPrestador: formatCnpj(metadata.prestadorCnpj),
         nomePrestador: metadata.prestadorNome || metadata.prestadorRazaoSocial || '',
-        cnpjTomador: metadata.tomadorCnpj || '',
+        cnpjTomador: formatCnpj(metadata.tomadorCnpj),
         nomeTomador: metadata.tomadorNome || metadata.tomadorRazaoSocial || '',
         valor: metadata.valorServico ? Number(metadata.valorServico) : 0,
         descricao: metadata.descricao || '',
         municipio: metadata.municipioPrestacao || '',
         codigoTributacao: metadata.codigoTributacao || ''
-      }).commit();
+      });
+
+      row.height = 20;
+
+      // Alinhamento específico por tipo de coluna
+      row.getCell('nsu').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('tipo').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('numero').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('status').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('dataEmissao').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('cnpjPrestador').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('cnpjTomador').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('valor').alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell('codigoTributacao').alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Estilo de fonte e bordas inferiores de grade para todas as células
+      row.eachCell((cell) => {
+        cell.font = { name: 'Segoe UI', size: 10 };
+        cell.border = {
+          bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+        };
+      });
+
+      // Zebra striping
+      if (rowIdx % 2 === 0) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF9FAFB' } // Cinza/azul claro e moderno
+          };
+        });
+      }
+
+      row.commit();
+      rowIdx++;
     }
 
     await workbook.commit();
