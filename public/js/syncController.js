@@ -482,6 +482,30 @@ window.AppSyncController = {
 
       // Calcular Métricas Gerais
       const citiesList = data.summary || [];
+      
+      // Ordenação específica solicitada pelo usuário
+      const orderMap = {
+        'sao paulo': 1,
+        'salvador': 2,
+        'sorocaba': 3,
+        'sao bernardo': 4,
+        'guarulhos': 5,
+        'santo andre': 6,
+        'manaus': 7
+      };
+      const normalizeName = (name) => {
+        return String(name || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .trim();
+      };
+      citiesList.sort((a, b) => {
+        const nameA = normalizeName(this.cleanFilenameToCityName(a.filename));
+        const nameB = normalizeName(this.cleanFilenameToCityName(b.filename));
+        return (orderMap[nameA] || 99) - (orderMap[nameB] || 99);
+      });
+
       const totalCities = citiesList.length;
       const activeCities = citiesList.filter(c => c.active).length;
       const totalXmls = citiesList.reduce((sum, c) => sum + Number(c.totalXmls || 0), 0);
