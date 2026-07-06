@@ -59,7 +59,13 @@
         <div class="operation-intro">
           <span class="eyebrow">Varredura</span>
           <h2>Sincronização por NSU</h2>
-          <input type="number" id="start-nsu" value="0" min="0" style="display: none;">
+          <div class="manual-nsu-override" style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+            <label for="override-nsu" style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; color: var(--text-secondary);">
+              <input type="checkbox" id="override-nsu">
+              <span>Forçar NSU inicial:</span>
+            </label>
+            <input type="number" id="start-nsu" value="0" min="0" style="width: 100px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--card-border); background: var(--surface-muted); color: var(--text-primary); font-size: 12px;">
+          </div>
         </div>
         <div class="action-buttons">
           <button class="btn btn-success" id="btn-start" disabled><span>Iniciar varredura</span></button>

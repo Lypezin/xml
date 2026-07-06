@@ -115,13 +115,21 @@ window.AppEvents = {
           window.currentCrawlerCnpj = unitFilterParams.partyCnpj || inputCnpjConsulta.value.trim();
           window.AppUi.updateCrawlerUI();
 
-          try {
-            const savedNsu = await window.AppSyncController.loadSavedStartNsu();
-            window.AppUi.log(`Iniciando varredura a partir do último NSU recebido salvo: ${savedNsu}.`);
-          } catch (err) {
-            window.currentNsu = 0;
-            inputStartNsu.value = 0;
-            window.AppUi.log(`Não foi possível carregar o último NSU salvo (${err.message}). Iniciando do NSU 0.`, 'warning');
+          const overrideNsuCheckbox = document.getElementById('override-nsu');
+          const isOverridden = overrideNsuCheckbox && overrideNsuCheckbox.checked;
+
+          if (isOverridden) {
+            window.currentNsu = parseInt(inputStartNsu.value) || 0;
+            window.AppUi.log(`Varredura iniciada manualmente forçando o NSU inicial: ${window.currentNsu}.`);
+          } else {
+            try {
+              const savedNsu = await window.AppSyncController.loadSavedStartNsu();
+              window.AppUi.log(`Iniciando varredura a partir do último NSU recebido salvo: ${savedNsu}.`);
+            } catch (err) {
+              window.currentNsu = 0;
+              inputStartNsu.value = 0;
+              window.AppUi.log(`Não foi possível carregar o último NSU salvo (${err.message}). Iniciando do NSU 0.`, 'warning');
+            }
           }
 
           if (mode === 'desc' && window.currentNsu === 0) {
