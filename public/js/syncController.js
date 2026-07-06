@@ -414,6 +414,11 @@ window.AppSyncController = {
 
     } catch (err) {
       if (!this.isActiveQueryRun(runId)) return;
+      const isTransientNetwork = err.message === 'Failed to fetch' || /fetch|network|connection|load failed|timeout/i.test(err.message);
+      if (isTransientNetwork) {
+        this.scheduleRetry(runId, requestNsu, `Falha de conexão: ${err.message}`);
+        return;
+      }
       window.AppUi.log(`Erro crítico: ${err.message}`, 'error');
       this.stopQuerying();
     }
