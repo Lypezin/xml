@@ -1273,24 +1273,22 @@ declare
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  select jsonb_agg(jsonb_build_object(
+  select coalesce(jsonb_agg(jsonb_build_object(
     'certificateId', c.id,
     'filename', c.filename,
     'cnpj', c.cnpj,
     'active', c.active,
-    'totalXmls', coalesce(d.total_count, 0),
+    'totalXmls', coalesce(
+      (
+        select max(nsu)::integer 
+        from xml_nfse.documents 
+        where certificate_id = c.id and environment = 'producao'
+      ), 0
+    ),
     'lastUpdate', coalesce(
       (
         select coalesce(
           last_doc.metadata ->> 'dataEmissaoCompleta',
-          (
-            select substring(p.xml_content from '<(?:[a-zA-Z0-9]+:)?(?:dhEmit|dhEmi|dhProc|DataEmissao|dataEmissao)>([^<]+)')
-            from xml_nfse.xml_payloads p
-            where p.certificate_id = c.id
-              and p.environment = 'producao'
-              and p.nsu = last_doc.nsu
-            limit 1
-          ),
           case when last_doc.data_emissao is not null then to_char(last_doc.data_emissao, 'YYYY-MM-DD') else to_char(last_doc.first_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS') end
         )
         from (
@@ -1298,29 +1296,22 @@ begin
           from xml_nfse.documents
           where certificate_id = c.id
             and environment = 'producao'
-            and tipo <> 'EVENTO'
-          order by data_emissao desc nulls last, nsu desc
+          order by nsu desc
           limit 1
         ) last_doc
       ),
       'Sem XMLs'
     )
-  ))
+  )), '[]'::jsonb)
   into result_json
   from xml_nfse.certificates c
-  left join lateral (
-    select count(*)::integer as total_count
-    from xml_nfse.documents
-    where certificate_id = c.id
-      and environment = 'producao'
-  ) d on true
   where exists (
     select 1
     from xml_nfse.certificate_secrets s
     where s.certificate_id = c.id
   );
 
-  return coalesce(result_json, '[]'::jsonb);
+  return result_json;
 end;
 $$;
 
