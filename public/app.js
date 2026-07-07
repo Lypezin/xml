@@ -75,13 +75,22 @@ async function loadAllComponents() {
     { id: 'view-regras-container', path: 'components/rules-panel.html' }
   ];
 
-  for (const component of components) {
+  const promises = components.map(async (component) => {
     const el = document.getElementById(component.id);
     if (el) {
       const res = await fetch(component.path);
-      el.outerHTML = await res.text();
+      const html = await res.text();
+      return { el, html };
     }
-  }
+    return null;
+  });
+
+  const results = await Promise.all(promises);
+  results.forEach(result => {
+    if (result) {
+      result.el.outerHTML = result.html;
+    }
+  });
 }
 
 // Inicialização do Bootstrap

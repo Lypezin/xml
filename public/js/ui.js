@@ -155,11 +155,19 @@ window.AppUi = {
       if (nav) nav.classList.remove('active');
     });
     [viewDashboardContent, viewDownloadContent, viewCertificadoContent, viewRegrasContent].forEach(content => {
-      if (content) content.style.display = 'none';
+      if (content) {
+        content.classList.remove('active-tab');
+        content.style.display = 'none';
+      }
     });
 
     if (activeNav) activeNav.classList.add('active');
-    if (activeContent) activeContent.style.display = 'block';
+    if (activeContent) {
+      activeContent.style.display = 'block';
+      // Trigger a reflow to start transition
+      void activeContent.offsetHeight;
+      activeContent.classList.add('active-tab');
+    }
     if (pageTitle) pageTitle.innerText = title;
     if (pageSubtitle) pageSubtitle.innerText = subtitle;
 
@@ -170,6 +178,7 @@ window.AppUi = {
     if (activeContent === viewDownloadContent && window.AppSyncController) {
       window.AppSyncController.loadPersistedHistory();
       window.AppSyncController.loadStorageSummary();
+      window.AppSyncController.loadSavedStartNsu();
     }
   },
 

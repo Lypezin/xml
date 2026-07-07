@@ -422,3 +422,21 @@ h1, h2, h3, h4, h5, h6,
   justify-content: space-between;
   margin-bottom: 12px;
 }
+
+/* Tab fade-in & slide-up animations */
+#view-dashboard-content,
+#view-download-content,
+#view-certificado-content,
+#view-regras-content {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#view-dashboard-content.active-tab,
+#view-download-content.active-tab,
+#view-certificado-content.active-tab,
+#view-regras-content.active-tab {
+  opacity: 1;
+  transform: translateY(0);
+}
