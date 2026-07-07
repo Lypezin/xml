@@ -158,6 +158,7 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
 
   let newDocuments = 0;
   let existingDocuments = 0;
+  const insertedKeys = [];
 
   for (const doc of processedDocs) {
     const savedDoc = await syncSupabaseDocument({
@@ -167,6 +168,9 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     });
     if (savedDoc?.inserted) {
       newDocuments += 1;
+      if (doc.chave && doc.chave !== 'N/A' && String(doc.tipo).toUpperCase() !== 'EVENTO') {
+        insertedKeys.push(doc.chave);
+      }
     } else {
       existingDocuments += 1;
     }
@@ -197,7 +201,8 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     maiorDataLote,
     novos: newDocuments,
     existentes: existingDocuments,
-    documentos: processedDocs
+    documentos: processedDocs,
+    insertedKeys
   };
 }
 

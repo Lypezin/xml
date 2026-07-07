@@ -20,8 +20,10 @@ const { resolveCertificateForRequest } = require('../services/localCertificates'
 const { getCertificateBuffer, onlyDigits } = require('../utils/cert');
 
 const router = express.Router();
-const MAX_ZIP_DOCUMENTS = 300;
-const MAX_EXCEL_DOCUMENTS = 1000;
+const MAX_ZIP_DOCUMENTS_VERCEL = 1000;
+const MAX_ZIP_DOCUMENTS_LOCAL = 50000;
+const MAX_EXCEL_DOCUMENTS_VERCEL = 20000;
+const MAX_EXCEL_DOCUMENTS_LOCAL = 100000;
 
 function clampListLimit(limit) {
   const parsed = Number(limit || 10);
@@ -363,10 +365,11 @@ router.get('/download-excel', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Nenhum documento encontrado.' });
     }
 
-    if (IS_VERCEL && totalMatched > MAX_EXCEL_DOCUMENTS) {
+    const limitMax = IS_VERCEL ? MAX_EXCEL_DOCUMENTS_VERCEL : MAX_EXCEL_DOCUMENTS_LOCAL;
+    if (totalMatched > limitMax) {
       return res.status(400).json({
         success: false,
-        error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} documentos. Para baixar Excel via rede, limite sua busca a no máximo ${MAX_EXCEL_DOCUMENTS.toLocaleString('pt-BR')} registros.`
+        error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} documentos. Para baixar Excel, limite sua busca a no máximo ${limitMax.toLocaleString('pt-BR')} registros.`
       });
     }
 
@@ -534,10 +537,11 @@ router.post('/download-period-zip', async (req, res) => {
     }
 
     const totalMatched = Number(result.total || documents.length);
-    if (IS_VERCEL && totalMatched > MAX_ZIP_DOCUMENTS) {
+    const limitMax = IS_VERCEL ? MAX_ZIP_DOCUMENTS_VERCEL : MAX_ZIP_DOCUMENTS_LOCAL;
+    if (totalMatched > limitMax) {
       return res.status(400).json({
         success: false,
-        error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} XMLs. Para evitar travamentos de payload na Vercel, baixe no máximo ${MAX_ZIP_DOCUMENTS.toLocaleString('pt-BR')} por ZIP usando os filtros de período ou unidade.`
+        error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} XMLs. Limite sua busca a no máximo ${limitMax.toLocaleString('pt-BR')} por ZIP.`
       });
     }
 
@@ -584,13 +588,20 @@ router.post('/download-period-zip', async (req, res) => {
         const fileName = doc.file_name || doc.arquivo;
         const localPath = path.join(DOWNLOADS_DIR, fileName);
         
+        let xmlContent = null;
         if (!IS_VERCEL && fs.existsSync(localPath)) {
-          archive.file(localPath, { name: fileName });
+          xmlContent = fs.readFileSync(localPath, 'utf8');
         } else {
           const payload = payloadByToken.get(getDocumentToken(doc));
           if (payload && payload.xml_content) {
-            archive.append(Buffer.from(payload.xml_content, 'utf8'), { name: fileName });
+            xmlContent = payload.xml_content;
           }
+        }
+
+        if (xmlContent) {
+          // Minificar XML para economizar tamanho de payload e banda
+          const minifiedXml = xmlContent.replace(/>\s+</g, '><').trim();
+          archive.append(Buffer.from(minifiedXml, 'utf8'), { name: fileName });
         }
       }
       

@@ -1212,36 +1212,54 @@ begin
   ),
   page_rows as (
     select
-      id,
-      certificate_id,
-      environment,
-      nsu,
-      tipo,
-      chave,
-      numero_nfse,
-      data_emissao,
-      prestador_cnpj,
-      prestador_nome,
-      tomador_cnpj,
-      tomador_nome,
-      valor_servico,
-      municipio_prestacao,
-      codigo_tributacao,
-      file_name,
-      xml_sha256,
+      d.id,
+      d.certificate_id,
+      d.environment,
+      d.nsu,
+      d.tipo,
+      d.chave,
+      d.numero_nfse,
+      d.data_emissao,
+      d.prestador_cnpj,
+      d.prestador_nome,
+      d.tomador_cnpj,
+      d.tomador_nome,
+      d.valor_servico,
+      d.municipio_prestacao,
+      d.codigo_tributacao,
+      d.file_name,
+      d.xml_sha256,
       metadata || jsonb_strip_nulls(jsonb_build_object(
-        'prestadorCnpj', prestador_cnpj,
-        'prestadorNome', prestador_nome,
-        'tomadorCnpj', tomador_cnpj,
-        'tomadorNome', tomador_nome,
-        'valorServico', valor_servico::text,
-        'municipioPrestacao', municipio_prestacao,
-        'codigoTributacao', codigo_tributacao
+        'prestadorCnpj', d.prestador_cnpj,
+        'prestadorNome', d.prestador_nome,
+        'tomadorCnpj', d.tomador_cnpj,
+        'tomadorNome', d.tomador_nome,
+        'valorServico', d.valor_servico::text,
+        'municipioPrestacao', d.municipio_prestacao,
+        'codigoTributacao', d.codigo_tributacao,
+        'status', case
+          when exists (
+            select 1 
+            from xml_nfse.documents ev
+            where ev.certificate_id = d.certificate_id
+              and ev.environment = d.environment
+              and ev.chave = d.chave
+              and ev.tipo = 'EVENTO'
+              and ev.chave is not null
+              and ev.chave <> ''
+              and (
+                lower(coalesce(ev.metadata ->> 'status', '')) like '%cancel%'
+                or lower(coalesce(ev.metadata ->> 'eventoDescricao', '')) like '%cancel%'
+                or lower(coalesce(ev.metadata ->> 'eventoMotivo', '')) like '%cancel%'
+              )
+          ) then 'Cancelada'
+          else coalesce(d.metadata ->> 'status', 'Autorizada')
+        end
       )) as metadata,
-      first_seen_at,
-      last_seen_at
-    from filtered
-    order by data_emissao desc, nsu desc
+      d.first_seen_at,
+      d.last_seen_at
+    from filtered d
+    order by d.data_emissao desc, d.nsu desc
     limit coalesce(p_limit, 100000)
     offset coalesce(p_offset, 0)
   )

@@ -303,7 +303,7 @@ window.AppEvents = {
       });
     }
 
-    selectEnvironment.addEventListener('change', () => {
+    selectEnvironment.addEventListener('change', async () => {
       const envText = selectEnvironment.value === 'producao' ? 'Produção' : 'Homologação';
       const statAmbiente = document.getElementById('stat-ambiente');
       if (statAmbiente) {
@@ -315,22 +315,30 @@ window.AppEvents = {
       }
       if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
         window.AppSyncController.loadPersistedHistory();
+        await window.AppSyncController.loadSavedStartNsu();
       }
     });
 
     if (inputCnpjConsulta) {
-      inputCnpjConsulta.addEventListener('change', () => window.AppSyncController.loadPersistedHistory());
+      inputCnpjConsulta.addEventListener('change', async () => {
+        window.AppSyncController.loadPersistedHistory();
+        await window.AppSyncController.loadSavedStartNsu();
+      });
     }
 
     if (unitFilter) {
-      unitFilter.addEventListener('change', () => {
+      unitFilter.addEventListener('change', async () => {
         window.AppSyncController.fillUnitFormFromSelection();
         window.AppSyncController.loadPersistedHistory();
+        await window.AppSyncController.loadSavedStartNsu();
       });
     }
 
     if (unitPartyRole) {
-      unitPartyRole.addEventListener('change', () => window.AppSyncController.loadPersistedHistory());
+      unitPartyRole.addEventListener('change', async () => {
+        window.AppSyncController.loadPersistedHistory();
+        await window.AppSyncController.loadSavedStartNsu();
+      });
     }
 
     if (historySearch) {

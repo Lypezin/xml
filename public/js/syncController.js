@@ -205,6 +205,7 @@ window.AppSyncController = {
         if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
           this.loadPersistedHistory();
           this.loadStorageSummary();
+          await this.loadSavedStartNsu();
         }
       } else {
         certUploadState.classList.add('active');
