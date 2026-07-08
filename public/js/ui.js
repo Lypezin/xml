@@ -9,7 +9,28 @@ window.AppUi = {
     const timestamp = new Date().toLocaleTimeString();
     const line = document.createElement('div');
     line.className = `log-line ${type}`;
-    line.innerText = `[${timestamp}] ${message}`;
+
+    let icon = '●';
+    if (type === 'success') icon = '✔';
+    if (type === 'warning') icon = '▲';
+    if (type === 'error') icon = '✖';
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'log-time';
+    timeSpan.innerText = `[${timestamp}]`;
+
+    const badgeSpan = document.createElement('span');
+    badgeSpan.className = `log-badge ${type}`;
+    badgeSpan.innerText = icon;
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'log-text';
+    textSpan.innerText = message;
+
+    line.appendChild(timeSpan);
+    line.appendChild(badgeSpan);
+    line.appendChild(textSpan);
+
     if (window.consoleLog) {
       consoleLog.appendChild(line);
       consoleLog.scrollTop = consoleLog.scrollHeight;
