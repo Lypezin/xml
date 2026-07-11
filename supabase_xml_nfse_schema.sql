@@ -1620,7 +1620,7 @@ declare
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  -- Uma agregacao por certificado (evita N subqueries correlacionadas)
+  -- total_xmls em agg + ultima NFS-e com horario (dataEmissaoCompleta)
   select coalesce(jsonb_agg(row_to_json(t)::jsonb), '[]'::jsonb)
   into result_json
   from (
@@ -1635,17 +1635,42 @@ begin
     inner join xml_nfse.certificate_secrets s on s.certificate_id = c.id
     left join (
       select
-        d.certificate_id,
-        count(*)::integer as total_xmls,
+        latest.certificate_id,
+        counts.total_xmls,
         coalesce(
-          to_char(max(d.data_emissao), 'YYYY-MM-DD'),
-          to_char(max(d.first_seen_at), 'YYYY-MM-DD"T"HH24:MI:SS'),
+          nullif(trim(latest.metadata ->> 'dataEmissaoCompleta'), ''),
+          nullif(trim(latest.metadata ->> 'dataEmissao'), ''),
+          to_char(latest.data_emissao, 'YYYY-MM-DD'),
+          to_char(
+            latest.first_seen_at at time zone 'America/Sao_Paulo',
+            'YYYY-MM-DD"T"HH24:MI:SS'
+          ),
           'Sem XMLs'
         ) as last_update
-      from xml_nfse.documents d
-      where d.environment = 'producao'
-        and d.tipo <> 'EVENTO'
-      group by d.certificate_id
+      from (
+        select distinct on (d.certificate_id)
+          d.certificate_id,
+          d.data_emissao,
+          d.first_seen_at,
+          d.metadata,
+          d.nsu
+        from xml_nfse.documents d
+        where d.environment = 'producao'
+          and d.tipo <> 'EVENTO'
+        order by
+          d.certificate_id,
+          d.data_emissao desc nulls last,
+          d.nsu desc
+      ) latest
+      inner join (
+        select
+          d.certificate_id,
+          count(*)::integer as total_xmls
+        from xml_nfse.documents d
+        where d.environment = 'producao'
+          and d.tipo <> 'EVENTO'
+        group by d.certificate_id
+      ) counts on counts.certificate_id = latest.certificate_id
     ) agg on agg.certificate_id = c.id
     order by c.active desc, c.filename
   ) t;

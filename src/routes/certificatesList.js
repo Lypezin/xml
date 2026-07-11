@@ -17,6 +17,36 @@ const { getEnvCertificate } = require('../utils/cert');
 
 const router = express.Router();
 
+/** Formata data/hora da ultima NFS-e para o card do dashboard. */
+function formatDashboardLastUpdate(raw) {
+  let lastUpdate = raw || 'Sem XMLs';
+  if (!lastUpdate || lastUpdate === 'Sem XMLs') return 'Sem XMLs';
+
+  const rawStr = String(lastUpdate).trim();
+
+  // ISO com hora: 2026-07-10T13:36:01-03:00 ou 2026-07-10T13:36:01.000Z
+  const isoMatch = rawStr.match(
+    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/
+  );
+  if (isoMatch) {
+    const [, y, m, d, hh, mm] = isoMatch;
+    return `${d}/${m}/${y} às ${hh}:${mm}`;
+  }
+
+  // So data: 2026-07-10
+  const dateOnly = rawStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) {
+    return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
+  }
+
+  // Ja formatado (dd/mm/yyyy ...)
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(rawStr)) {
+    return rawStr;
+  }
+
+  return rawStr;
+}
+
 router.get('/certificate-status', async (req, res) => {
   if (useRemoteCertificateStorage()) {
     const certificates = await listRemoteCertificates();
@@ -108,34 +138,13 @@ router.get('/dashboard-summary', async (req, res) => {
       const summaryData = await supabaseRpc('xml_nfse_get_dashboard_summary', {});
       if (Array.isArray(summaryData)) {
         const summary = summaryData.map(city => {
-          let lastUpdate = city.lastUpdate || 'Sem XMLs';
-          if (lastUpdate && lastUpdate !== 'Sem XMLs') {
-            const rawStr = String(lastUpdate).trim();
-            if (rawStr.includes('T')) {
-              const parts = rawStr.split('T');
-              const datePart = parts[0];
-              const timePart = parts[1].split(/[-+Z]/)[0];
-              const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-              if (match) {
-                lastUpdate = `${match[3]}/${match[2]}/${match[1]} às ${timePart}`;
-              } else {
-                lastUpdate = `${datePart} às ${timePart}`;
-              }
-            } else {
-              const match = rawStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-              if (match) {
-                lastUpdate = `${match[3]}/${match[2]}/${match[1]}`;
-              }
-            }
-          }
-
           return {
             certificateId: city.certificateId,
             filename: city.filename,
             cnpj: city.cnpj,
             active: Boolean(city.active),
             totalXmls: Number(city.totalXmls || 0),
-            lastUpdate
+            lastUpdate: formatDashboardLastUpdate(city.lastUpdate)
           };
         });
 
