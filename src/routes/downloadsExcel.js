@@ -15,6 +15,23 @@ const { styleDataRow } = require('../utils/excelRowStyle');
 
 const router = express.Router();
 
+/** YYYY-MM-DD -> DD-MM-YYYY para nome de arquivo legível */
+function formatDateForFileName(value) {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return raw.replace(/[^\w.-]+/g, '_');
+  return `${match[3]}-${match[2]}-${match[1]}`;
+}
+
+function buildExcelFileName(startDate, endDate) {
+  const start = formatDateForFileName(startDate);
+  const end = formatDateForFileName(endDate);
+  if (start && end) return `Notas_NFSe_${start}_a_${end}.xlsx`;
+  if (start) return `Notas_NFSe_desde_${start}.xlsx`;
+  if (end) return `Notas_NFSe_ate_${end}.xlsx`;
+  return 'Notas_NFSe.xlsx';
+}
+
 router.get('/download-excel', async (req, res) => {
   try {
     const {
@@ -67,11 +84,11 @@ router.get('/download-excel', async (req, res) => {
     });
 
     const documents = dedupeXmlItems(fullResult.documents || []);
-    const periodLabel = [startDate, endDate].filter(Boolean).join('_a_') || 'filtro';
+    const fileName = buildExcelFileName(startDate, endDate);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="NFS-e_Relatorio_${periodLabel}.xlsx"`
+      `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
     );
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
@@ -82,18 +99,9 @@ router.get('/download-excel', async (req, res) => {
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('Notas NFS-e', {
-      views: [{ state: 'frozen', ySplit: 2, showGridLines: false }],
+      views: [{ state: 'frozen', ySplit: 1, showGridLines: false }],
       properties: { defaultRowHeight: 18 }
     });
-
-    worksheet.mergeCells('A1:N1');
-    const titleCell = worksheet.getCell('A1');
-    titleCell.value = `Relatório NFS-e · ${documents.length} nota(s)${startDate || endDate ? ` · ${startDate || '…'} a ${endDate || '…'}` : ''}`;
-    titleCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FF0F172A' } };
-    titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
-    worksheet.getRow(1).height = 30;
-    worksheet.getRow(1).commit();
 
     worksheet.columns = [
       { key: 'nsu', width: 12 },
@@ -133,8 +141,8 @@ router.get('/download-excel', async (req, res) => {
     headerRow.commit();
 
     worksheet.autoFilter = {
-      from: { row: 2, column: 1 },
-      to: { row: 2 + documents.length, column: 14 }
+      from: { row: 1, column: 1 },
+      to: { row: 1 + documents.length, column: 14 }
     };
 
     let dataRow = 0;
