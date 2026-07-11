@@ -55,6 +55,13 @@ window.AppUiElements = {
     window.crawlerVisitedCount = document.getElementById('crawler-visited-count');
     window.crawlerQueueCount = document.getElementById('crawler-queue-count');
     window.consoleLog = document.getElementById('console-log');
+    window.consoleLogDrawer = document.getElementById('console-log-drawer');
+    window.consoleLogHint = document.getElementById('console-log-hint');
+    if (window.consoleLogDrawer) {
+      consoleLogDrawer.addEventListener('toggle', () => {
+        if (window.AppUi?._updateLogHint) window.AppUi._updateLogHint();
+      });
+    }
 
     window.btnClearDownloads = document.getElementById('btn-clear-downloads');
     window.btnExportExcel = document.getElementById('btn-export-excel');

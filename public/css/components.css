@@ -183,18 +183,63 @@ body.light-mode .file-name-preview {
   min-height: 190px;
 }
 
+.console-log-drawer {
+  margin-top: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--surface-muted, rgba(0, 0, 0, 0.03));
+  overflow: hidden;
+}
+
+.console-log-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.console-log-summary::-webkit-details-marker {
+  display: none;
+}
+
+.console-log-summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.console-log-drawer[open] > .console-log-summary::before {
+  transform: rotate(90deg);
+}
+
+.console-log-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 .console-log {
   background: #09090b;
-  border: 1px solid var(--card-border);
-  border-radius: 8px;
+  border: none;
+  border-top: 1px solid #27272a;
+  border-radius: 0;
   padding: 16px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11.5px;
   color: #e4e4e7;
   overflow-y: auto;
   height: 220px;
-  min-height: 220px;
-  margin-top: 14px;
+  min-height: 160px;
+  margin-top: 0;
   flex-grow: 1;
   display: flex;
   flex-direction: column;

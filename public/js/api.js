@@ -363,6 +363,20 @@ window.AppApi = {
     }, { softMs: 300000 });
   },
 
+  async getDocumentTotals(params) {
+    const qs = new URLSearchParams(params).toString();
+    const key = `totals:${qs}`;
+    const cache = window.AppDataCache;
+    if (!cache) {
+      const res = await fetch(`/api/document-totals?${qs}`);
+      return this._jsonOrThrow(res, 'Falha ao obter totais.');
+    }
+    return cache.getOrFetch(key, 60000, async () => {
+      const res = await fetch(`/api/document-totals?${qs}`);
+      return this._jsonOrThrow(res, 'Falha ao obter totais.');
+    }, { softMs: 300000 });
+  },
+
   async scanCancellations(body) {
     const res = await fetch('/api/scan-cancellations', {
       method: 'POST',

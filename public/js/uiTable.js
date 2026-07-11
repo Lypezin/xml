@@ -65,12 +65,32 @@ window.AppUiTable = {
     return Array.from(byKey.values());
   },
 
-  setDocuments(docs, total = null, page = 1, totalValue = 0) {
+  setDocuments(docs, total = null, page = 1, totalValue = 0, options = {}) {
     this.documents = this.dedupeDocuments((docs || []).map(doc => this.normalizeDocument(doc)));
-    this.remoteTotal = total === null ? this.documents.length : Number(total || 0);
-    this.remoteTotalValue = Number(totalValue || 0);
-    this.remoteMode = total !== null;
+    this.totalsPending = Boolean(options.totalsPending);
+    this.remoteMode = true;
     this.currentPage = page;
+    const pageSize = this.pageSize || 10;
+    if (total == null && this.totalsPending) {
+      // Provisório: habilita "próxima" se a página veio cheia
+      const full = this.documents.length >= pageSize;
+      this.remoteTotal = full
+        ? page * pageSize + 1
+        : (page - 1) * pageSize + this.documents.length;
+      this.remoteTotalValue = totalValue == null ? this.remoteTotalValue : Number(totalValue || 0);
+    } else {
+      this.remoteTotal = total == null ? this.documents.length : Number(total || 0);
+      this.remoteTotalValue = Number(totalValue || 0);
+      this.totalsPending = false;
+    }
+    this.renderCurrentPage();
+  },
+
+  updateTotals(total, totalValue) {
+    this.totalsPending = false;
+    this.remoteTotal = Number(total || 0);
+    this.remoteTotalValue = Number(totalValue || 0);
+    this.remoteMode = true;
     this.renderCurrentPage();
   },
 
@@ -248,12 +268,30 @@ window.AppUiTable = {
   },
 
   updatePagination(total, from, to) {
-    if (historyCountLabel) historyCountLabel.innerText = `${total} XML${total === 1 ? '' : 's'} sincronizado${total === 1 ? '' : 's'}`;
-    if (historyPageInfo) historyPageInfo.innerText = total > 0 ? `${from}-${to} de ${total}` : '0 de 0';
+    const pending = Boolean(this.totalsPending);
+    if (historyCountLabel) {
+      historyCountLabel.innerText = pending
+        ? `${this.documents.length} XML(s) nesta página…`
+        : `${total} XML${total === 1 ? '' : 's'} sincronizado${total === 1 ? '' : 's'}`;
+    }
+    if (historyPageInfo) {
+      historyPageInfo.innerText = pending
+        ? (total > 0 ? `${from}-${to}` : '0')
+        : (total > 0 ? `${from}-${to} de ${total}` : '0 de 0');
+    }
     if (btnHistoryPrev) btnHistoryPrev.disabled = this.currentPage <= 1;
-    if (btnHistoryNext) btnHistoryNext.disabled = this.currentPage >= Math.ceil(Math.max(total, 1) / this.pageSize);
-    if (statTotalNotas) statTotalNotas.innerText = total;
-    if (statTotalValue) statTotalValue.innerText = window.AppUtils.formatCurrency(this.remoteTotalValue || 0);
+    if (btnHistoryNext) {
+      const fullPage = this.documents.length >= (this.pageSize || 10);
+      btnHistoryNext.disabled = pending
+        ? !fullPage
+        : this.currentPage >= Math.ceil(Math.max(total, 1) / this.pageSize);
+    }
+    if (statTotalNotas) statTotalNotas.innerText = pending ? '…' : total;
+    if (statTotalValue) {
+      statTotalValue.innerText = pending && !this.remoteTotalValue
+        ? '…'
+        : window.AppUtils.formatCurrency(this.remoteTotalValue || 0);
+    }
   },
 
   nextPage() {

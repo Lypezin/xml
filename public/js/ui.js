@@ -33,8 +33,29 @@ window.AppUi = {
 
     if (window.consoleLog) {
       consoleLog.appendChild(line);
+      // Limita linhas antigas para não explodir a DOM
+      while (consoleLog.children.length > 400) {
+        consoleLog.removeChild(consoleLog.firstChild);
+      }
       consoleLog.scrollTop = consoleLog.scrollHeight;
+      this._updateLogHint();
+      // Auto-abre em erro/warning relevante
+      if ((type === 'error' || type === 'warning') && window.consoleLogDrawer && !consoleLogDrawer.open) {
+        consoleLogDrawer.open = true;
+      }
     }
+  },
+
+  _updateLogHint() {
+    const hint = window.consoleLogHint || document.getElementById('console-log-hint');
+    const log = window.consoleLog || document.getElementById('console-log');
+    if (!hint || !log) return;
+    const n = log.children.length;
+    const drawer = window.consoleLogDrawer || document.getElementById('console-log-drawer');
+    const open = drawer && drawer.open;
+    hint.textContent = open
+      ? `${n} linha${n === 1 ? '' : 's'}`
+      : `${n} linha${n === 1 ? '' : 's'} · clique para expandir`;
   },
 
   logNationalApiContext(nationalApi) {

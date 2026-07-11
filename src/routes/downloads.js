@@ -13,6 +13,7 @@ const {
   getSupabaseXmlPayloads,
   listSupabaseXmlPayloads,
   listRemoteDocuments,
+  getRemoteDocumentTotals,
   listRemoteCertificates,
   getStorageSummary
 } = require('../services/supabase');
@@ -301,7 +302,8 @@ router.get('/list-documents', async (req, res) => {
       onlyCancelled = 'false',
       cancelledMode = '',
       limit,
-      offset
+      offset,
+      skipTotals = 'false'
     } = req.query;
     const cert = await resolveCertificateMetadataForList(certificateId);
     if (!cert) {
@@ -310,6 +312,7 @@ router.get('/list-documents', async (req, res) => {
 
     const receiverCnpj = onlyDigits(partyCnpj) || onlyDigits(cnpj) || onlyDigits(cert.cnpj);
     const flags = parseCancelledFlags({ includeCancelled, onlyCancelled, cancelledMode });
+    const wantSkipTotals = String(skipTotals).toLowerCase() === 'true' || skipTotals === '1';
 
     const result = await listRemoteDocuments({
       certificateId: cert.id,
@@ -323,20 +326,75 @@ router.get('/list-documents', async (req, res) => {
       includeCancelled: flags.includeCancelled,
       onlyCancelled: flags.onlyCancelled,
       limit: clampListLimit(limit),
-      offset: clampListOffset(offset)
+      offset: clampListOffset(offset),
+      skipTotals: wantSkipTotals
     });
 
     return res.json({
       success: true,
       documents: result.documents,
       total: result.total,
+      totalsPending: Boolean(result.totalsPending),
       summary: {
-        totalValue: result.totalValue || 0
+        totalValue: result.totalValue == null ? null : (result.totalValue || 0)
       }
     });
   } catch (err) {
     const detail = err.response?.data || err.message;
     console.error('Erro ao listar documentos:', detail);
+    return res.status(500).json({
+      success: false,
+      error: typeof detail === 'string' ? detail : JSON.stringify(detail)
+    });
+  }
+});
+
+router.get('/document-totals', async (req, res) => {
+  try {
+    const {
+      certificateId,
+      environment = 'producao',
+      startDate,
+      endDate,
+      cnpj,
+      partyCnpj,
+      partyRole,
+      search = '',
+      includeCancelled = 'false',
+      onlyCancelled = 'false',
+      cancelledMode = ''
+    } = req.query;
+    const cert = await resolveCertificateMetadataForList(certificateId);
+    if (!cert) {
+      return res.status(400).json({ success: false, error: 'Certificado não configurado.' });
+    }
+
+    const receiverCnpj = onlyDigits(partyCnpj) || onlyDigits(cnpj) || onlyDigits(cert.cnpj);
+    const flags = parseCancelledFlags({ includeCancelled, onlyCancelled, cancelledMode });
+
+    const result = await getRemoteDocumentTotals({
+      certificateId: cert.id,
+      environment,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      cnpj: '',
+      partyCnpj: receiverCnpj,
+      partyRole: normalizePartyRole(partyRole),
+      search,
+      includeCancelled: flags.includeCancelled,
+      onlyCancelled: flags.onlyCancelled
+    });
+
+    return res.json({
+      success: true,
+      total: result.total,
+      totalValue: result.totalValue,
+      source: result.source,
+      summary: { totalValue: result.totalValue }
+    });
+  } catch (err) {
+    const detail = err.response?.data || err.message;
+    console.error('Erro ao obter totais:', detail);
     return res.status(500).json({
       success: false,
       error: typeof detail === 'string' ? detail : JSON.stringify(detail)

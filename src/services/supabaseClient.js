@@ -55,6 +55,7 @@ async function getSupabaseUserFromToken(token) {
 
 const HEAVY_RPCS = new Set([
   'xml_nfse_list_documents',
+  'xml_nfse_get_document_totals',
   'xml_nfse_get_dashboard_summary',
   'xml_nfse_storage_summary',
   'xml_nfse_get_xml_payloads_by_tokens',

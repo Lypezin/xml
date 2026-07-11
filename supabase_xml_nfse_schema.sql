@@ -215,6 +215,58 @@ create index if not exists documents_nfse_chave_active_idx
   on xml_nfse.documents (certificate_id, environment, chave)
   where tipo <> 'EVENTO' and chave is not null and chave <> '';
 
+-- Cache de totais por certificado/ambiente (lista sem filtros fica O(1))
+create table if not exists xml_nfse.document_stats (
+  certificate_id text not null,
+  environment text not null check (environment in ('producao', 'homologacao')),
+  active_count integer not null default 0,
+  cancelled_count integer not null default 0,
+  active_value numeric(20,2) not null default 0,
+  cancelled_value numeric(20,2) not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (certificate_id, environment)
+);
+
+create or replace function xml_nfse.refresh_document_stats(
+  p_certificate_id text default null,
+  p_environment text default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = xml_nfse, public
+as $$
+declare
+  n integer := 0;
+begin
+  insert into xml_nfse.document_stats as s (
+    certificate_id, environment, active_count, cancelled_count, active_value, cancelled_value, updated_at
+  )
+  select
+    d.certificate_id,
+    d.environment,
+    count(*) filter (where not d.is_cancelled)::integer,
+    count(*) filter (where d.is_cancelled)::integer,
+    coalesce(sum(case when not d.is_cancelled and d.valor_servico >= 0 and d.valor_servico < 1e9 then d.valor_servico else 0 end), 0),
+    coalesce(sum(case when d.is_cancelled and d.valor_servico >= 0 and d.valor_servico < 1e9 then d.valor_servico else 0 end), 0),
+    now()
+  from xml_nfse.documents d
+  where d.tipo <> 'EVENTO'
+    and (p_certificate_id is null or d.certificate_id = p_certificate_id)
+    and (p_environment is null or d.environment = p_environment)
+  group by d.certificate_id, d.environment
+  on conflict (certificate_id, environment) do update set
+    active_count = excluded.active_count,
+    cancelled_count = excluded.cancelled_count,
+    active_value = excluded.active_value,
+    cancelled_value = excluded.cancelled_value,
+    updated_at = now();
+
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
 create index if not exists xml_payloads_expires_at_idx
   on xml_nfse.xml_payloads (expires_at);
 
@@ -956,6 +1008,56 @@ begin
       last_seen_at = now()
   returning id, (xmax = 0) into doc_id, inserted_new;
 
+  -- Mantém document_stats coerente em inserts de NFSe
+  if inserted_new and upper(coalesce(p_tipo, 'NFSE')) <> 'EVENTO' then
+    insert into xml_nfse.document_stats (
+      certificate_id, environment, active_count, cancelled_count, active_value, cancelled_value, updated_at
+    )
+    values (
+      p_certificate_id,
+      p_environment,
+      case when cancelled then 0 else 1 end,
+      case when cancelled then 1 else 0 end,
+      case
+        when cancelled then 0
+        when metadata_valor_servico ~ '^-?\d+(\.\d+)?$'
+         and metadata_valor_servico::numeric >= 0
+         and metadata_valor_servico::numeric < 1000000000
+        then round(metadata_valor_servico::numeric, 2)
+        else 0
+      end,
+      case
+        when not cancelled then 0
+        when metadata_valor_servico ~ '^-?\d+(\.\d+)?$'
+         and metadata_valor_servico::numeric >= 0
+         and metadata_valor_servico::numeric < 1000000000
+        then round(metadata_valor_servico::numeric, 2)
+        else 0
+      end,
+      now()
+    )
+    on conflict (certificate_id, environment) do update set
+      active_count = xml_nfse.document_stats.active_count + case when cancelled then 0 else 1 end,
+      cancelled_count = xml_nfse.document_stats.cancelled_count + case when cancelled then 1 else 0 end,
+      active_value = xml_nfse.document_stats.active_value + case
+        when cancelled then 0
+        when metadata_valor_servico ~ '^-?\d+(\.\d+)?$'
+         and metadata_valor_servico::numeric >= 0
+         and metadata_valor_servico::numeric < 1000000000
+        then round(metadata_valor_servico::numeric, 2)
+        else 0
+      end,
+      cancelled_value = xml_nfse.document_stats.cancelled_value + case
+        when not cancelled then 0
+        when metadata_valor_servico ~ '^-?\d+(\.\d+)?$'
+         and metadata_valor_servico::numeric >= 0
+         and metadata_valor_servico::numeric < 1000000000
+        then round(metadata_valor_servico::numeric, 2)
+        else 0
+      end,
+      updated_at = now();
+  end if;
+
   return jsonb_build_object('success', true, 'document_id', doc_id, 'inserted', inserted_new);
 end;
 $$;
@@ -1164,6 +1266,7 @@ as $$
 declare
   updated_count integer := 0;
   clean_chave text := nullif(trim(coalesce(p_chave, '')), '');
+  moved_value numeric := 0;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
@@ -1171,24 +1274,42 @@ begin
     return jsonb_build_object('success', true, 'updated', false, 'updated_count', 0);
   end if;
 
-  update xml_nfse.documents d
-  set metadata = coalesce(d.metadata, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
-        'status', 'Cancelada',
-        'isCancellation', true,
-        'eventoDescricao', coalesce(p_event_meta ->> 'eventoDescricao', d.metadata ->> 'eventoDescricao'),
-        'eventoMotivo', coalesce(p_event_meta ->> 'eventoMotivo', d.metadata ->> 'eventoMotivo'),
-        'tpEvento', coalesce(p_event_meta ->> 'tpEvento', d.metadata ->> 'tpEvento'),
-        'cancelledByEventNsu', p_event_nsu,
-        'cancelledAt', now()
-      )),
-      is_cancelled = true,
-      last_seen_at = now()
-  where d.certificate_id = p_certificate_id
-    and d.environment = p_environment
-    and d.chave = clean_chave
-    and d.tipo <> 'EVENTO';
+  with upd as (
+    update xml_nfse.documents d
+    set metadata = coalesce(d.metadata, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+          'status', 'Cancelada',
+          'isCancellation', true,
+          'eventoDescricao', coalesce(p_event_meta ->> 'eventoDescricao', d.metadata ->> 'eventoDescricao'),
+          'eventoMotivo', coalesce(p_event_meta ->> 'eventoMotivo', d.metadata ->> 'eventoMotivo'),
+          'tpEvento', coalesce(p_event_meta ->> 'tpEvento', d.metadata ->> 'tpEvento'),
+          'cancelledByEventNsu', p_event_nsu,
+          'cancelledAt', now()
+        )),
+        is_cancelled = true,
+        last_seen_at = now()
+    where d.certificate_id = p_certificate_id
+      and d.environment = p_environment
+      and d.chave = clean_chave
+      and d.tipo <> 'EVENTO'
+      and d.is_cancelled = false
+    returning case
+      when d.valor_servico >= 0 and d.valor_servico < 1e9 then d.valor_servico else 0
+    end as v
+  )
+  select count(*)::integer, coalesce(sum(v), 0)
+  into updated_count, moved_value
+  from upd;
 
-  get diagnostics updated_count = row_count;
+  if updated_count > 0 then
+    insert into xml_nfse.document_stats (certificate_id, environment, active_count, cancelled_count, active_value, cancelled_value, updated_at)
+    values (p_certificate_id, p_environment, 0, updated_count, 0, moved_value, now())
+    on conflict (certificate_id, environment) do update set
+      active_count = greatest(0, xml_nfse.document_stats.active_count - updated_count),
+      cancelled_count = xml_nfse.document_stats.cancelled_count + updated_count,
+      active_value = greatest(0, xml_nfse.document_stats.active_value - moved_value),
+      cancelled_value = xml_nfse.document_stats.cancelled_value + moved_value,
+      updated_at = now();
+  end if;
 
   return jsonb_build_object(
     'success', true,
@@ -1221,12 +1342,8 @@ grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authe
 grant execute on function public.xml_nfse_storage_summary(text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_mark_cancelled_by_chave(text, text, text, text, bigint, jsonb) to anon, authenticated;
 
-drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer);
-drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, integer, integer);
-drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, integer, integer);
-drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, boolean, integer, integer);
-
-create or replace function public.xml_nfse_list_documents(
+-- Totais rapidos (document_stats quando sem filtro; senao agregacao filtrada)
+create or replace function public.xml_nfse_get_document_totals(
   p_secret text,
   p_certificate_id text,
   p_environment text,
@@ -1237,29 +1354,26 @@ create or replace function public.xml_nfse_list_documents(
   p_party_role text default 'tomador',
   p_search text default '',
   p_include_cancelled boolean default false,
-  p_only_cancelled boolean default false,
-  p_limit integer default null,
-  p_offset integer default null
+  p_only_cancelled boolean default false
 )
 returns jsonb
 language plpgsql
 security definer
 set search_path = xml_nfse, public, extensions
-set statement_timeout = 30000
+set statement_timeout = '15000'
 as $$
 declare
-  result_data jsonb;
   search_term text := lower(trim(coalesce(p_search, '')));
   search_digits text := regexp_replace(coalesce(p_search, ''), '\D', '', 'g');
   search_decimal text := replace(lower(trim(coalesce(p_search, ''))), ',', '.');
   cnpj_consulta_digits text := regexp_replace(coalesce(p_cnpj_consulta, ''), '\D', '', 'g');
   party_cnpj_digits text := regexp_replace(coalesce(p_party_cnpj, ''), '\D', '', 'g');
   search_numeric numeric;
-  lim integer := least(greatest(coalesce(p_limit, 10), 1), 100);
-  off integer := greatest(coalesce(p_offset, 0), 0);
+  simple_filter boolean;
   total_count integer := 0;
   total_value numeric := 0;
-  docs_json jsonb := '[]'::jsonb;
+  src text := 'scan';
+  st record;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
@@ -1267,7 +1381,41 @@ begin
     search_numeric := search_decimal::numeric;
   end if;
 
-  -- Totais enxutos (covering indexes em valor_servico)
+  simple_filter := (
+    search_term = ''
+    and cnpj_consulta_digits = ''
+    and party_cnpj_digits = ''
+    and p_start_date is null
+    and p_end_date is null
+  );
+
+  if simple_filter then
+    select * into st
+    from xml_nfse.document_stats s
+    where s.certificate_id = p_certificate_id
+      and s.environment = p_environment;
+
+    if found then
+      if coalesce(p_only_cancelled, false) then
+        total_count := st.cancelled_count;
+        total_value := st.cancelled_value;
+      elsif coalesce(p_include_cancelled, false) then
+        total_count := st.active_count + st.cancelled_count;
+        total_value := st.active_value + st.cancelled_value;
+      else
+        total_count := st.active_count;
+        total_value := st.active_value;
+      end if;
+      src := 'stats';
+      return jsonb_build_object(
+        'total', total_count,
+        'totalValue', total_value,
+        'source', src,
+        'updatedAt', st.updated_at
+      );
+    end if;
+  end if;
+
   select
     count(*)::integer,
     coalesce(sum(
@@ -1287,20 +1435,11 @@ begin
     )
     and (p_start_date is null or d.data_emissao >= p_start_date)
     and (p_end_date is null or d.data_emissao <= p_end_date)
-    and (
-      cnpj_consulta_digits = ''
-      or coalesce(d.tomador_cnpj, '') = cnpj_consulta_digits
-    )
+    and (cnpj_consulta_digits = '' or coalesce(d.tomador_cnpj, '') = cnpj_consulta_digits)
     and (
       party_cnpj_digits = ''
-      or (
-        coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
-        and coalesce(d.prestador_cnpj, '') = party_cnpj_digits
-      )
-      or (
-        coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
-        and coalesce(d.tomador_cnpj, '') = party_cnpj_digits
-      )
+      or (coalesce(p_party_role, 'tomador') in ('prestador', 'ambos') and coalesce(d.prestador_cnpj, '') = party_cnpj_digits)
+      or (coalesce(p_party_role, 'tomador') in ('tomador', 'ambos') and coalesce(d.tomador_cnpj, '') = party_cnpj_digits)
     )
     and (
       search_term = ''
@@ -1313,6 +1452,74 @@ begin
       or (search_digits <> '' and coalesce(d.chave, '') like '%' || search_digits || '%')
       or (search_digits <> '' and coalesce(d.numero_nfse, '') like '%' || search_digits || '%')
     );
+
+  return jsonb_build_object(
+    'total', coalesce(total_count, 0),
+    'totalValue', coalesce(total_value, 0),
+    'source', src
+  );
+end;
+$$;
+
+grant execute on function public.xml_nfse_get_document_totals(text, text, text, date, date, text, text, text, text, boolean, boolean) to anon, authenticated;
+
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer);
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, integer, integer);
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, integer, integer);
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, boolean, integer, integer);
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, boolean, integer, integer, boolean);
+
+create or replace function public.xml_nfse_list_documents(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_start_date date default null,
+  p_end_date date default null,
+  p_cnpj_consulta text default '',
+  p_party_cnpj text default '',
+  p_party_role text default 'tomador',
+  p_search text default '',
+  p_include_cancelled boolean default false,
+  p_only_cancelled boolean default false,
+  p_limit integer default null,
+  p_offset integer default null,
+  p_skip_totals boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+set statement_timeout = 30000
+as $$
+declare
+  search_term text := lower(trim(coalesce(p_search, '')));
+  search_digits text := regexp_replace(coalesce(p_search, ''), '\D', '', 'g');
+  search_decimal text := replace(lower(trim(coalesce(p_search, ''))), ',', '.');
+  cnpj_consulta_digits text := regexp_replace(coalesce(p_cnpj_consulta, ''), '\D', '', 'g');
+  party_cnpj_digits text := regexp_replace(coalesce(p_party_cnpj, ''), '\D', '', 'g');
+  search_numeric numeric;
+  lim integer := least(greatest(coalesce(p_limit, 10), 1), 100);
+  off integer := greatest(coalesce(p_offset, 0), 0);
+  total_count integer := 0;
+  total_value numeric := 0;
+  docs_json jsonb := '[]'::jsonb;
+  totals_json jsonb;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  if search_decimal ~ '^[0-9]+(\.[0-9]+)?$' then
+    search_numeric := search_decimal::numeric;
+  end if;
+
+  if not coalesce(p_skip_totals, false) then
+    totals_json := public.xml_nfse_get_document_totals(
+      p_secret, p_certificate_id, p_environment,
+      p_start_date, p_end_date, p_cnpj_consulta, p_party_cnpj, p_party_role,
+      p_search, p_include_cancelled, p_only_cancelled
+    );
+    total_count := coalesce((totals_json ->> 'total')::integer, 0);
+    total_value := coalesce((totals_json ->> 'totalValue')::numeric, 0);
+  end if;
 
   select coalesce(jsonb_agg(to_jsonb(page_rows.*) order by page_rows.ord), '[]'::jsonb)
   into docs_json
@@ -1362,20 +1569,11 @@ begin
       )
       and (p_start_date is null or d.data_emissao >= p_start_date)
       and (p_end_date is null or d.data_emissao <= p_end_date)
-      and (
-        cnpj_consulta_digits = ''
-        or coalesce(d.tomador_cnpj, '') = cnpj_consulta_digits
-      )
+      and (cnpj_consulta_digits = '' or coalesce(d.tomador_cnpj, '') = cnpj_consulta_digits)
       and (
         party_cnpj_digits = ''
-        or (
-          coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
-          and coalesce(d.prestador_cnpj, '') = party_cnpj_digits
-        )
-        or (
-          coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
-          and coalesce(d.tomador_cnpj, '') = party_cnpj_digits
-        )
+        or (coalesce(p_party_role, 'tomador') in ('prestador', 'ambos') and coalesce(d.prestador_cnpj, '') = party_cnpj_digits)
+        or (coalesce(p_party_role, 'tomador') in ('tomador', 'ambos') and coalesce(d.tomador_cnpj, '') = party_cnpj_digits)
       )
       and (
         search_term = ''
@@ -1393,18 +1591,16 @@ begin
     offset off
   ) page_rows;
 
-  result_data := jsonb_build_object(
+  return jsonb_build_object(
     'documents', coalesce(docs_json, '[]'::jsonb),
-    'total', coalesce(total_count, 0),
-    'totalValue', coalesce(total_value, 0)
+    'total', case when coalesce(p_skip_totals, false) then null else total_count end,
+    'totalValue', case when coalesce(p_skip_totals, false) then null else total_value end,
+    'totalsPending', coalesce(p_skip_totals, false)
   );
-
-  return result_data;
 end;
 $$;
 
-
-grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, boolean, integer, integer) to anon, authenticated;
+grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, boolean, integer, integer, boolean) to anon, authenticated;
 grant execute on function public.xml_nfse_list_units(text) to anon, authenticated;
 grant execute on function public.xml_nfse_upsert_unit(text, uuid, text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_delete_unit(text, uuid) to anon, authenticated;

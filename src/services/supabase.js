@@ -215,7 +215,8 @@ async function listRemoteDocuments({
   includeCancelled = false,
   onlyCancelled = false,
   limit = null,
-  offset = null
+  offset = null,
+  skipTotals = false
 }) {
   const result = await supabaseRpc('xml_nfse_list_documents', {
     p_certificate_id: certificateId,
@@ -229,15 +230,49 @@ async function listRemoteDocuments({
     p_include_cancelled: Boolean(includeCancelled) || Boolean(onlyCancelled),
     p_only_cancelled: Boolean(onlyCancelled),
     p_limit: limit === null ? null : Number(limit),
-    p_offset: offset === null ? null : Number(offset)
+    p_offset: offset === null ? null : Number(offset),
+    p_skip_totals: Boolean(skipTotals)
   });
   if (Array.isArray(result)) {
-    return { documents: result, total: result.length, totalValue: 0 };
+    return { documents: result, total: result.length, totalValue: 0, totalsPending: false };
   }
+  const totalsPending = Boolean(result?.totalsPending) || result?.total == null;
   return {
     documents: Array.isArray(result?.documents) ? result.documents : [],
+    total: totalsPending ? null : Number(result?.total || 0),
+    totalValue: totalsPending ? null : Number(result?.totalValue || result?.total_value || 0),
+    totalsPending
+  };
+}
+
+async function getRemoteDocumentTotals({
+  certificateId,
+  environment,
+  startDate,
+  endDate,
+  cnpj,
+  partyCnpj = '',
+  partyRole = 'tomador',
+  search = '',
+  includeCancelled = false,
+  onlyCancelled = false
+}) {
+  const result = await supabaseRpc('xml_nfse_get_document_totals', {
+    p_certificate_id: certificateId,
+    p_environment: normalizeEnvironment(environment),
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+    p_cnpj_consulta: cnpj || '',
+    p_party_cnpj: partyCnpj || '',
+    p_party_role: partyRole || 'tomador',
+    p_search: search || '',
+    p_include_cancelled: Boolean(includeCancelled) || Boolean(onlyCancelled),
+    p_only_cancelled: Boolean(onlyCancelled)
+  });
+  return {
     total: Number(result?.total || 0),
-    totalValue: Number(result?.totalValue || result?.total_value || 0)
+    totalValue: Number(result?.totalValue || result?.total_value || 0),
+    source: result?.source || 'scan'
   };
 }
 
@@ -332,6 +367,7 @@ module.exports = {
   upsertUnit,
   deleteUnit,
   listRemoteDocuments,
+  getRemoteDocumentTotals,
   setRemoteActiveCertificate,
   deleteRemoteCertificate,
   renameRemoteCertificate,

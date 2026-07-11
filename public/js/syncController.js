@@ -177,23 +177,26 @@ window.AppSyncController = {
       }
     }
 
-    try {
-      const limit = window.AppUiTable.pageSize || 10;
-      const data = await window.AppApi.listDocuments({
-        certificateId: certId,
-        environment: selectEnvironment ? selectEnvironment.value : 'producao',
-        cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
-        partyCnpj: unitFilterParams.partyCnpj,
-        partyRole: unitFilterParams.partyRole,
-        search: historySearch ? historySearch.value.trim() : '',
-        cancelledMode: window.AppUtils.getCancelledMode(),
-        includeCancelled: window.AppUtils.getIncludeCancelledParam(),
-        onlyCancelled: window.AppUtils.getOnlyCancelledParam(),
-        limit,
-        offset: (safePage - 1) * limit
-      });
+    const limit = window.AppUiTable.pageSize || 10;
+    const listParams = {
+      certificateId: certId,
+      environment: selectEnvironment ? selectEnvironment.value : 'producao',
+      cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+      partyCnpj: unitFilterParams.partyCnpj,
+      partyRole: unitFilterParams.partyRole,
+      search: historySearch ? historySearch.value.trim() : '',
+      cancelledMode: window.AppUtils.getCancelledMode(),
+      includeCancelled: window.AppUtils.getIncludeCancelledParam(),
+      onlyCancelled: window.AppUtils.getOnlyCancelledParam(),
+      limit,
+      offset: (safePage - 1) * limit,
+      skipTotals: true
+    };
 
-      // Resposta antiga: ignora
+    try {
+      // 1) Página primeiro (sem count/sum)
+      const data = await window.AppApi.listDocuments(listParams);
+
       if (requestId !== window._historyRequestId) return;
 
       if (!data.success) {
@@ -201,19 +204,65 @@ window.AppSyncController = {
         return;
       }
 
-      const totalValue = data.summary?.totalValue ?? data.totalValue ?? 0;
       const docs = data.documents || [];
-      window.AppUiTable.setDocuments(docs, data.total || 0, safePage, totalValue);
-      this._saveHistorySnapshot(snapKey, docs, data.total || 0, safePage, totalValue);
+      const totalsPending = data.totalsPending !== false && (data.total == null || data.summary?.totalValue == null);
+      const totalValue = data.summary?.totalValue ?? data.totalValue ?? null;
+      window.AppUiTable.setDocuments(docs, totalsPending ? null : (data.total || 0), safePage, totalValue, {
+        totalsPending
+      });
       if (window.btnDownloadZip) window.btnDownloadZip.disabled = !(docs && docs.length > 0);
-      if (!quiet) {
-        const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
-        window.AppUi.log(`Histórico carregado${unitLabel}: ${docs.length} de ${data.total || 0} XML(s) salvos.`, 'success');
+
+      // 2) Totais em segundo request (stats cache no banco)
+      if (totalsPending && window.AppApi.getDocumentTotals) {
+        this._loadHistoryTotals(requestId, listParams, snapKey, docs, safePage, quiet, unitFilterParams);
+      } else {
+        this._saveHistorySnapshot(snapKey, docs, data.total || 0, safePage, totalValue || 0);
+        if (!quiet) {
+          const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
+          window.AppUi.log(`Histórico carregado${unitLabel}: ${docs.length} de ${data.total || 0} XML(s) salvos.`, 'success');
+        }
+      }
+
+      // 3) Prefetch página 2 (só na 1ª página, se veio cheia)
+      if (safePage === 1 && docs.length >= limit) {
+        this._prefetchHistoryPage(2, { ...listParams, offset: limit });
       }
     } catch (err) {
       if (requestId !== window._historyRequestId) return;
       if (!quiet) window.AppUi.log(`Erro ao carregar histórico: ${err.message}`, 'warning');
     }
+  },
+
+  async _loadHistoryTotals(requestId, listParams, snapKey, docs, safePage, quiet, unitFilterParams) {
+    try {
+      const { limit, offset, skipTotals, ...totalsParams } = listParams;
+      const totals = await window.AppApi.getDocumentTotals(totalsParams);
+      if (requestId !== window._historyRequestId) return;
+      if (!totals?.success) return;
+      const total = totals.total || 0;
+      const totalValue = totals.totalValue ?? totals.summary?.totalValue ?? 0;
+      if (window.AppUiTable.updateTotals) {
+        window.AppUiTable.updateTotals(total, totalValue);
+      } else {
+        window.AppUiTable.setDocuments(docs, total, safePage, totalValue);
+      }
+      this._saveHistorySnapshot(snapKey, docs, total, safePage, totalValue);
+      if (!quiet) {
+        const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
+        window.AppUi.log(`Histórico carregado${unitLabel}: ${docs.length} de ${total} XML(s) salvos.`, 'success');
+      }
+    } catch (err) {
+      if (requestId !== window._historyRequestId) return;
+      // Página já está ok; totais falharam silenciosamente
+      if (!quiet) window.AppUi.log(`Totais ainda calculando: ${err.message}`, 'warning');
+    }
+  },
+
+  _prefetchHistoryPage(page, listParams) {
+    if (!window.AppApi?.listDocuments) return;
+    const params = { ...listParams, skipTotals: true };
+    // Dispara e deixa no cache do AppDataCache (mesma key da navegação)
+    window.AppApi.listDocuments(params).catch(() => {});
   },
 
   async loadSavedStartNsu() {
