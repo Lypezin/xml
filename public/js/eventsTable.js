@@ -1,0 +1,113 @@
+// eventsTable
+window.AppEventsTable = {
+  bind() {
+if (tableBody) {
+  tableBody.addEventListener('click', async (e) => {
+    const xmlButton = e.target.closest('button[data-action="download-xml"]');
+    const pdfButton = e.target.closest('button[data-action="download-pdf"]');
+    if (!xmlButton && !pdfButton) return;
+
+    try {
+      if (xmlButton) {
+        await window.AppApi.downloadFromApi(`/api/download-xml/${xmlButton.dataset.token}`, 'nfse.xml');
+        window.AppUi.log('XML baixado com sucesso.', 'success');
+        return;
+      }
+
+      const params = new URLSearchParams({
+        certificateId: selectCertificate ? selectCertificate.value : (window.activeCertificateId || ''),
+        environment: selectEnvironment ? selectEnvironment.value : 'producao'
+      });
+      await window.AppApi.downloadFromApi(`/api/download-pdf/${encodeURIComponent(pdfButton.dataset.chave)}?${params.toString()}`, 'danfse.pdf');
+      window.AppUi.log('PDF baixado com sucesso.', 'success');
+    } catch (err) {
+      window.AppUi.log(`Erro ao baixar documento: ${err.message}`, 'error');
+    }
+  });
+}
+
+if (btnClearDownloads) btnClearDownloads.addEventListener('click', async () => {
+  if (!confirm('Limpar apenas arquivos temporários? Os XMLs permanentes no banco de dados serão preservados.')) return;
+
+  try {
+    const data = await window.AppApi.clearDownloads();
+    if (data.success) {
+      window.AppUi.log(`Temporários limpos. ${data.count} XML(s) removido(s); banco de dados preservado.`);
+      window.totalDownloaded = 0;
+      if (btnDownloadZip) btnDownloadZip.disabled = true;
+      window.AppUi.updateProgress(0, 0);
+      statNsuAtual.innerText = '0';
+      statNsuMax.innerText = '0';
+      alertRateLimit.style.display = 'none';
+      alertSyncSuccess.style.display = 'none';
+      window.AppSyncController.loadPersistedHistory();
+      window.AppSyncController.loadStorageSummary();
+    }
+  } catch (err) {
+    window.AppUi.log(`Erro ao limpar pasta: ${err.message}`, 'error');
+  }
+});
+
+if (btnExportExcel) {
+  btnExportExcel.addEventListener('click', async () => {
+    window.AppUi.log('Gerando Excel com os XMLs persistidos da tabela atual...');
+    btnExportExcel.disabled = true;
+    if (btnDownloadZip) btnDownloadZip.disabled = true;
+    try {
+      const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
+      await window.AppApi.downloadExcel({
+        certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId,
+        environment: selectEnvironment ? selectEnvironment.value : 'producao',
+        startDate: downloadStartDate?.value || null,
+        endDate: downloadEndDate?.value || null,
+        cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+        partyCnpj: unitFilterParams.partyCnpj,
+        partyRole: unitFilterParams.partyRole,
+        search: historySearch ? historySearch.value.trim() : '',
+        cancelledMode: window.AppUtils.getCancelledMode(),
+        includeCancelled: window.AppUtils.getIncludeCancelledParam(),
+        onlyCancelled: window.AppUtils.getOnlyCancelledParam()
+      });
+      window.AppUi.log('Excel da tabela baixado com sucesso.', 'success');
+    } catch (err) {
+      window.AppUi.log(`Erro ao baixar Excel: ${err.message}`, 'error');
+    } finally {
+      const hasDocs = !window.AppUiTable?.documents?.length;
+      btnExportExcel.disabled = hasDocs;
+      if (btnDownloadZip) btnDownloadZip.disabled = hasDocs;
+    }
+  });
+}
+
+if (btnDownloadZip) {
+  btnDownloadZip.addEventListener('click', async () => {
+    window.AppUi.log('Gerando ZIP com os XMLs persistidos da tabela atual...');
+    btnDownloadZip.disabled = true;
+    if (btnExportExcel) btnExportExcel.disabled = true;
+    try {
+      const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
+      await window.AppApi.downloadPeriodZip({
+        certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId,
+        environment: selectEnvironment ? selectEnvironment.value : 'producao',
+        startDate: downloadStartDate?.value || null,
+        endDate: downloadEndDate?.value || null,
+        cnpj: inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '',
+        partyCnpj: unitFilterParams.partyCnpj,
+        partyRole: unitFilterParams.partyRole,
+        search: historySearch ? historySearch.value.trim() : '',
+        cancelledMode: window.AppUtils.getCancelledMode(),
+        includeCancelled: window.AppUtils.getIncludeCancelledParam(),
+        onlyCancelled: window.AppUtils.getOnlyCancelledParam()
+      });
+      window.AppUi.log('ZIP da tabela baixado com sucesso.', 'success');
+    } catch (err) {
+      window.AppUi.log(`Erro ao baixar ZIP: ${err.message}`, 'error');
+    } finally {
+      const hasDocs = !window.AppUiTable?.documents?.length;
+      btnDownloadZip.disabled = hasDocs;
+      if (btnExportExcel) btnExportExcel.disabled = hasDocs;
+    }
+  });
+}
+  }
+};

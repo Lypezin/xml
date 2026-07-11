@@ -1,0 +1,142 @@
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .metrics-row {
+    grid-template-columns: 1fr;
+  }
+  .overview-metrics,
+  .toolbar-grid,
+  .operation-layout,
+  .certificates-layout,
+  .sync-policy-grid,
+  .results-filter-bar,
+  .hero-status-strip,
+  .rules-dashboard-grid,
+  .rules-flow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Clean professional polish */
+body.light-mode .sidebar,
+body.light-mode .card,
+body.light-mode .metric-card,
+body.light-mode .cert-status-badge,
+body.light-mode .footer-status {
+  box-shadow: var(--shadow-sm);
+}
+
+body.light-mode .main-content {
+  background: var(--bg-color);
+}
+
+.navbar {
+  align-items: center;
+}
+
+.navbar-title h1 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.navbar-title p {
+  font-size: 12px;
+}
+
+.metric-card,
+.card {
+  border-radius: var(--border-radius);
+}
+
+.card h2,
+.results-header h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.results-header {
+  gap: 12px;
+}
+
+.results-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cnpj-badge {
+  white-space: nowrap;
+}
+
+.descricao-texto {
+  max-width: 320px;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 20px 16px;
+  }
+
+  .navbar,
+  .results-header,
+  .panel-heading,
+  .operation-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input-row {
+    flex-direction: column;
+  }
+
+  .hero-copy h2 {
+    font-size: 23px;
+  }
+
+  .xml-list-head {
+    display: none;
+  }
+
+  .xml-item {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .xml-party-cell {
+    grid-template-columns: 1fr;
+  }
+
+  .xml-action-cell {
+    justify-content: stretch;
+  }
+
+  .xml-action-cell .btn {
+    width: 100%;
+  }
+
+  .cert-action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cert-list-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cert-list-actions {
+    justify-content: stretch;
+  }
+
+  .cert-list-actions .btn {
+    flex: 1;
+  }
+}

@@ -1,26 +1,57 @@
 /* Service Worker — cache apenas CSS/JS estáticos (sem API/HTML) */
-const CACHE = 'nfse-static-v1';
+const CACHE = 'nfse-static-v2';
 const PRECACHE = [
   '/css/variables.css',
   '/css/buttons.css',
   '/css/auth.css',
-  '/css/layout.css',
+  '/css/layout-shell-a.css',
+  '/css/layout-shell-b.css',
+  '/css/layout-panels-a.css',
+  '/css/layout-panels-b.css',
   '/css/sidebar.css',
   '/css/metrics.css',
   '/css/components.css',
+  '/css/console.css',
+  '/css/dashboard-cards.css',
+  '/css/dashboard-skeletons.css',
   '/css/certificates.css',
-  '/css/table.css',
-  '/css/responsive.css',
+  '/css/table-list.css',
+  '/css/table-item.css',
+  '/css/responsive-a.css',
+  '/css/responsive-b.css',
   '/js/utils.js',
   '/js/dataCache.js',
   '/js/panels-bundle.js',
-  '/js/api.js',
+  '/js/apiAuth.js',
+  '/js/apiCerts.js',
+  '/js/apiData.js',
+  '/js/apiDownloads.js',
   '/js/uiElements.js',
-  '/js/uiTable.js',
-  '/js/ui.js',
+  '/js/uiTableCore.js',
+  '/js/uiTableLoading.js',
+  '/js/uiTableRender.js',
+  '/js/uiCore.js',
+  '/js/uiCerts.js',
+  '/js/uiProgress.js',
+  '/js/uiTabs.js',
+  '/js/unitsController.js',
+  '/js/historyController.js',
+  '/js/certStatusController.js',
   '/js/syncController.js',
+  '/js/queryLoop.js',
+  '/js/dashboardController.js',
   '/js/eventsCert.js',
+  '/js/eventsAuth.js',
+  '/js/eventsSync.js',
+  '/js/eventsTable.js',
+  '/js/eventsFilters.js',
+  '/js/eventsNsu.js',
+  '/js/eventsNav.js',
+  '/js/eventsScheduler.js',
   '/js/events.js',
+  '/js/bootComponents.js',
+  '/js/bootData.js',
+  '/js/boot.js',
   '/app.js',
   '/favicon.svg'
 ];
@@ -67,7 +98,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Só same-origin estáticos
   if (url.origin !== self.location.origin) return;
   if (!isStaticAsset(url)) return;
 
@@ -83,7 +113,6 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => cached);
 
-      // Stale-while-revalidate: devolve cache se houver, senão rede
       return cached || network;
     })
   );

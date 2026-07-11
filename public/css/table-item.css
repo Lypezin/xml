@@ -1,0 +1,197 @@
+.xml-main-cell strong,
+.xml-value-cell strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.xml-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.xml-party-cell {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.xml-party-cell strong {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.xml-party-cell span {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.xml-party-cell small,
+.xml-value-cell span {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.xml-action-cell {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.xml-action-cell .btn {
+  width: 72px;
+  justify-content: center;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.xml-empty-state {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.cnpj-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  background: var(--surface-muted);
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  border: 1px solid var(--card-border);
+  font-weight: 500;
+}
+
+.cnpj-badge.wrap {
+  display: inline-block;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+.tipo-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tipo-badge.nfse {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.tipo-badge.evento {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.status-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 50px;
+  display: inline-flex;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.status-badge.ok {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.status-badge.cancelled {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+.status-badge.event {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.descricao-texto {
+  max-width: 100%;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.descricao-texto.expanded {
+  max-width: none;
+}
+
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.pulse-loading {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  color: var(--text-muted);
+}
+
+/* Estilo para Notas Canceladas */
+.xml-item.cancelled-row {
+  opacity: 0.65;
+}
+
+.xml-item.cancelled-row .xml-main-cell,
+.xml-item.cancelled-row .xml-party-cell,
+.xml-item.cancelled-row .xml-service-cell,
+.xml-item.cancelled-row .xml-value-cell {
+  text-decoration: line-through;
+  text-decoration-color: var(--danger, #ef4444);
+}
+
+.xml-item.cancelled-row .btn,
+.xml-item.cancelled-row .tipo-badge,
+.xml-item.cancelled-row .status-badge {
+  text-decoration: none !important;
+}

@@ -19,40 +19,41 @@
       } catch (e) {}
     })();
   </script>
-  <!-- display=swap evita FOIT; pesos essenciais -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <!-- CSS em paralelo (sem @import em cascata) -->
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/buttons.css">
   <link rel="stylesheet" href="css/auth.css">
-  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/layout-shell-a.css">
+  <link rel="stylesheet" href="css/layout-shell-b.css">
+  <link rel="stylesheet" href="css/layout-panels-a.css">
+  <link rel="stylesheet" href="css/layout-panels-b.css">
   <link rel="stylesheet" href="css/sidebar.css">
   <link rel="stylesheet" href="css/metrics.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/console.css">
+  <link rel="stylesheet" href="css/dashboard-cards.css">
+  <link rel="stylesheet" href="css/dashboard-skeletons.css">
   <link rel="stylesheet" href="css/certificates.css">
-  <link rel="stylesheet" href="css/table.css">
-  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/table-list.css">
+  <link rel="stylesheet" href="css/table-item.css">
+  <link rel="stylesheet" href="css/responsive-a.css">
+  <link rel="stylesheet" href="css/responsive-b.css">
 </head>
 <body class="light-mode">
-  <!-- Background glow effect -->
   <div class="glass-bg"></div>
 
-  <!-- Container placeholders loaded dynamically -->
   <div id="auth-screen-container"></div>
 
   <div class="app-layout" id="app-layout" style="display: none;">
     <div id="sidebar-container"></div>
 
-    <!-- Main Content Area -->
     <main class="main-content">
-      <!-- Top Navbar -->
       <header class="navbar">
         <div class="navbar-title">
           <h1 id="page-title"></h1>
           <p id="page-subtitle">Gestão de XMLs NFS-e Nacional por unidade</p>
         </div>
-        
-        <!-- Active Certificate Info -->
+
         <div class="navbar-actions">
           <div class="cert-status-badge user-status-badge">
             <span id="auth-user-email">Sessão ativa</span>
@@ -70,7 +71,6 @@
       <div id="view-certificado-container"></div>
       <div id="view-regras-container"></div>
 
-      <!-- Footer -->
       <footer class="app-footer">
         <p>v1.5.0 — NFS-e Nacional · cancelamentos · performance · segurança</p>
       </footer>
@@ -80,14 +80,37 @@
   <script src="js/utils.js" defer></script>
   <script src="js/dataCache.js" defer></script>
   <script src="js/panels-bundle.js" defer></script>
-  <script src="js/api.js" defer></script>
+  <script src="js/apiAuth.js" defer></script>
+  <script src="js/apiCerts.js" defer></script>
+  <script src="js/apiData.js" defer></script>
+  <script src="js/apiDownloads.js" defer></script>
   <script src="js/uiElements.js" defer></script>
-  <script src="js/uiTable.js" defer></script>
-  <script src="js/ui.js" defer></script>
+  <script src="js/uiTableCore.js" defer></script>
+  <script src="js/uiTableLoading.js" defer></script>
+  <script src="js/uiTableRender.js" defer></script>
+  <script src="js/uiCore.js" defer></script>
+  <script src="js/uiCerts.js" defer></script>
+  <script src="js/uiProgress.js" defer></script>
+  <script src="js/uiTabs.js" defer></script>
+  <script src="js/unitsController.js" defer></script>
+  <script src="js/historyController.js" defer></script>
+  <script src="js/certStatusController.js" defer></script>
   <script src="js/syncController.js" defer></script>
+  <script src="js/queryLoop.js" defer></script>
+  <script src="js/dashboardController.js" defer></script>
   <script src="js/eventsCert.js" defer></script>
+  <script src="js/eventsAuth.js" defer></script>
+  <script src="js/eventsSync.js" defer></script>
+  <script src="js/eventsTable.js" defer></script>
+  <script src="js/eventsFilters.js" defer></script>
+  <script src="js/eventsNsu.js" defer></script>
+  <script src="js/eventsNav.js" defer></script>
+  <script src="js/eventsScheduler.js" defer></script>
   <script src="js/events.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="js/bootComponents.js" defer></script>
+  <script src="js/bootData.js" defer></script>
+  <script src="js/boot.js" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {

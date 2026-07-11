@@ -6,10 +6,18 @@ const {
   getSupabaseUserFromToken,
   supabaseRpc
 } = require('./supabaseClient');
-
-function normalizeEnvironment(environment) {
-  return environment === 'homologacao' ? 'homologacao' : 'producao';
-}
+const {
+  normalizeEnvironment,
+  syncSupabaseDocument,
+  storeSupabaseXmlPayload,
+  markSupabaseDocumentCancelledByChave,
+  getSupabaseXmlPayload,
+  getSupabaseXmlPayloads,
+  listSupabaseXmlPayloads,
+  getStorageSummary,
+  listRemoteDocuments,
+  getRemoteDocumentTotals
+} = require('./supabaseDocuments');
 
 function useRemoteCertificateStorage() {
   return IS_VERCEL || process.env.CERT_STORAGE_MODE === 'supabase';
@@ -59,113 +67,6 @@ async function finishSupabaseRun({ runId, status, endNsu = null, maxNsuSeen = nu
   });
 }
 
-function normalizeCurrencyForPersistence(value) {
-  if (value === null || value === undefined) return 'N/A';
-
-  const normalized = String(value)
-    .trim()
-    .replace(/\s/g, '')
-    .replace(',', '.');
-
-  if (!/^-?\d+(\.\d+)?$/.test(normalized)) {
-    return 'N/A';
-  }
-
-  const integerPart = normalized.split('.')[0].replace(/^-/, '');
-  if (integerPart.length > 18) {
-    return 'N/A';
-  }
-
-  const numericValue = Number(normalized);
-  if (!Number.isFinite(numericValue) || numericValue < 0 || numericValue >= 1000000000) {
-    return 'N/A';
-  }
-
-  return normalized;
-}
-
-async function syncSupabaseDocument({ certificateId, environment, doc }) {
-  return supabaseRpc('xml_nfse_upsert_document', {
-    p_certificate_id: certificateId,
-    p_environment: normalizeEnvironment(environment),
-    p_nsu: Number(doc.nsu || 0),
-    p_tipo: doc.tipo || 'NFSE',
-    p_chave: doc.chave || '',
-    p_file_name: doc.arquivo || '',
-    p_xml_sha256: doc.xmlSha256 || '',
-    p_metadata: {
-      numeroNfse: doc.numeroNfse,
-      prestadorCnpj: doc.prestadorCnpj,
-      prestadorNome: doc.prestadorNome,
-      tomadorCnpj: doc.tomadorCnpj,
-      tomadorNome: doc.tomadorNome,
-      valorServico: normalizeCurrencyForPersistence(doc.valorServico),
-      dataEmissao: doc.dataEmissao,
-      dataEmissaoCompleta: doc.dataEmissaoCompleta || doc.dataEmissao,
-      descricao: doc.descricao || doc.descricaoServico || 'N/A',
-      municipioPrestacao: doc.municipioPrestacao,
-      codigoTributacao: doc.codigoTributacao,
-      competencia: doc.competencia,
-      status: doc.status || 'Autorizada',
-      eventoDescricao: doc.eventoDescricao || 'N/A',
-      eventoMotivo: doc.eventoMotivo || 'N/A',
-      tpEvento: doc.tpEvento || 'N/A',
-      isCancellation: Boolean(doc.isCancellation),
-      token: doc.token,
-      arquivo: doc.arquivo,
-      xmlSha256: doc.xmlSha256
-    }
-  });
-}
-
-async function storeSupabaseXmlPayload({ token, certificateId, environment, nsu, fileName, xmlString }) {
-  return supabaseRpc('xml_nfse_upsert_xml_payload', {
-    p_token: token,
-    p_certificate_id: certificateId,
-    p_environment: normalizeEnvironment(environment),
-    p_nsu: nsu === undefined || nsu === null ? null : Number(nsu),
-    p_file_name: fileName,
-    p_xml_content: xmlString
-  });
-}
-
-async function markSupabaseDocumentCancelledByChave({
-  certificateId,
-  environment,
-  chave,
-  eventNsu = null,
-  eventMeta = {}
-}) {
-  return supabaseRpc('xml_nfse_mark_cancelled_by_chave', {
-    p_certificate_id: certificateId,
-    p_environment: normalizeEnvironment(environment),
-    p_chave: chave || '',
-    p_event_nsu: eventNsu === null || eventNsu === undefined ? null : Number(eventNsu),
-    p_event_meta: eventMeta || {}
-  });
-}
-
-async function getSupabaseXmlPayload(token) {
-  return supabaseRpc('xml_nfse_get_xml_payload', { p_token: token });
-}
-
-async function getSupabaseXmlPayloads(tokens) {
-  if (!Array.isArray(tokens) || tokens.length === 0) return [];
-  const result = await supabaseRpc('xml_nfse_get_xml_payloads_by_tokens', { p_tokens: tokens });
-  return Array.isArray(result) ? result : [];
-}
-
-async function listSupabaseXmlPayloads() {
-  return supabaseRpc('xml_nfse_list_xml_payloads', {});
-}
-
-async function getStorageSummary({ certificateId = '', environment = '' } = {}) {
-  return supabaseRpc('xml_nfse_storage_summary', {
-    p_certificate_id: certificateId || null,
-    p_environment: environment ? normalizeEnvironment(environment) : null
-  });
-}
-
 async function getSupabaseSetting(key) {
   return supabaseRpc('xml_nfse_get_setting', { p_key: key });
 }
@@ -201,79 +102,6 @@ async function deleteUnit(id) {
   return supabaseRpc('xml_nfse_delete_unit', {
     p_unit_id: id
   });
-}
-
-async function listRemoteDocuments({
-  certificateId,
-  environment,
-  startDate,
-  endDate,
-  cnpj,
-  partyCnpj = '',
-  partyRole = 'tomador',
-  search = '',
-  includeCancelled = false,
-  onlyCancelled = false,
-  limit = null,
-  offset = null,
-  skipTotals = false
-}) {
-  const result = await supabaseRpc('xml_nfse_list_documents', {
-    p_certificate_id: certificateId,
-    p_environment: normalizeEnvironment(environment),
-    p_start_date: startDate || null,
-    p_end_date: endDate || null,
-    p_cnpj_consulta: cnpj || '',
-    p_party_cnpj: partyCnpj || '',
-    p_party_role: partyRole || 'tomador',
-    p_search: search || '',
-    p_include_cancelled: Boolean(includeCancelled) || Boolean(onlyCancelled),
-    p_only_cancelled: Boolean(onlyCancelled),
-    p_limit: limit === null ? null : Number(limit),
-    p_offset: offset === null ? null : Number(offset),
-    p_skip_totals: Boolean(skipTotals)
-  });
-  if (Array.isArray(result)) {
-    return { documents: result, total: result.length, totalValue: 0, totalsPending: false };
-  }
-  const totalsPending = Boolean(result?.totalsPending) || result?.total == null;
-  return {
-    documents: Array.isArray(result?.documents) ? result.documents : [],
-    total: totalsPending ? null : Number(result?.total || 0),
-    totalValue: totalsPending ? null : Number(result?.totalValue || result?.total_value || 0),
-    totalsPending
-  };
-}
-
-async function getRemoteDocumentTotals({
-  certificateId,
-  environment,
-  startDate,
-  endDate,
-  cnpj,
-  partyCnpj = '',
-  partyRole = 'tomador',
-  search = '',
-  includeCancelled = false,
-  onlyCancelled = false
-}) {
-  const result = await supabaseRpc('xml_nfse_get_document_totals', {
-    p_certificate_id: certificateId,
-    p_environment: normalizeEnvironment(environment),
-    p_start_date: startDate || null,
-    p_end_date: endDate || null,
-    p_cnpj_consulta: cnpj || '',
-    p_party_cnpj: partyCnpj || '',
-    p_party_role: partyRole || 'tomador',
-    p_search: search || '',
-    p_include_cancelled: Boolean(includeCancelled) || Boolean(onlyCancelled),
-    p_only_cancelled: Boolean(onlyCancelled)
-  });
-  return {
-    total: Number(result?.total || 0),
-    totalValue: Number(result?.totalValue || result?.total_value || 0),
-    source: result?.source || 'scan'
-  };
 }
 
 async function setRemoteActiveCertificate(certificateId) {

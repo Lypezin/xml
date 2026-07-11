@@ -1,0 +1,199 @@
+/* XML list, pagination and document badges - Minimalist SaaS Clean */
+.data-grid-card {
+  padding: 18px 20px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 12px;
+}
+
+.results-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.results-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.results-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.results-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px);
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+}
+
+.cancelled-filter-field select {
+  min-height: 38px;
+  width: 100%;
+}
+
+.results-filter-bar .input-group {
+  margin-bottom: 0;
+}
+
+.search-field input {
+  min-height: 38px;
+}
+
+.toggle-row {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--input-bg);
+  transition: var(--transition);
+}
+
+.toggle-row:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.toggle-row input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Linha cancelada — destaque sutil e legivel */
+.xml-item.cancelled-row {
+  background: linear-gradient(90deg, var(--danger-bg) 0%, transparent 48%);
+  border-color: var(--danger-border);
+}
+
+.xml-item.cancelled-row:hover {
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.status-badge.cancelled {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+  font-weight: 600;
+}
+
+.status-badge.ok {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.status-badge.event {
+  background: var(--warning-bg);
+  color: var(--warning-hover);
+  border: 1px solid var(--warning-border);
+}
+
+.xml-item {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.xml-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.xml-list-wrapper {
+  overflow-x: auto;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.xml-list-head,
+.xml-item {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.9fr) minmax(220px, 1.2fr) minmax(200px, 1.1fr) minmax(140px, 0.8fr) 80px;
+  gap: 14px;
+  align-items: center;
+}
+
+.xml-list-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 16px;
+  background: var(--table-header-bg);
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.xml-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.xml-item {
+  padding: 14px 16px;
+  min-height: 90px;
+  border-bottom: 1px solid var(--card-border);
+  transition: background-color var(--transition-normal);
+  background: transparent;
+}
+
+.xml-item:last-child {
+  border-bottom: none;
+}
+
+.xml-item:nth-child(even) {
+  background: var(--surface-muted);
+}
+
+.xml-item:hover {
+  background: var(--primary-glow) !important;
+}
+
+.xml-main-cell,
+.xml-party-cell,
+.xml-service-cell,
+.xml-value-cell {
+  min-width: 0;
+}
+
+.xml-main-cell,
+.xml-service-cell,
+.xml-value-cell,
+.xml-party-cell > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

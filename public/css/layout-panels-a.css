@@ -1,0 +1,139 @@
+.input-group input,
+.input-group select {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-primary);
+  outline: none;
+  transition: var(--transition);
+}
+
+.input-group input:focus,
+.input-group select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.helper-text {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.nfse-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.hero-copy {
+  max-width: 580px;
+}
+
+.hero-copy h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.4px;
+  margin-top: 2px;
+}
+
+.hero-copy p {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.hero-status-strip {
+  display: flex;
+  gap: 10px;
+}
+
+.hero-status-strip div {
+  min-width: 110px;
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-status-strip span {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: block;
+}
+
+.hero-status-strip strong {
+  color: var(--text-primary);
+  font-size: 12.5px;
+  margin-top: 2px;
+  display: block;
+  font-weight: 600;
+}
+
+.toolbar-card,
+.operation-card,
+.premium-console,
+.data-grid-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.toolbar-card:hover,
+.operation-card:hover,
+.premium-console:hover,
+.data-grid-card:hover {
+  border-color: var(--border-strong);
+}
+
+.eyebrow {
+  display: inline-flex;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.operation-card p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.toolbar-card {
+  padding: 20px;
+}
+
+.toolbar-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.toolbar-action {
+  min-height: 38px;
+}
