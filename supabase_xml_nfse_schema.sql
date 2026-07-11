@@ -1512,6 +1512,7 @@ begin
         'cancelledAt', now(),
         'cancelledByBackfill', true
       )),
+      is_cancelled = true,
       last_seen_at = now()
   from (
     select distinct on (certificate_id, environment, chave)
