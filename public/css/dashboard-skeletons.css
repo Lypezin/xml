@@ -153,5 +153,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  max-width: min(100%, 190px);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
