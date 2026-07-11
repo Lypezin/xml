@@ -1,12 +1,5 @@
 @media (max-width: 768px) {
-  .app-layout {
-    flex-direction: column;
-  }
-  .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--card-border);
-  }
+  /* Sidebar drawer é controlado em mobile-shell.css */
   .metrics-row {
     grid-template-columns: 1fr;
   }
