@@ -79,7 +79,7 @@ Object.assign(window.AppUiTable = window.AppUiTable || {}, {
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         if (window.historySearch) window.historySearch.value = '';
-        if (window.cancelledFilter) window.cancelledFilter.value = 'active';
+        if (window.cancelledFilter) window.cancelledFilter.value = 'all';
         if (window.unitFilter) window.unitFilter.value = '';
         if (window.AppDataCache) window.AppDataCache.invalidate('history:');
         if (window.AppSyncController?.loadPersistedHistory) {

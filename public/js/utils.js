@@ -108,9 +108,9 @@ window.AppUtils = {
    */
   getCancelledMode() {
     const el = window.cancelledFilter || document.getElementById('cancelled-filter');
-    const mode = String(el?.value || 'active').toLowerCase();
-    if (mode === 'all' || mode === 'cancelled') return mode;
-    return 'active';
+    const mode = String(el?.value || 'all').toLowerCase();
+    if (mode === 'active' || mode === 'cancelled') return mode;
+    return 'all';
   },
 
   /** Compat: includeCancelled=true quando mostra todas ou so canceladas */
