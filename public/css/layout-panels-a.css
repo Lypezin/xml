@@ -1,10 +1,18 @@
+.input-group label {
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: block;
+}
+
 .input-group input,
 .input-group select {
   width: 100%;
   background: var(--input-bg);
   border: 1px solid var(--card-border);
-  border-radius: 6px;
-  min-height: 38px;
+  border-radius: var(--radius-md);
+  min-height: 40px;
   padding: 8px 12px;
   font-family: inherit;
   font-size: 13px;
@@ -16,8 +24,8 @@
 
 .input-group input:focus,
 .input-group select:focus {
-  border-color: var(--secondary);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-glow);
 }
 
 .helper-text {

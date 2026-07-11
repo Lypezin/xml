@@ -1,97 +1,143 @@
-/* Variables & Styling System Design Tokens - Minimalist SaaS Clean (Shadcn UI) */
+/* Design tokens — NFS-e Ops Premium SaaS */
+
 :root {
+  /* Surfaces */
   --bg-color: #09090b;
-  --sidebar-bg: #09090b;
-  --card-bg: #09090b;
+  --sidebar-bg: rgba(9, 9, 11, 0.82);
+  --card-bg: #0c0c0e;
   --card-border: #27272a;
   --input-bg: #09090b;
-  --table-header-bg: #18181b;
-  --code-bg: #09090b;
-  --surface-muted: #18181b;
-  --surface-raised: #09090b;
+  --table-header-bg: #121214;
+  --code-bg: #18181b;
+  --surface-muted: #141416;
+  --surface-raised: #18181b;
   --border-strong: #3f3f46;
-  
-  --primary: #fafafa;
-  --primary-hover: #e4e4e7;
-  --primary-glow: rgba(250, 250, 250, 0.08);
-  
+  --topbar-bg: rgba(9, 9, 11, 0.72);
+
+  /* Brand / accent (CTA + active) */
+  --brand: #10b981;
+  --brand-hover: #059669;
+  --brand-soft: rgba(16, 185, 129, 0.12);
+  --brand-glow: rgba(16, 185, 129, 0.22);
+
+  /* Primary = brand (CTAs consistentes light/dark) */
+  --primary: var(--brand);
+  --primary-hover: var(--brand-hover);
+  --primary-glow: var(--brand-soft);
+
   --secondary: #10b981;
   --secondary-hover: #059669;
-  
+
   --success: #10b981;
   --success-hover: #059669;
-  --success-bg: rgba(16, 185, 129, 0.05);
-  --success-border: rgba(16, 185, 129, 0.15);
-  
+  --success-bg: rgba(16, 185, 129, 0.08);
+  --success-border: rgba(16, 185, 129, 0.2);
+
   --warning: #f59e0b;
   --warning-hover: #d97706;
-  --warning-bg: rgba(245, 158, 11, 0.05);
-  --warning-border: rgba(245, 158, 11, 0.15);
-  
+  --warning-bg: rgba(245, 158, 11, 0.08);
+  --warning-border: rgba(245, 158, 11, 0.2);
+
   --danger: #ef4444;
   --danger-hover: #dc2626;
-  --danger-bg: rgba(239, 68, 68, 0.05);
-  --danger-border: rgba(239, 68, 68, 0.15);
-  
+  --danger-bg: rgba(239, 68, 68, 0.08);
+  --danger-border: rgba(239, 68, 68, 0.2);
+
   --text-primary: #fafafa;
   --text-secondary: #a1a1aa;
   --text-muted: #71717a;
-  
-  --border-radius: 8px;
-  --transition: all 0.15s ease-in-out;
+  --text-on-brand: #ffffff;
+
+  /* Radius scale */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --border-radius: var(--radius-md);
+
+  /* Space scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Type */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', var(--font-sans);
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-display: 1.75rem;
+  --text-title: 1.25rem;
+  --text-body: 0.875rem;
+  --text-meta: 0.75rem;
+
+  /* Motion */
+  --transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   --transition-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --focus-ring: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--secondary);
-  --focus-ring-soft: 0 0 0 3px rgba(16, 185, 129, 0.28);
-  
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --focus-ring: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--brand);
+  --focus-ring-soft: 0 0 0 3px var(--brand-glow);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.36);
+
+  --sidebar-width: 264px;
+  --content-max: 1400px;
 }
 
 body.light-mode {
-  --bg-color: #f8fafc;
-  --sidebar-bg: #ffffff;
+  --bg-color: #f4f6f8;
+  --sidebar-bg: rgba(255, 255, 255, 0.86);
   --card-bg: #ffffff;
-  --card-border: #f1f5f9;
+  --card-border: #e8edf2;
   --input-bg: #ffffff;
   --table-header-bg: #f8fafc;
   --code-bg: #f1f5f9;
-  --surface-muted: #f8fafc;
+  --surface-muted: #f1f5f9;
   --surface-raised: #ffffff;
   --border-strong: #cbd5e1;
-  
-  --primary: #0f172a;
-  --primary-hover: #1e293b;
-  --primary-glow: rgba(15, 23, 42, 0.04);
-  
+  --topbar-bg: rgba(255, 255, 255, 0.78);
+
+  --brand: #0d9488;
+  --brand-hover: #0f766e;
+  --brand-soft: rgba(13, 148, 136, 0.1);
+  --brand-glow: rgba(13, 148, 136, 0.22);
+
+  --primary: var(--brand);
+  --primary-hover: var(--brand-hover);
+  --primary-glow: var(--brand-soft);
+
   --secondary: #0d9488;
   --secondary-hover: #0f766e;
-  
-  --success: #10b981;
-  --success-hover: #059669;
-  --success-bg: rgba(16, 185, 129, 0.05);
-  --success-border: rgba(16, 185, 129, 0.12);
-  
-  --warning: #f59e0b;
-  --warning-hover: #d97706;
-  --warning-bg: rgba(245, 158, 11, 0.05);
-  --warning-border: rgba(245, 158, 11, 0.12);
-  
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
-  --danger-bg: rgba(239, 68, 68, 0.05);
-  --danger-border: rgba(239, 68, 68, 0.12);
-  
+
+  --success: #059669;
+  --success-hover: #047857;
+  --success-bg: rgba(5, 150, 105, 0.08);
+  --success-border: rgba(5, 150, 105, 0.18);
+
+  --warning: #d97706;
+  --warning-hover: #b45309;
+  --warning-bg: rgba(217, 119, 6, 0.08);
+  --warning-border: rgba(217, 119, 6, 0.18);
+
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-bg: rgba(220, 38, 38, 0.06);
+  --danger-border: rgba(220, 38, 38, 0.16);
+
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
-  
-  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.02), 0 1px 3px 0 rgba(15, 23, 42, 0.02);
-  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.03), 0 2px 4px -2px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(15, 23, 42, 0.01);
-  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.04), 0 4px 6px -4px rgba(15, 23, 42, 0.02), 0 0 0 1px rgba(15, 23, 42, 0.01);
+  --text-on-brand: #ffffff;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.02);
+  --shadow-md: 0 10px 28px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.03);
+  --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(15, 23, 42, 0.04);
 }
 
 * {
@@ -100,18 +146,14 @@ body.light-mode {
   padding: 0;
 }
 
-html.theme-dark-boot body,
-html.theme-dark-boot body.light-mode {
-  /* evita flash de tema claro quando o usuario escolheu escuro */
-}
-
 html.theme-dark-boot body {
   --bg-color: #09090b;
   --text-primary: #fafafa;
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
   background-color: var(--bg-color);
   color: var(--text-primary);
   min-height: 100vh;
@@ -123,33 +165,31 @@ body {
 }
 
 ::selection {
-  background: rgba(13, 148, 136, 0.22);
+  background: var(--brand-glow);
   color: inherit;
 }
 
 .glass-bg {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   z-index: -1;
-  background: radial-gradient(circle at 10% 20%, rgba(13, 148, 136, 0.06) 0%, transparent 40%),
-              radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
-              var(--bg-color);
   pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 8% 0%, rgba(16, 185, 129, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 35% at 100% 10%, rgba(56, 189, 248, 0.05) 0%, transparent 50%),
+    var(--bg-color);
 }
 
 body.light-mode .glass-bg {
-  background: radial-gradient(circle at 10% 20%, rgba(13, 148, 136, 0.04) 0%, transparent 40%),
-              radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.02) 0%, transparent 40%),
-              var(--bg-color);
+  background:
+    radial-gradient(ellipse 55% 35% at 5% 0%, rgba(13, 148, 136, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 45% 30% at 100% 0%, rgba(99, 102, 241, 0.04) 0%, transparent 45%),
+    var(--bg-color);
 }
 
-/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -159,8 +199,11 @@ body.light-mode .glass-bg {
 ::-webkit-scrollbar-thumb {
   background: var(--card-border);
   border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+  background-clip: padding-box;
 }

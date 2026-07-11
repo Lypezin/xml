@@ -43,6 +43,15 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
 
     window._tabCache = window._tabCache || {};
     const activeId = activeContent?.id || '';
+    const crumb = document.getElementById('page-breadcrumb');
+    if (crumb) {
+      const section =
+        activeId === 'view-dashboard-content' ? 'Visão geral' :
+        activeId === 'view-download-content' ? 'Operação' :
+        activeId === 'view-certificado-content' ? 'Operação' :
+        activeId === 'view-regras-content' ? 'Sistema' : 'NFS-e Ops';
+      crumb.textContent = `${section} / ${title || 'NFS-e Ops'}`;
+    }
 
     // Dados em background (nao bloqueia pintura da aba)
     const schedule = (fn) => {

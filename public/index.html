@@ -51,18 +51,22 @@
     <main class="main-content">
       <header class="navbar">
         <div class="navbar-title">
+          <p class="navbar-eyebrow" id="page-breadcrumb">NFS-e Ops</p>
           <h1 id="page-title"></h1>
           <p id="page-subtitle">Gestão de XMLs NFS-e Nacional por unidade</p>
         </div>
 
         <div class="navbar-actions">
-          <div class="cert-status-badge user-status-badge">
-            <span id="auth-user-email">Sessão ativa</span>
-            <button class="btn btn-secondary btn-sm" id="btn-logout" type="button">Sair</button>
-          </div>
-          <div class="cert-status-badge">
+          <div class="cert-status-badge cert-chip" title="Certificado em uso">
             <span class="status-indicator" id="navbar-cert-indicator"></span>
-            <span id="navbar-cert-text">Verificando certificado...</span>
+            <span class="cert-chip-text" id="navbar-cert-text">Verificando certificado...</span>
+          </div>
+          <div class="user-menu">
+            <div class="user-menu-meta">
+              <span class="user-menu-label">Sessão</span>
+              <span id="auth-user-email">Sessão ativa</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-logout" type="button">Sair</button>
           </div>
         </div>
       </header>
@@ -73,7 +77,7 @@
       <div id="view-regras-container"></div>
 
       <footer class="app-footer">
-        <p>v1.5.0 — NFS-e Nacional · cancelamentos · performance · segurança</p>
+        <p>NFS-e Ops · ADN Nacional · cancelamentos · exportação</p>
       </footer>
     </main>
   </div>

@@ -1,28 +1,59 @@
 <section class="auth-screen" id="auth-screen">
-  <form class="auth-panel" id="auth-form">
-    <div class="auth-brand">
-      <svg class="brand-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-      </svg>
-      <div>
-        <h1>NFS-e Nacional</h1>
-        <p>Acesso restrito da operação fiscal</p>
+  <div class="auth-shell">
+    <aside class="auth-brand-panel" aria-hidden="false">
+      <div class="auth-brand-panel-inner">
+        <div class="auth-brand-mark">
+          <svg class="brand-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <span>NFS-e Ops</span>
+        </div>
+        <h1>Operação fiscal nacional com controle de ponta a ponta</h1>
+        <p class="auth-brand-lead">Varredura ADN, cancelamentos, exportação e painel por unidade — em um só lugar.</p>
+        <ul class="auth-brand-points">
+          <li>
+            <span class="auth-point-icon" aria-hidden="true">✓</span>
+            <span>mTLS com certificado A1 e consulta por NSU</span>
+          </li>
+          <li>
+            <span class="auth-point-icon" aria-hidden="true">✓</span>
+            <span>Detecção de cancelamentos e XMLs permanentes</span>
+          </li>
+          <li>
+            <span class="auth-point-icon" aria-hidden="true">✓</span>
+            <span>Excel, ZIP e filtros por unidade/tomador</span>
+          </li>
+        </ul>
       </div>
-    </div>
+    </aside>
 
-    <div class="form-group">
-      <label for="auth-email">Email</label>
-      <input type="email" id="auth-email" autocomplete="email" required>
-    </div>
+    <div class="auth-form-panel">
+      <form class="auth-panel" id="auth-form">
+        <div class="auth-brand">
+          <svg class="brand-icon auth-form-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <div>
+            <h1>Entrar</h1>
+            <p>Acesso restrito da operação fiscal</p>
+          </div>
+        </div>
 
-    <div class="form-group">
-      <label for="auth-password">Senha</label>
-      <input type="password" id="auth-password" autocomplete="current-password" required>
-    </div>
+        <div class="form-group">
+          <label for="auth-email">Email</label>
+          <input type="email" id="auth-email" autocomplete="email" required placeholder="voce@empresa.com">
+        </div>
 
-    <button type="submit" class="btn btn-primary" id="auth-submit">
-      <span>Entrar</span>
-    </button>
-    <p class="auth-message" id="auth-message"></p>
-  </form>
+        <div class="form-group">
+          <label for="auth-password">Senha</label>
+          <input type="password" id="auth-password" autocomplete="current-password" required placeholder="••••••••">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="auth-submit">
+          <span>Entrar na plataforma</span>
+        </button>
+        <p class="auth-message" id="auth-message"></p>
+      </form>
+    </div>
+  </div>
 </section>

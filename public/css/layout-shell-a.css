@@ -34,25 +34,14 @@ h1, h2, h3, h4, h5, h6,
 /* Main Content Area */
 .main-content {
   flex: 1;
-  padding: 20px 28px 28px;
+  padding: 12px 28px 28px;
   overflow-y: auto;
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
   min-width: 0;
-}
-
-.app-footer {
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--card-border);
-  color: var(--text-muted);
-  font-size: 11.5px;
-}
-
-.app-footer p {
-  margin: 0;
+  background: transparent;
 }
 
 /* Transicao rapida entre abas (fluida, sem atraso perceptivel) */

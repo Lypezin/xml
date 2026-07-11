@@ -1,4 +1,4 @@
-/* Premium Button Styles & Interactive Tokens - Minimalist SaaS Clean */
+/* Buttons — brand CTAs */
 
 .btn {
   display: inline-flex;
@@ -7,9 +7,11 @@
   gap: 8px;
   font-family: inherit;
   font-size: 13px;
-  font-weight: 500;
-  padding: 8px 14px;
-  border-radius: 6px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  padding: 9px 16px;
+  min-height: 40px;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
   transition: var(--transition);
@@ -21,7 +23,7 @@
 }
 
 .btn:hover:not(:disabled) {
-  transform: translateY(-1.5px);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
@@ -30,26 +32,26 @@
 }
 
 .btn:disabled {
-  opacity: 0.4;
+  opacity: 0.42;
   cursor: not-allowed;
   transform: none !important;
   box-shadow: none !important;
 }
 
 .btn-primary {
-  background: var(--primary);
-  color: var(--bg-color);
-  border: 1px solid var(--primary);
+  background: var(--brand);
+  color: var(--text-on-brand);
+  border-color: transparent;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+  background: var(--brand-hover);
 }
 
 .btn-success {
   background: var(--success);
   color: #ffffff;
+  border-color: transparent;
 }
 
 .btn-success:hover:not(:disabled) {
@@ -59,6 +61,7 @@
 .btn-warning {
   background: var(--warning);
   color: #ffffff;
+  border-color: transparent;
 }
 
 .btn-warning:hover:not(:disabled) {
@@ -68,6 +71,7 @@
 .btn-danger {
   background: var(--danger);
   color: #ffffff;
+  border-color: transparent;
 }
 
 .btn-danger:hover:not(:disabled) {
@@ -75,17 +79,41 @@
 }
 
 .btn-secondary {
-  background: transparent;
+  background: var(--card-bg);
   color: var(--text-primary);
   border: 1px solid var(--card-border);
+  box-shadow: none;
 }
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--surface-muted);
   border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  box-shadow: none;
+  transform: none;
 }
 
 .btn-sm {
   font-size: 12px;
   padding: 6px 12px;
+  min-height: 32px;
+  border-radius: var(--radius-sm);
+}
+
+.btn-icon-only {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
 }
