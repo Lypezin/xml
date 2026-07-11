@@ -32,7 +32,7 @@
 
 .results-filter-bar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(160px, 200px) auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px);
   gap: 12px;
   align-items: end;
   margin-bottom: 16px;
@@ -45,11 +45,6 @@
 .cancelled-filter-field select {
   min-height: 38px;
   width: 100%;
-}
-
-#btn-scan-cancellations {
-  min-height: 38px;
-  white-space: nowrap;
 }
 
 .results-filter-bar .input-group {

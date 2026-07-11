@@ -67,7 +67,6 @@ window.AppUiElements = {
     window.historySearch = document.getElementById('history-search');
     window.includeCancelled = document.getElementById('include-cancelled');
     window.cancelledFilter = document.getElementById('cancelled-filter');
-    window.btnScanCancellations = document.getElementById('btn-scan-cancellations');
 
     window.navDashboard = document.getElementById('nav-dashboard');
     window.navDownload = document.getElementById('nav-download');

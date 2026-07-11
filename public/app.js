@@ -103,11 +103,26 @@ function showBootError(message) {
 function showAppShell() {
   if (window.authScreen) window.authScreen.style.display = 'none';
   if (window.appLayout) window.appLayout.style.display = 'flex';
-  const dash = window.viewDashboardContent || document.getElementById('view-dashboard-content');
-  if (dash) {
-    dash.style.display = 'block';
-    dash.classList.add('active-tab', 'active');
-  }
+
+  // Garante uma unica aba visivel no boot (evita dashboard + XMLs juntos no F5)
+  const tabIds = [
+    'view-dashboard-content',
+    'view-download-content',
+    'view-certificado-content',
+    'view-regras-content'
+  ];
+  tabIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const isDash = id === 'view-dashboard-content';
+    el.classList.toggle('active-tab', isDash);
+    el.classList.toggle('active', isDash);
+    el.style.display = isDash ? 'block' : 'none';
+  });
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navDash = document.getElementById('nav-dashboard');
+  if (navDash) navDash.classList.add('active');
 }
 
 /**
