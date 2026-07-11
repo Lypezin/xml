@@ -95,6 +95,7 @@ create table if not exists xml_nfse.documents (
   file_name text,
   xml_sha256 text,
   metadata jsonb not null default '{}'::jsonb,
+  is_cancelled boolean not null default false,
   first_seen_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now(),
   unique (certificate_id, environment, nsu)
@@ -102,6 +103,9 @@ create table if not exists xml_nfse.documents (
 
 alter table xml_nfse.documents
   alter column valor_servico type numeric(20,2);
+
+alter table xml_nfse.documents
+  add column if not exists is_cancelled boolean not null default false;
 
 create table if not exists xml_nfse.download_events (
   id uuid primary key default gen_random_uuid(),
@@ -158,11 +162,48 @@ create index if not exists documents_chave_evento_lookup_idx
   on xml_nfse.documents (certificate_id, environment, chave, nsu desc)
   where tipo = 'EVENTO' and chave is not null and chave <> '';
 
+-- Listagem por data_emissao (padrao da UI) — partial indexes com is_cancelled
+create index if not exists documents_list_active_emissao_idx
+  on xml_nfse.documents (certificate_id, environment, data_emissao desc nulls last, nsu desc)
+  where tipo <> 'EVENTO' and is_cancelled = false;
+
+create index if not exists documents_list_all_emissao_idx
+  on xml_nfse.documents (certificate_id, environment, data_emissao desc nulls last, nsu desc)
+  where tipo <> 'EVENTO';
+
+create index if not exists documents_tomador_active_emissao_idx
+  on xml_nfse.documents (certificate_id, environment, tomador_cnpj, data_emissao desc nulls last, nsu desc)
+  where tipo <> 'EVENTO' and is_cancelled = false;
+
+create index if not exists documents_tomador_all_emissao_idx
+  on xml_nfse.documents (certificate_id, environment, tomador_cnpj, data_emissao desc nulls last, nsu desc)
+  where tipo <> 'EVENTO';
+
+create index if not exists documents_prestador_active_emissao_idx
+  on xml_nfse.documents (certificate_id, environment, prestador_cnpj, data_emissao desc nulls last, nsu desc)
+  where tipo <> 'EVENTO' and is_cancelled = false;
+
+create index if not exists documents_prestador_all_emissao_idx
+  on xml_nfse.documents (certificate_id, environment, prestador_cnpj, data_emissao desc nulls last, nsu desc)
+  where tipo <> 'EVENTO';
+
+create index if not exists documents_active_count_idx
+  on xml_nfse.documents (certificate_id, environment)
+  where tipo <> 'EVENTO' and is_cancelled = false;
+
+create index if not exists documents_nfse_chave_active_idx
+  on xml_nfse.documents (certificate_id, environment, chave)
+  where tipo <> 'EVENTO' and chave is not null and chave <> '';
+
 create index if not exists xml_payloads_expires_at_idx
   on xml_nfse.xml_payloads (expires_at);
 
 create index if not exists xml_payloads_certificate_environment_nsu_idx
   on xml_nfse.xml_payloads (certificate_id, environment, nsu);
+
+create index if not exists xml_payloads_cert_env_bytes_idx
+  on xml_nfse.xml_payloads (certificate_id, environment)
+  include (content_bytes);
 
 create index if not exists sync_runs_certificate_environment_started_idx
   on xml_nfse.sync_runs (certificate_id, environment, started_at desc);
@@ -816,11 +857,18 @@ declare
   inserted_new boolean;
   metadata_data_emissao text;
   metadata_valor_servico text;
+  cancelled boolean;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
   metadata_data_emissao := nullif(nullif(coalesce(p_metadata ->> 'dataEmissao', ''), ''), 'N/A');
   metadata_valor_servico := nullif(nullif(replace(coalesce(p_metadata ->> 'valorServico', ''), ',', '.'), ''), 'N/A');
+
+  cancelled := (
+    lower(coalesce(p_metadata ->> 'status', '')) like '%cancel%'
+    or coalesce((p_metadata ->> 'isCancellation')::boolean, false) is true
+    or lower(coalesce(p_tipo, '')) like '%cancel%'
+  );
 
   insert into xml_nfse.documents (
     certificate_id,
@@ -839,7 +887,8 @@ begin
     codigo_tributacao,
     file_name,
     xml_sha256,
-    metadata
+    metadata,
+    is_cancelled
   )
   values (
     p_certificate_id,
@@ -864,7 +913,8 @@ begin
     nullif(nullif(p_metadata ->> 'codigoTributacao', ''), 'N/A'),
     p_file_name,
     p_xml_sha256,
-    coalesce(p_metadata, '{}'::jsonb)
+    coalesce(p_metadata, '{}'::jsonb),
+    cancelled
   )
   on conflict (certificate_id, environment, nsu) do update
   set tipo = excluded.tipo,
@@ -881,6 +931,8 @@ begin
       file_name = excluded.file_name,
       xml_sha256 = excluded.xml_sha256,
       metadata = excluded.metadata,
+      -- nao rebaixa cancelamento se ja estava cancelada
+      is_cancelled = xml_nfse.documents.is_cancelled or excluded.is_cancelled,
       last_seen_at = now()
   returning id, (xmax = 0) into doc_id, inserted_new;
 
@@ -1109,6 +1161,7 @@ begin
         'cancelledByEventNsu', p_event_nsu,
         'cancelledAt', now()
       )),
+      is_cancelled = true,
       last_seen_at = now()
   where d.certificate_id = p_certificate_id
     and d.environment = p_environment
@@ -1180,6 +1233,8 @@ declare
   cnpj_consulta_digits text := regexp_replace(coalesce(p_cnpj_consulta, ''), '\D', '', 'g');
   party_cnpj_digits text := regexp_replace(coalesce(p_party_cnpj, ''), '\D', '', 'g');
   search_numeric numeric;
+  lim integer := least(greatest(coalesce(p_limit, 10), 1), 100);
+  off integer := greatest(coalesce(p_offset, 0), 0);
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
@@ -1208,11 +1263,13 @@ begin
       d.xml_sha256,
       d.metadata,
       d.first_seen_at,
-      d.last_seen_at
+      d.last_seen_at,
+      d.is_cancelled
     from xml_nfse.documents d
     where d.certificate_id = p_certificate_id
       and d.environment = p_environment
       and d.tipo <> 'EVENTO'
+      and (p_include_cancelled or d.is_cancelled = false)
       and (p_start_date is null or d.data_emissao >= p_start_date)
       and (p_end_date is null or d.data_emissao <= p_end_date)
       and (
@@ -1231,30 +1288,6 @@ begin
         )
       )
       and (
-        p_include_cancelled
-        or (
-          lower(coalesce(d.metadata ->> 'status', '')) not like '%cancel%'
-          and lower(coalesce(d.tipo, '')) not like '%cancel%'
-          and coalesce((d.metadata ->> 'isCancellation')::boolean, false) is not true
-          and not exists (
-            select 1
-            from xml_nfse.documents ev
-            where ev.certificate_id = d.certificate_id
-              and ev.environment = d.environment
-              and ev.chave = d.chave
-              and ev.tipo = 'EVENTO'
-              and ev.chave is not null
-              and ev.chave <> ''
-              and (
-                lower(coalesce(ev.metadata ->> 'status', '')) like '%cancel%'
-                or lower(coalesce(ev.metadata ->> 'eventoDescricao', '')) like '%cancel%'
-                or lower(coalesce(ev.metadata ->> 'eventoMotivo', '')) like '%cancel%'
-                or coalesce((ev.metadata ->> 'isCancellation')::boolean, false) is true
-              )
-          )
-        )
-      )
-      and (
         search_term = ''
         or lower(coalesce(d.prestador_nome, '')) like '%' || search_term || '%'
         or lower(coalesce(d.tomador_nome, '')) like '%' || search_term || '%'
@@ -1262,6 +1295,8 @@ begin
         or (search_digits <> '' and coalesce(d.tomador_cnpj, '') like '%' || search_digits || '%')
         or (search_numeric is not null and coalesce(d.valor_servico, 0) = search_numeric)
         or (search_decimal <> '' and coalesce(d.valor_servico, 0)::text like '%' || search_decimal || '%')
+        or (search_digits <> '' and coalesce(d.chave, '') like '%' || search_digits || '%')
+        or (search_digits <> '' and coalesce(d.numero_nfse, '') like '%' || search_digits || '%')
       )
   ),
   totals as (
@@ -1302,35 +1337,15 @@ begin
         'valorServico', d.valor_servico::text,
         'municipioPrestacao', d.municipio_prestacao,
         'codigoTributacao', d.codigo_tributacao,
-        'status', case
-          when lower(coalesce(d.metadata ->> 'status', '')) like '%cancel%'
-            or coalesce((d.metadata ->> 'isCancellation')::boolean, false) is true
-          then 'Cancelada'
-          when exists (
-            select 1
-            from xml_nfse.documents ev
-            where ev.certificate_id = d.certificate_id
-              and ev.environment = d.environment
-              and ev.chave = d.chave
-              and ev.tipo = 'EVENTO'
-              and ev.chave is not null
-              and ev.chave <> ''
-              and (
-                lower(coalesce(ev.metadata ->> 'status', '')) like '%cancel%'
-                or lower(coalesce(ev.metadata ->> 'eventoDescricao', '')) like '%cancel%'
-                or lower(coalesce(ev.metadata ->> 'eventoMotivo', '')) like '%cancel%'
-                or coalesce((ev.metadata ->> 'isCancellation')::boolean, false) is true
-              )
-          ) then 'Cancelada'
-          else coalesce(d.metadata ->> 'status', 'Autorizada')
-        end
+        'status', case when d.is_cancelled then 'Cancelada' else coalesce(d.metadata ->> 'status', 'Autorizada') end,
+        'isCancellation', d.is_cancelled
       )) as metadata,
       d.first_seen_at,
       d.last_seen_at
     from filtered d
-    order by d.data_emissao desc, d.nsu desc
-    limit coalesce(p_limit, 100000)
-    offset coalesce(p_offset, 0)
+    order by d.data_emissao desc nulls last, d.nsu desc
+    limit lim
+    offset off
   )
   select jsonb_build_object(
     'documents', coalesce((select jsonb_agg(to_jsonb(page_rows.*)) from page_rows), '[]'::jsonb),
