@@ -8,8 +8,19 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <meta name="theme-color" content="#0b0f19">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <!-- display=swap evita FOIT; pesos reduzidos -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- CSS em paralelo (sem @import em cascata) -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/buttons.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/metrics.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/certificates.css">
+  <link rel="stylesheet" href="css/table.css">
+  <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body class="light-mode">
   <!-- Background glow effect -->
@@ -50,19 +61,19 @@
 
       <!-- Footer -->
       <footer class="app-footer">
-        <p>v1.4.0 - NFS-e Nacional com certificados criptografados e histórico persistido.</p>
+        <p>v1.4.1 - NFS-e Nacional com cancelamentos e carregamento otimizado.</p>
       </footer>
     </main>
   </div>
 
-  <script src="js/utils.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/uiElements.js"></script>
-  <script src="js/uiTable.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/syncController.js"></script>
-  <script src="js/eventsCert.js"></script>
-  <script src="js/events.js"></script>
-  <script src="app.js"></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/uiElements.js" defer></script>
+  <script src="js/uiTable.js" defer></script>
+  <script src="js/ui.js" defer></script>
+  <script src="js/syncController.js" defer></script>
+  <script src="js/eventsCert.js" defer></script>
+  <script src="js/events.js" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

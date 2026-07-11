@@ -53,8 +53,20 @@ app.use('/api', require('./src/routes/downloads'));
 app.use('/api', require('./src/routes/units'));
 app.use('/api', require('./src/routes/schedulerRoutes'));
 
-// Servir arquivos estáticos do frontend
-app.use(express.static(path.join(__dirname, 'public')));
+// Servir arquivos estáticos com cache longo (acelera recarregar guias/CSS/JS)
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: IS_VERCEL ? '1h' : '15m',
+  etag: true,
+  lastModified: true,
+  setHeaders(res, filePath) {
+    if (/\.(css|js|svg|woff2?)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
+    }
+    if (/\.html$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 if (!IS_VERCEL) {
   app.use('/downloads', express.static(DOWNLOADS_DIR));
 }

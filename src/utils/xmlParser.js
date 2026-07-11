@@ -157,23 +157,38 @@ function parseXmlMetadata(xmlString, nsu) {
     if (descMatch) metadata.descricaoServico = descMatch[1];
 
     const eventSection = extractSection(xmlString, 'pedRegEvento') || extractSection(xmlString, 'infEvento');
-    if (eventSection) {
-      metadata.tpEvento = extractTag(eventSection, 'tpEvento') ||
-        extractTag(eventSection, 'cEvento') ||
-        extractTag(xmlString, 'tpEvento') ||
-        metadata.tpEvento;
-      metadata.eventoDescricao = extractTag(eventSection, 'xDesc') ||
-        extractTag(eventSection, 'xEvento') ||
+    // Bloco tipico de cancelamento nacional: <e101101><xDesc>Cancelamento de NFS-e</xDesc>...
+    const cancelBlockMatch = xmlString.match(/<(?:[a-zA-Z0-9]+:)?e101101\b[^>]*>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?e101101>/i)
+      || xmlString.match(/<(?:[a-zA-Z0-9]+:)?e105102\b[^>]*>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?e105102>/i);
+    const eventScope = cancelBlockMatch ? cancelBlockMatch[1] : eventSection;
+
+    if (eventSection || cancelBlockMatch) {
+      if (cancelBlockMatch) {
+        const tagName = (xmlString.match(/<(?:[a-zA-Z0-9]+:)?(e10\d{4})\b/i) || [])[1];
+        metadata.tpEvento = tagName || 'e101101';
+      } else {
+        metadata.tpEvento = extractTag(eventSection, 'tpEvento') ||
+          extractTag(eventSection, 'cEvento') ||
+          extractTag(xmlString, 'tpEvento') ||
+          metadata.tpEvento;
+      }
+
+      metadata.eventoDescricao = extractTag(eventScope || eventSection, 'xDesc') ||
+        extractTag(eventSection || '', 'xEvento') ||
         metadata.eventoDescricao;
-      metadata.eventoMotivo = extractTag(eventSection, 'xMotivo') ||
-        extractTag(eventSection, 'cMotivo') ||
+      metadata.eventoMotivo = extractTag(eventScope || eventSection, 'xMotivo') ||
+        extractTag(eventScope || eventSection, 'cMotivo') ||
         metadata.eventoMotivo;
-      const rawDate = extractTag(eventSection, 'dhEvento') || extractTag(xmlString, 'dhProc');
+
+      const chFromEvent = extractTag(eventSection || xmlString, 'chNFSe');
+      if (chFromEvent) metadata.chave = chFromEvent;
+
+      const rawDate = extractTag(eventSection || xmlString, 'dhEvento') || extractTag(xmlString, 'dhProc');
       metadata.dataEmissao = normalizeDate(rawDate);
       metadata.dataEmissaoCompleta = rawDate;
       metadata.descricaoServico = metadata.eventoDescricao !== 'N/A' ? metadata.eventoDescricao : metadata.descricaoServico;
 
-      metadata.isCancellation = isCancellationEvent(metadata);
+      metadata.isCancellation = Boolean(cancelBlockMatch) || isCancellationEvent(metadata);
       metadata.status = metadata.isCancellation ? 'Cancelada' : 'Evento';
     }
 

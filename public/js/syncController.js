@@ -191,26 +191,29 @@ window.AppSyncController = {
       window.AppUi.renderCertificateList();
 
       if (data.active) {
-        certUploadState.classList.remove('active');
-        certActiveState.classList.add('active');
-        activeCertName.innerText = `Arquivo: ${data.filename}`;
-        activeCertCnpj.innerText = `CNPJ: ${data.cnpj || 'Não informado'}`;
-        btnStart.disabled = false;
+        if (certUploadState) certUploadState.classList.remove('active');
+        if (certActiveState) certActiveState.classList.add('active');
+        if (activeCertName) activeCertName.innerText = `Arquivo: ${data.filename}`;
+        if (activeCertCnpj) activeCertCnpj.innerText = `CNPJ: ${data.cnpj || 'Não informado'}`;
+        if (btnStart) btnStart.disabled = false;
         if (window.btnResetNsu) window.btnResetNsu.disabled = false;
         window.AppUi.log(`Certificado ativo CNPJ: ${data.cnpj}`);
         if (indicator && txt) {
           indicator.className = 'status-indicator online';
           txt.innerText = `Certificado Ativo: ${data.cnpj}`;
         }
-        if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
+        // Nao recarregar historico no boot se a aba XMLs nao esta visivel (ganho grande)
+        const syncVisible = window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none'
+          && window.viewDownloadContent.classList.contains('active-tab');
+        if (syncVisible) {
           this.loadPersistedHistory();
           this.loadStorageSummary();
           await this.loadSavedStartNsu();
         }
       } else {
-        certUploadState.classList.add('active');
-        certActiveState.classList.remove('active');
-        btnStart.disabled = true;
+        if (certUploadState) certUploadState.classList.add('active');
+        if (certActiveState) certActiveState.classList.remove('active');
+        if (btnStart) btnStart.disabled = true;
         if (window.btnResetNsu) window.btnResetNsu.disabled = true;
         window.AppUi.log('Nenhum certificado carregado.', 'warning');
         if (indicator && txt) {

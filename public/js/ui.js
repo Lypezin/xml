@@ -176,7 +176,8 @@ window.AppUi = {
   switchTab(activeNav, activeContent, title, subtitle, options = {}) {
     const forceRefresh = Boolean(options.forceRefresh);
     const now = Date.now();
-    const cacheTtlMs = 45000;
+    // Cache agressivo: 2 min para dados de aba
+    const cacheTtlMs = 120000;
 
     [navDashboard, navDownload, navCertificado, navRegras].forEach(nav => {
       if (nav) nav.classList.remove('active');
@@ -191,31 +192,43 @@ window.AppUi = {
     if (activeNav) activeNav.classList.add('active');
     if (activeContent) {
       activeContent.style.display = 'block';
-      // Trigger a reflow to start transition
       void activeContent.offsetHeight;
       activeContent.classList.add('active-tab');
     }
     if (pageTitle) pageTitle.innerText = title;
     if (pageSubtitle) pageSubtitle.innerText = subtitle;
 
+    window._tabCache = window._tabCache || {};
+
     if (activeContent === viewDashboardContent && window.AppSyncController?.loadDashboard) {
-      const lastDash = window._tabCache?.dashboardAt || 0;
+      const lastDash = window._tabCache.dashboardAt || 0;
       if (forceRefresh || !lastDash || now - lastDash > cacheTtlMs) {
-        window.AppSyncController.loadDashboard();
-        window._tabCache = window._tabCache || {};
         window._tabCache.dashboardAt = now;
+        window.AppSyncController.loadDashboard();
       }
     }
 
     if (activeContent === viewDownloadContent && window.AppSyncController) {
-      const lastSync = window._tabCache?.syncAt || 0;
-      if (forceRefresh || !lastSync || now - lastSync > cacheTtlMs || window._historyReloadDirty) {
-        window.AppSyncController.loadPersistedHistory();
-        window.AppSyncController.loadStorageSummary();
-        window.AppSyncController.loadSavedStartNsu();
-        window._tabCache = window._tabCache || {};
+      const lastSync = window._tabCache.syncAt || 0;
+      const lastNsu = window._tabCache.nsuAt || 0;
+      const lastStorage = window._tabCache.storageAt || 0;
+      const needHistory = forceRefresh || !lastSync || now - lastSync > cacheTtlMs || window._historyReloadDirty;
+      const needNsu = forceRefresh || !lastNsu || now - lastNsu > cacheTtlMs;
+      // Storage e pesado: 1a visita da aba ou a cada 5 min
+      const needStorage = forceRefresh || !lastStorage || now - lastStorage > 300000;
+
+      if (needHistory) {
         window._tabCache.syncAt = now;
         window._historyReloadDirty = false;
+        window.AppSyncController.loadPersistedHistory();
+      }
+      if (needNsu) {
+        window._tabCache.nsuAt = now;
+        window.AppSyncController.loadSavedStartNsu();
+      }
+      if (needStorage) {
+        window._tabCache.storageAt = now;
+        window.AppSyncController.loadStorageSummary();
       }
     }
   },

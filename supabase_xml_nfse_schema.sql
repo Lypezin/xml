@@ -1409,3 +1409,116 @@ end;
 $$;
 
 grant execute on function public.xml_nfse_get_dashboard_summary(text) to anon, authenticated;
+
+-- ============================================================
+-- Backfill de cancelamentos (e101101 / e105102) a partir de EVENTOs
+-- ============================================================
+create or replace function public.xml_nfse_backfill_cancellations(
+  p_secret text,
+  p_batch_limit integer default 50000
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+set statement_timeout = '120s'
+as $$
+declare
+  eventos_found integer := 0;
+  nfse_updated integer := 0;
+  eventos_meta_updated integer := 0;
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  create temporary table if not exists tmp_cancel_keys (
+    certificate_id text not null,
+    environment text not null,
+    chave text,
+    event_nsu bigint,
+    evento_descricao text,
+    evento_motivo text,
+    tp_evento text
+  ) on commit drop;
+
+  truncate tmp_cancel_keys;
+
+  insert into tmp_cancel_keys (certificate_id, environment, chave, event_nsu, evento_descricao, evento_motivo, tp_evento)
+  select
+    d.certificate_id,
+    d.environment,
+    coalesce(nullif(trim(d.chave), ''), substring(p.xml_content from '<chNFSe>([^<]+)</chNFSe>')),
+    d.nsu,
+    coalesce(
+      substring(p.xml_content from '<xDesc>([^<]*[Cc]ancel[^<]*)</xDesc>'),
+      substring(p.xml_content from '<xDesc>([^<]+)</xDesc>'),
+      'Cancelamento de NFS-e'
+    ),
+    coalesce(substring(p.xml_content from '<xMotivo>([^<]+)</xMotivo>'), ''),
+    case when p.xml_content ~* '<e105102[\s>]' then 'e105102' else 'e101101' end
+  from xml_nfse.documents d
+  join xml_nfse.xml_payloads p
+    on p.certificate_id = d.certificate_id
+   and p.nsu = d.nsu
+  where d.tipo = 'EVENTO'
+    and (
+      p.xml_content ~* '<e101101[\s>]'
+      or p.xml_content ~* '<e105102[\s>]'
+      or p.xml_content ~* 'Cancelamento de NFS-e'
+    )
+  limit greatest(coalesce(p_batch_limit, 50000), 1);
+
+  get diagnostics eventos_found = row_count;
+
+  update xml_nfse.documents d
+  set metadata = coalesce(d.metadata, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+        'status', 'Cancelada',
+        'isCancellation', true,
+        'eventoDescricao', t.evento_descricao,
+        'eventoMotivo', nullif(t.evento_motivo, ''),
+        'tpEvento', t.tp_evento
+      )),
+      last_seen_at = now()
+  from tmp_cancel_keys t
+  where d.certificate_id = t.certificate_id
+    and d.environment = t.environment
+    and d.nsu = t.event_nsu
+    and d.tipo = 'EVENTO';
+
+  get diagnostics eventos_meta_updated = row_count;
+
+  update xml_nfse.documents d
+  set metadata = coalesce(d.metadata, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+        'status', 'Cancelada',
+        'isCancellation', true,
+        'eventoDescricao', t.evento_descricao,
+        'eventoMotivo', nullif(t.evento_motivo, ''),
+        'tpEvento', t.tp_evento,
+        'cancelledByEventNsu', t.event_nsu,
+        'cancelledAt', now(),
+        'cancelledByBackfill', true
+      )),
+      last_seen_at = now()
+  from (
+    select distinct on (certificate_id, environment, chave)
+      certificate_id, environment, chave, event_nsu, evento_descricao, evento_motivo, tp_evento
+    from tmp_cancel_keys
+    where chave is not null and chave <> '' and chave <> 'N/A'
+    order by certificate_id, environment, chave, event_nsu desc
+  ) t
+  where d.certificate_id = t.certificate_id
+    and d.environment = t.environment
+    and d.chave = t.chave
+    and d.tipo <> 'EVENTO';
+
+  get diagnostics nfse_updated = row_count;
+
+  return jsonb_build_object(
+    'success', true,
+    'eventos_cancel_found', eventos_found,
+    'eventos_metadata_updated', eventos_meta_updated,
+    'nfse_marked_cancelled', nfse_updated
+  );
+end;
+$$;
+
+grant execute on function public.xml_nfse_backfill_cancellations(text, integer) to anon, authenticated;

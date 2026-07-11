@@ -1,3 +1,5 @@
+/* Fallback se algum link ainda apontar para style.css.
+   O index.html carrega os CSS em paralelo via <link>. */
 @import url('css/variables.css');
 @import url('css/buttons.css');
 @import url('css/auth.css');
