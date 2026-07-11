@@ -138,7 +138,7 @@ window.AppSyncController = {
         partyCnpj: unitFilterParams.partyCnpj,
         partyRole: unitFilterParams.partyRole,
         search: historySearch ? historySearch.value.trim() : '',
-        includeCancelled: includeCancelled?.checked ? 'false' : 'true',
+        includeCancelled: window.AppUtils.getIncludeCancelledParam(),
         limit,
         offset: (safePage - 1) * limit
       });
@@ -331,17 +331,36 @@ window.AppSyncController = {
 
       window.transientRetryCount = 0;
 
-      const { ultNSU, maxNSU, totalFila, documentos, novos = 0, existentes = 0 } = data;
+      const {
+        ultNSU,
+        maxNSU,
+        totalFila,
+        documentos,
+        novos = 0,
+        existentes = 0,
+        canceladasNovas = 0,
+        eventosCancelamento = 0
+      } = data;
       window.maxNsu = Math.max(window.maxNsu, maxNSU);
       statNsuMax.innerText = window.maxNsu;
       statNsuAtual.innerText = ultNSU;
       
       if (documentos && documentos.length > 0) {
-        window.AppUi.log(`Lote processado! ${novos} novo(s), ${existentes} já existiam, ${documentos.length} recebido(s) no lote.`, novos > 0 ? 'success' : 'warning');
+        let loteMsg = `Lote processado! ${novos} novo(s), ${existentes} já existiam, ${documentos.length} recebido(s) no lote.`;
+        if (Number(canceladasNovas) > 0 || Number(eventosCancelamento) > 0) {
+          loteMsg += ` Canceladas detectadas: ${canceladasNovas} (eventos de cancel: ${eventosCancelamento}).`;
+        }
+        window.AppUi.log(loteMsg, novos > 0 || canceladasNovas > 0 ? 'success' : 'warning');
         window.totalDownloaded += novos;
         if (window.btnDownloadZip) btnDownloadZip.disabled = false;
-        await this.loadPersistedHistory(1);
-        this.loadStorageSummary();
+        // Throttle: nao recarrega a tabela a cada lote (melhora velocidade da varredura)
+        window._historyReloadDirty = true;
+        const now = Date.now();
+        if (!window._lastHistoryReloadAt || now - window._lastHistoryReloadAt > 8000) {
+          window._lastHistoryReloadAt = now;
+          window._historyReloadDirty = false;
+          this.loadPersistedHistory(1);
+        }
         
         if (window.isCrawlerActive) {
           let novosCnpjs = 0;
@@ -394,6 +413,12 @@ window.AppSyncController = {
       if (deveParar) {
         window.AppUi.log(`Sincronização concluída! ${motivoParada}`, 'success');
         alertSyncSuccess.style.display = 'block';
+        if (window._historyReloadDirty) {
+          window._historyReloadDirty = false;
+          window._lastHistoryReloadAt = Date.now();
+          await this.loadPersistedHistory(1);
+        }
+        this.loadStorageSummary();
         this.stopQuerying();
         return;
       }

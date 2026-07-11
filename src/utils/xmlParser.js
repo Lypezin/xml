@@ -1,5 +1,15 @@
 const crypto = require('crypto');
 
+// Códigos tipicos de cancelamento no modelo nacional (ampliaveis).
+const CANCEL_EVENT_CODES = new Set([
+  'e101101',
+  'e105102',
+  '101101',
+  '105102',
+  'cancelamento',
+  'cancelar'
+]);
+
 function extractTag(xmlString, tagName) {
   const match = xmlString.match(new RegExp(`<([a-zA-Z0-9]+:)?${tagName}[^>]*>([\\s\\S]*?)<\\/\\1?${tagName}>`, 'i'));
   return match ? match[2].trim() : null;
@@ -32,6 +42,32 @@ function buildStableXmlToken({ certificateId, environment, nsu, xmlSha256, chave
     .digest('hex');
 }
 
+function textLooksLikeCancel(...parts) {
+  const blob = parts
+    .filter(Boolean)
+    .map(p => String(p).toLowerCase())
+    .join(' ');
+  if (!blob) return false;
+  return /cancel/.test(blob);
+}
+
+function isCancellationEvent(meta = {}) {
+  const code = String(meta.tpEvento || meta.codigoEvento || meta.cMotivo || '').trim().toLowerCase();
+  if (code && CANCEL_EVENT_CODES.has(code)) return true;
+  if (code && /cancel/.test(code)) return true;
+
+  return textLooksLikeCancel(
+    meta.status,
+    meta.tipo,
+    meta.eventoDescricao,
+    meta.eventoMotivo,
+    meta.descricao,
+    meta.descricaoServico,
+    meta.xDesc,
+    meta.xMotivo
+  );
+}
+
 function parseXmlMetadata(xmlString, nsu) {
   const metadata = {
     nsu: nsu || 'N/A',
@@ -56,7 +92,9 @@ function parseXmlMetadata(xmlString, nsu) {
     descricaoServico: 'N/A',
     status: 'Autorizada',
     eventoDescricao: 'N/A',
-    eventoMotivo: 'N/A'
+    eventoMotivo: 'N/A',
+    tpEvento: 'N/A',
+    isCancellation: false
   };
 
   try {
@@ -75,7 +113,7 @@ function parseXmlMetadata(xmlString, nsu) {
     metadata.codigoTributacao = extractTag(xmlString, 'cTribNac') || metadata.codigoTributacao;
     metadata.tributacaoNacional = extractTag(xmlString, 'xTribNac') || metadata.tributacaoNacional;
 
-    const emitSectionMatch = xmlString.match(/<emit>([\s\S]*?)<\/emit>/i) || 
+    const emitSectionMatch = xmlString.match(/<emit>([\s\S]*?)<\/emit>/i) ||
                              xmlString.match(/<prestador>([\s\S]*?)<\/prestador>/i) ||
                              xmlString.match(/<prest>([\s\S]*?)<\/prest>/i);
     if (emitSectionMatch) {
@@ -86,7 +124,7 @@ function parseXmlMetadata(xmlString, nsu) {
       if (nome) metadata.prestadorNome = nome[1];
     }
 
-    const tomSectionMatch = xmlString.match(/<toma>([\s\S]*?)<\/toma>/i) || 
+    const tomSectionMatch = xmlString.match(/<toma>([\s\S]*?)<\/toma>/i) ||
                             xmlString.match(/<tomador>([\s\S]*?)<\/tomador>/i) ||
                             xmlString.match(/<tom>([\s\S]*?)<\/tom>/i);
     if (tomSectionMatch) {
@@ -97,13 +135,13 @@ function parseXmlMetadata(xmlString, nsu) {
       if (nome) metadata.tomadorNome = nome[1];
     }
 
-    const valMatch = xmlString.match(/<vServ>([^<]+)<\/vServ>/i) || 
+    const valMatch = xmlString.match(/<vServ>([^<]+)<\/vServ>/i) ||
                      xmlString.match(/<vServPrest>([^<]+)<\/vServPrest>/i) ||
                      xmlString.match(/<valorServico>([^<]+)<\/valorServico>/i) ||
                      xmlString.match(/<vLiq>([^<]+)<\/vLiq>/i);
     if (valMatch) metadata.valorServico = valMatch[1];
 
-    const dataMatch = xmlString.match(/<(?:[a-zA-Z0-9]+:)?dhEmit>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dhEmit>/i) || 
+    const dataMatch = xmlString.match(/<(?:[a-zA-Z0-9]+:)?dhEmit>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dhEmit>/i) ||
                       xmlString.match(/<(?:[a-zA-Z0-9]+:)?dhEmi>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dhEmi>/i) ||
                       xmlString.match(/<(?:[a-zA-Z0-9]+:)?dhProc>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dhProc>/i) ||
                       xmlString.match(/<(?:[a-zA-Z0-9]+:)?dEmi>([^<]+)<\/(?:[a-zA-Z0-9]+:)?dEmi>/i) ||
@@ -120,13 +158,23 @@ function parseXmlMetadata(xmlString, nsu) {
 
     const eventSection = extractSection(xmlString, 'pedRegEvento') || extractSection(xmlString, 'infEvento');
     if (eventSection) {
-      metadata.status = 'Evento';
-      metadata.eventoDescricao = extractTag(eventSection, 'xDesc') || metadata.eventoDescricao;
-      metadata.eventoMotivo = extractTag(eventSection, 'xMotivo') || metadata.eventoMotivo;
+      metadata.tpEvento = extractTag(eventSection, 'tpEvento') ||
+        extractTag(eventSection, 'cEvento') ||
+        extractTag(xmlString, 'tpEvento') ||
+        metadata.tpEvento;
+      metadata.eventoDescricao = extractTag(eventSection, 'xDesc') ||
+        extractTag(eventSection, 'xEvento') ||
+        metadata.eventoDescricao;
+      metadata.eventoMotivo = extractTag(eventSection, 'xMotivo') ||
+        extractTag(eventSection, 'cMotivo') ||
+        metadata.eventoMotivo;
       const rawDate = extractTag(eventSection, 'dhEvento') || extractTag(xmlString, 'dhProc');
       metadata.dataEmissao = normalizeDate(rawDate);
       metadata.dataEmissaoCompleta = rawDate;
       metadata.descricaoServico = metadata.eventoDescricao !== 'N/A' ? metadata.eventoDescricao : metadata.descricaoServico;
+
+      metadata.isCancellation = isCancellationEvent(metadata);
+      metadata.status = metadata.isCancellation ? 'Cancelada' : 'Evento';
     }
 
   } catch (e) {
@@ -142,5 +190,7 @@ module.exports = {
   normalizeDate,
   buildXmlToken,
   buildStableXmlToken,
-  parseXmlMetadata
+  parseXmlMetadata,
+  isCancellationEvent,
+  textLooksLikeCancel
 };

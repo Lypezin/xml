@@ -9,7 +9,6 @@ const {
   formatNationalApiRejection,
   getResponseNsu,
   extractDfeDocuments,
-  normalizeEnvironment,
   buildNationalApiContext
 } = require('../services/nfse');
 const { validateCertificateForNationalApi } = require('./certValidator');
@@ -20,27 +19,23 @@ const {
   syncSupabaseDocument
 } = require('../services/supabase');
 const { processBatchDocuments } = require('../services/documentProcessor');
+const { analyzeBatchCancellations } = require('../services/cancelationAnalyzer');
 
-function getDocumentDedupKey(doc) {
-  const chave = String(doc.chave || '').trim();
-  if (chave && chave !== 'N/A' && !chave.startsWith('NSU_')) {
-    return `CHAVE:${chave}`;
-  }
-  return `NSU:${doc.nsu || doc.token || doc.arquivo || doc.xmlSha256 || 'SEM_CHAVE'}`;
-}
-
+/**
+ * Dedup apenas duplicatas do mesmo NSU no lote.
+ * NUNCA remove EVENTO por chave — cancelamento precisa ser persistido.
+ */
 function dedupeProcessedDocuments(docs) {
-  const byKey = new Map();
-  const ordered = [...(docs || [])].sort((a, b) => {
-    const aEvento = String(a.tipo || '').toUpperCase() === 'EVENTO';
-    const bEvento = String(b.tipo || '').toUpperCase() === 'EVENTO';
-    return Number(aEvento) - Number(bEvento);
-  });
-  for (const doc of ordered) {
-    const key = getDocumentDedupKey(doc);
-    if (!byKey.has(key)) byKey.set(key, doc);
+  const byNsu = new Map();
+  for (const doc of docs || []) {
+    const nsuKey = doc.nsu === undefined || doc.nsu === null
+      ? `tok:${doc.token || doc.xmlSha256 || Math.random()}`
+      : `nsu:${doc.nsu}`;
+    if (!byNsu.has(nsuKey)) {
+      byNsu.set(nsuKey, doc);
+    }
   }
-  return Array.from(byKey.values());
+  return Array.from(byNsu.values());
 }
 
 async function executeSyncBatch({ selectedCertificate, requestEnvironment, requestStartNsu, requestCnpjConsulta, sortOrder, supabaseRunId }) {
@@ -83,11 +78,11 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
   }
 
   console.log(`Resposta HTTP ${response.status} | Chaves: ${Object.keys(data).join(', ')}`);
-  
+
   const nationalStatus = getNationalApiStatus(data);
   if (nationalStatus === 'REJEICAO') {
     const errorMsg = formatNationalApiRejection(data) || 'Rejeicao da API Nacional sem detalhes.';
-    
+
     await syncSupabaseState({
       certificateId: selectedCertificate.id,
       environment: requestEnvironment,
@@ -142,7 +137,7 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     const datas = processedDocs
       .map(d => d.dataEmissao)
       .filter(d => d !== 'N/A' && d);
-      
+
     if (datas.length > 0) {
       datas.sort();
       menorDataLote = datas[0];
@@ -159,6 +154,7 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
   let newDocuments = 0;
   let existingDocuments = 0;
   const insertedKeys = [];
+  const upsertedDocs = [];
 
   for (const doc of processedDocs) {
     const savedDoc = await syncSupabaseDocument({
@@ -166,7 +162,10 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
       environment: requestEnvironment,
       doc
     });
-    if (savedDoc?.inserted) {
+    const inserted = Boolean(savedDoc?.inserted);
+    upsertedDocs.push({ doc, inserted });
+
+    if (inserted) {
       newDocuments += 1;
       if (doc.chave && doc.chave !== 'N/A' && String(doc.tipo).toUpperCase() !== 'EVENTO') {
         insertedKeys.push(doc.chave);
@@ -175,6 +174,13 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
       existingDocuments += 1;
     }
   }
+
+  const cancelStats = await analyzeBatchCancellations({
+    certificateId: selectedCertificate.id,
+    environment: requestEnvironment,
+    upsertedDocs,
+    httpsAgent
+  });
 
   await syncSupabaseState({
     certificateId: selectedCertificate.id,
@@ -201,11 +207,14 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     maiorDataLote,
     novos: newDocuments,
     existentes: existingDocuments,
+    canceladasNovas: cancelStats.canceladasNovas || 0,
+    eventosCancelamento: cancelStats.eventosCancelamento || 0,
     documentos: processedDocs,
     insertedKeys
   };
 }
 
 module.exports = {
-  executeSyncBatch
+  executeSyncBatch,
+  dedupeProcessedDocuments
 };

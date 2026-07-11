@@ -116,6 +116,8 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
         status: meta.status,
         eventoDescricao: meta.eventoDescricao,
         eventoMotivo: meta.eventoMotivo,
+        tpEvento: meta.tpEvento,
+        isCancellation: Boolean(meta.isCancellation),
         arquivo: fileName,
         xmlSha256: xmlSha256,
         token: token

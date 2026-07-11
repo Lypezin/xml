@@ -96,6 +96,18 @@ function buildDfeUrl(baseUrl, nsu, cnpjConsulta) {
   return `${baseUrl}/DFe/${Number(nsu || 0)}?${params.toString()}`;
 }
 
+function buildEventosUrl(baseUrl, chaveAcesso) {
+  const chave = String(chaveAcesso || '').trim();
+  if (!chave || chave === 'N/A') return null;
+  return `${baseUrl}/NFSe/${encodeURIComponent(chave)}/Eventos`;
+}
+
+function getCancelCheckMode() {
+  const mode = String(process.env.CANCEL_CHECK_MODE || 'lote+eventos').trim().toLowerCase();
+  if (mode === 'off' || mode === 'lote' || mode === 'lote+eventos') return mode;
+  return 'lote+eventos';
+}
+
 function isNationalApiFiscalStatus(status) {
   return (status >= 200 && status < 300) || status === 400 || status === 404;
 }
@@ -126,6 +138,8 @@ module.exports = {
   getResponseNsu,
   resolveCnpjConsulta,
   buildDfeUrl,
+  buildEventosUrl,
+  getCancelCheckMode,
   isNationalApiFiscalStatus,
   buildNationalApiContext,
   normalizeEnvironment

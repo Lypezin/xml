@@ -120,9 +120,13 @@ create table if not exists xml_nfse.xml_payloads (
   nsu bigint,
   file_name text not null,
   xml_content text not null,
+  content_bytes integer,
   created_at timestamptz not null default now(),
   expires_at timestamptz
 );
+
+alter table xml_nfse.xml_payloads
+  add column if not exists content_bytes integer;
 
 create index if not exists sync_state_lookup_idx
   on xml_nfse.sync_state (certificate_id, environment, cnpj_consulta);
@@ -694,7 +698,10 @@ begin
     now()
   )
   on conflict (certificate_id, environment, cnpj_consulta) do update
-  set last_nsu = excluded.last_nsu,
+  set last_nsu = case
+        when coalesce(p_status, '') = 'error' then xml_nfse.sync_state.last_nsu
+        else greatest(xml_nfse.sync_state.last_nsu, excluded.last_nsu)
+      end,
       max_nsu_seen = greatest(xml_nfse.sync_state.max_nsu_seen, excluded.max_nsu_seen),
       status = excluded.status,
       last_success_at = coalesce(excluded.last_success_at, xml_nfse.sync_state.last_success_at),
@@ -925,8 +932,12 @@ language plpgsql
 security definer
 set search_path = xml_nfse, public, extensions
 as $$
+declare
+  bytes_len integer;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
+
+  bytes_len := octet_length(coalesce(p_xml_content, ''));
 
   insert into xml_nfse.xml_payloads (
     token,
@@ -935,6 +946,7 @@ begin
     nsu,
     file_name,
     xml_content,
+    content_bytes,
     expires_at
   )
   values (
@@ -944,6 +956,7 @@ begin
     p_nsu,
     p_file_name,
     p_xml_content,
+    bytes_len,
     null
   )
   on conflict (token) do update
@@ -952,6 +965,7 @@ begin
       nsu = excluded.nsu,
       file_name = excluded.file_name,
       xml_content = excluded.xml_content,
+      content_bytes = excluded.content_bytes,
       expires_at = null;
 
   return jsonb_build_object('success', true, 'token', p_token);
@@ -1048,7 +1062,7 @@ begin
     'permanentPayloads', count(*) filter (where p.expires_at is null),
     'expiringPayloads', count(*) filter (where p.expires_at is not null),
     'expiredPayloads', count(*) filter (where p.expires_at is not null and p.expires_at < now()),
-    'totalBytes', coalesce(sum(octet_length(p.xml_content)), 0),
+    'totalBytes', coalesce(sum(coalesce(p.content_bytes, octet_length(p.xml_content))), 0),
     'firstCreatedAt', min(p.created_at),
     'lastCreatedAt', max(p.created_at)
   )
@@ -1058,6 +1072,56 @@ begin
     and (p_environment is null or p.environment = p_environment);
 
   return coalesce(summary, '{}'::jsonb);
+end;
+$$;
+
+-- Marca NFSe (nao EVENTO) como Cancelada por chave — usado na varredura so para lotes novos
+create or replace function public.xml_nfse_mark_cancelled_by_chave(
+  p_secret text,
+  p_certificate_id text,
+  p_environment text,
+  p_chave text,
+  p_event_nsu bigint default null,
+  p_event_meta jsonb default '{}'::jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+declare
+  updated_count integer := 0;
+  clean_chave text := nullif(trim(coalesce(p_chave, '')), '');
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  if clean_chave is null or clean_chave = '' or clean_chave = 'N/A' then
+    return jsonb_build_object('success', true, 'updated', false, 'updated_count', 0);
+  end if;
+
+  update xml_nfse.documents d
+  set metadata = coalesce(d.metadata, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+        'status', 'Cancelada',
+        'isCancellation', true,
+        'eventoDescricao', coalesce(p_event_meta ->> 'eventoDescricao', d.metadata ->> 'eventoDescricao'),
+        'eventoMotivo', coalesce(p_event_meta ->> 'eventoMotivo', d.metadata ->> 'eventoMotivo'),
+        'tpEvento', coalesce(p_event_meta ->> 'tpEvento', d.metadata ->> 'tpEvento'),
+        'cancelledByEventNsu', p_event_nsu,
+        'cancelledAt', now()
+      )),
+      last_seen_at = now()
+  where d.certificate_id = p_certificate_id
+    and d.environment = p_environment
+    and d.chave = clean_chave
+    and d.tipo <> 'EVENTO';
+
+  get diagnostics updated_count = row_count;
+
+  return jsonb_build_object(
+    'success', true,
+    'updated', updated_count > 0,
+    'updated_count', updated_count
+  );
 end;
 $$;
 
@@ -1082,6 +1146,7 @@ grant execute on function public.xml_nfse_get_xml_payload(text, text) to anon, a
 grant execute on function public.xml_nfse_get_xml_payloads_by_tokens(text, text[]) to anon, authenticated;
 grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authenticated;
 grant execute on function public.xml_nfse_storage_summary(text, text, text) to anon, authenticated;
+grant execute on function public.xml_nfse_mark_cancelled_by_chave(text, text, text, text, bigint, jsonb) to anon, authenticated;
 
 drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer);
 drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, integer, integer);
@@ -1168,12 +1233,11 @@ begin
       and (
         p_include_cancelled
         or (
-          not (
-            lower(coalesce(d.metadata ->> 'status', '')) like '%cancel%'
-            or lower(coalesce(d.tipo, '')) like '%cancel%'
-          )
+          lower(coalesce(d.metadata ->> 'status', '')) not like '%cancel%'
+          and lower(coalesce(d.tipo, '')) not like '%cancel%'
+          and coalesce((d.metadata ->> 'isCancellation')::boolean, false) is not true
           and not exists (
-            select 1 
+            select 1
             from xml_nfse.documents ev
             where ev.certificate_id = d.certificate_id
               and ev.environment = d.environment
@@ -1185,6 +1249,7 @@ begin
                 lower(coalesce(ev.metadata ->> 'status', '')) like '%cancel%'
                 or lower(coalesce(ev.metadata ->> 'eventoDescricao', '')) like '%cancel%'
                 or lower(coalesce(ev.metadata ->> 'eventoMotivo', '')) like '%cancel%'
+                or coalesce((ev.metadata ->> 'isCancellation')::boolean, false) is true
               )
           )
         )
@@ -1238,8 +1303,11 @@ begin
         'municipioPrestacao', d.municipio_prestacao,
         'codigoTributacao', d.codigo_tributacao,
         'status', case
+          when lower(coalesce(d.metadata ->> 'status', '')) like '%cancel%'
+            or coalesce((d.metadata ->> 'isCancellation')::boolean, false) is true
+          then 'Cancelada'
           when exists (
-            select 1 
+            select 1
             from xml_nfse.documents ev
             where ev.certificate_id = d.certificate_id
               and ev.environment = d.environment
@@ -1251,6 +1319,7 @@ begin
                 lower(coalesce(ev.metadata ->> 'status', '')) like '%cancel%'
                 or lower(coalesce(ev.metadata ->> 'eventoDescricao', '')) like '%cancel%'
                 or lower(coalesce(ev.metadata ->> 'eventoMotivo', '')) like '%cancel%'
+                or coalesce((ev.metadata ->> 'isCancellation')::boolean, false) is true
               )
           ) then 'Cancelada'
           else coalesce(d.metadata ->> 'status', 'Autorizada')

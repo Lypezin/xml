@@ -275,6 +275,12 @@
   border: 1px solid var(--success-border);
 }
 
+.status-badge.cancelled {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
 .status-badge.event {
   background: var(--warning-bg);
   color: var(--warning);

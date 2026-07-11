@@ -173,6 +173,7 @@ window.AppUiTable = {
     if (window.btnDownloadZip) window.btnDownloadZip.disabled = false;
     if (window.btnExportExcel) window.btnExportExcel.disabled = false;
 
+    const esc = window.AppUtils.escapeHtml;
     pageDocs.forEach(doc => {
       const item = document.createElement('article');
       const isCancelled = String(doc.status || '').toLowerCase().includes('cancel');
@@ -183,34 +184,38 @@ window.AppUiTable = {
       const eventoDetalhe = isEvento
         ? [doc.eventoDescricao, doc.eventoMotivo].filter(v => v && v !== 'N/A').join(' - ')
         : '';
+      const statusClass = isCancelled ? 'cancelled' : (doc.status === 'Evento' ? 'event' : 'ok');
+      const safeToken = esc(doc.token || '');
+      const safeChave = esc(doc.chave || '');
+      const descText = eventoDetalhe || doc.descricao || 'N/A';
 
       item.innerHTML = `
         <div class="xml-main-cell">
           <div class="xml-title-row">
-            <span class="tipo-badge ${String(doc.tipo || 'nfse').toLowerCase()}">${doc.tipo || 'NFSE'}</span>
-            <span class="status-badge ${doc.status === 'Evento' ? 'event' : 'ok'}">${doc.status || 'Autorizada'}</span>
+            <span class="tipo-badge ${esc(String(doc.tipo || 'nfse').toLowerCase())}">${esc(doc.tipo || 'NFSE')}</span>
+            <span class="status-badge ${statusClass}">${esc(doc.status || 'Autorizada')}</span>
           </div>
-          <strong>NSU ${doc.nsu || 'N/A'}</strong>
-          <span class="helper-text">NFS-e ${doc.numeroNfse || 'N/A'} | DPS ${doc.numeroDps || 'N/A'} / Serie ${doc.serieDps || 'N/A'}</span>
-          <span class="cnpj-badge wrap">${doc.chave || 'Chave não informada'}</span>
+          <strong>NSU ${esc(doc.nsu || 'N/A')}</strong>
+          <span class="helper-text">NFS-e ${esc(doc.numeroNfse || 'N/A')} | DPS ${esc(doc.numeroDps || 'N/A')} / Serie ${esc(doc.serieDps || 'N/A')}</span>
+          <span class="cnpj-badge wrap">${esc(doc.chave || 'Chave não informada')}</span>
         </div>
         <div class="xml-party-cell">
-          <div><strong>Prestador</strong><span>${doc.prestadorNome || 'N/A'}</span><small>${window.AppUtils.formatCnpj(doc.prestadorCnpj) || 'N/A'}</small></div>
-          <div><strong>Tomador</strong><span>${doc.tomadorNome || 'N/A'}</span><small>${window.AppUtils.formatCnpj(doc.tomadorCnpj) || 'Não cadastrado'}</small></div>
+          <div><strong>Prestador</strong><span>${esc(doc.prestadorNome || 'N/A')}</span><small>${esc(window.AppUtils.formatCnpj(doc.prestadorCnpj) || 'N/A')}</small></div>
+          <div><strong>Tomador</strong><span>${esc(doc.tomadorNome || 'N/A')}</span><small>${esc(window.AppUtils.formatCnpj(doc.tomadorCnpj) || 'Não cadastrado')}</small></div>
         </div>
         <div class="xml-service-cell">
-          <div class="descricao-texto expanded" title="${eventoDetalhe || doc.descricao || 'N/A'}">${eventoDetalhe || doc.descricao || 'N/A'}</div>
-          <span class="helper-text">Município: ${doc.municipioPrestacao || 'N/A'}</span>
-          <span class="helper-text">Cod. tributação: ${doc.codigoTributacao || 'N/A'}</span>
+          <div class="descricao-texto expanded" title="${esc(descText)}">${esc(descText)}</div>
+          <span class="helper-text">Município: ${esc(doc.municipioPrestacao || 'N/A')}</span>
+          <span class="helper-text">Cod. tributação: ${esc(doc.codigoTributacao || 'N/A')}</span>
         </div>
         <div class="xml-value-cell">
-          <strong>${valorFormatado}</strong>
-          <span>Emissão: ${window.AppUtils.formatDate(doc.dataEmissao)}</span>
-          <span>Competência: ${window.AppUtils.formatDate(doc.competencia)}</span>
-          <span>Processamento: ${window.AppUtils.formatDate(doc.dataProcessamento)}</span>
+          <strong>${esc(valorFormatado)}</strong>
+          <span>Emissão: ${esc(window.AppUtils.formatDate(doc.dataEmissao))}</span>
+          <span>Competência: ${esc(window.AppUtils.formatDate(doc.competencia))}</span>
+          <span>Processamento: ${esc(window.AppUtils.formatDate(doc.dataProcessamento))}</span>
         </div>
         <div class="xml-action-cell">
-          <button type="button" class="btn btn-secondary btn-sm" data-action="download-xml" data-token="${doc.token}" ${doc.token ? '' : 'disabled'}>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="download-xml" data-token="${safeToken}" ${doc.token ? '' : 'disabled'}>
             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
@@ -218,7 +223,7 @@ window.AppUiTable = {
             </svg>
             <span>XML</span>
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="download-pdf" data-chave="${doc.chave || ''}" ${hasChave ? '' : 'disabled'}>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="download-pdf" data-chave="${safeChave}" ${hasChave ? '' : 'disabled'}>
             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>

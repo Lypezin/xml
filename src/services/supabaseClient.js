@@ -53,11 +53,33 @@ async function getSupabaseUserFromToken(token) {
   }
 }
 
-async function supabaseRpc(functionName, params = {}, retries = 3, delay = 1000) {
+const HEAVY_RPCS = new Set([
+  'xml_nfse_list_documents',
+  'xml_nfse_get_dashboard_summary',
+  'xml_nfse_storage_summary',
+  'xml_nfse_get_xml_payloads_by_tokens',
+  'xml_nfse_list_xml_payloads'
+]);
+
+function getRpcTimeout(functionName) {
+  if (HEAVY_RPCS.has(functionName)) return 30000;
+  return 12000;
+}
+
+function getRpcRetries(functionName) {
+  // Listagens pesadas: no max 1 retry (evita 3x carga no banco)
+  if (HEAVY_RPCS.has(functionName)) return 2;
+  return 3;
+}
+
+async function supabaseRpc(functionName, params = {}, retries = null, delay = 1000) {
   const config = getSupabaseConfig();
   if (!config) return null;
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
+  const maxRetries = retries === null ? getRpcRetries(functionName) : retries;
+  const timeout = getRpcTimeout(functionName);
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const res = await axios.post(
         `${config.url}/rest/v1/rpc/${functionName}`,
@@ -70,14 +92,16 @@ async function supabaseRpc(functionName, params = {}, retries = 3, delay = 1000)
             apikey: config.key,
             'Content-Type': 'application/json'
           },
-          timeout: 5000
+          timeout
         }
       );
       return res.data;
     } catch (err) {
+      const isTimeout = err.code === 'ECONNABORTED' || /timeout/i.test(String(err.message || ''));
       const isNetworkOr5xx = !err.response || (err.response.status >= 500);
-      if (attempt < retries && isNetworkOr5xx) {
-        console.warn(`RPC ${functionName} falhou (tentativa ${attempt}/${retries}). Retentando em ${delay}ms... Erro: ${err.message}`);
+      // Nao re-tenta cegamente timeouts de listagem pesada alem do limite
+      if (attempt < maxRetries && (isNetworkOr5xx || isTimeout)) {
+        console.warn(`RPC ${functionName} falhou (tentativa ${attempt}/${maxRetries}). Retentando em ${delay}ms... Erro: ${err.message}`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }

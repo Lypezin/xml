@@ -98,18 +98,20 @@ window.AppUi = {
     }
 
     certList.innerHTML = '';
+    const esc = window.AppUtils.escapeHtml;
     window.certificates.forEach(cert => {
       const item = document.createElement('div');
       item.className = `cert-list-item ${cert.id === window.activeCertificateId ? 'active' : ''}`;
+      const safeId = esc(cert.id);
       item.innerHTML = `
         <div class="cert-list-main">
-          <strong>${cert.filename}</strong>
-          <span>CNPJ: ${cert.cnpj || 'Não informado'}</span>
+          <strong>${esc(cert.filename)}</strong>
+          <span>CNPJ: ${esc(cert.cnpj || 'Não informado')}</span>
         </div>
         <div class="cert-list-actions">
-          <button class="btn btn-secondary btn-sm" data-action="select-cert" data-id="${cert.id}" ${cert.id === window.activeCertificateId ? 'disabled' : ''}>Usar</button>
-          <button class="btn btn-secondary btn-sm" data-action="rename-cert" data-id="${cert.id}">Renomear</button>
-          <button class="btn btn-secondary btn-sm text-danger" data-action="remove-cert" data-id="${cert.id}">Remover</button>
+          <button class="btn btn-secondary btn-sm" data-action="select-cert" data-id="${safeId}" ${cert.id === window.activeCertificateId ? 'disabled' : ''}>Usar</button>
+          <button class="btn btn-secondary btn-sm" data-action="rename-cert" data-id="${safeId}">Renomear</button>
+          <button class="btn btn-secondary btn-sm text-danger" data-action="remove-cert" data-id="${safeId}">Remover</button>
         </div>
       `;
       certList.appendChild(item);
@@ -171,7 +173,11 @@ window.AppUi = {
     window.AppUiTable.appendDocumentsToTable(docs);
   },
 
-  switchTab(activeNav, activeContent, title, subtitle) {
+  switchTab(activeNav, activeContent, title, subtitle, options = {}) {
+    const forceRefresh = Boolean(options.forceRefresh);
+    const now = Date.now();
+    const cacheTtlMs = 45000;
+
     [navDashboard, navDownload, navCertificado, navRegras].forEach(nav => {
       if (nav) nav.classList.remove('active');
     });
@@ -193,13 +199,24 @@ window.AppUi = {
     if (pageSubtitle) pageSubtitle.innerText = subtitle;
 
     if (activeContent === viewDashboardContent && window.AppSyncController?.loadDashboard) {
-      window.AppSyncController.loadDashboard();
+      const lastDash = window._tabCache?.dashboardAt || 0;
+      if (forceRefresh || !lastDash || now - lastDash > cacheTtlMs) {
+        window.AppSyncController.loadDashboard();
+        window._tabCache = window._tabCache || {};
+        window._tabCache.dashboardAt = now;
+      }
     }
 
     if (activeContent === viewDownloadContent && window.AppSyncController) {
-      window.AppSyncController.loadPersistedHistory();
-      window.AppSyncController.loadStorageSummary();
-      window.AppSyncController.loadSavedStartNsu();
+      const lastSync = window._tabCache?.syncAt || 0;
+      if (forceRefresh || !lastSync || now - lastSync > cacheTtlMs || window._historyReloadDirty) {
+        window.AppSyncController.loadPersistedHistory();
+        window.AppSyncController.loadStorageSummary();
+        window.AppSyncController.loadSavedStartNsu();
+        window._tabCache = window._tabCache || {};
+        window._tabCache.syncAt = now;
+        window._historyReloadDirty = false;
+      }
     }
   },
 

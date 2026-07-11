@@ -106,7 +106,7 @@ async function checkAndRun(options = {}) {
         requestStartNsu: currentNsu,
         requestCnpjConsulta: cnpjConsulta,
         sortOrder: 'asc',
-        supabaseRunId: runResult ? runResult.run_id : null
+        supabaseRunId: runResult ? (runResult.run_id || runResult) : null
       });
 
       batches += 1;

@@ -171,7 +171,8 @@ window.AppEvents = {
         try {
           const certId = window.selectCertificate.value;
           const env = window.selectEnvironment.value;
-          const cnpj = window.inputCnpjConsulta.value;
+          const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
+          const cnpj = unitFilterParams.partyCnpj || window.inputCnpjConsulta?.value || '';
           
           if (!certId) {
             window.AppUi.log('Selecione um certificado primeiro.', 'error');
@@ -261,7 +262,7 @@ window.AppEvents = {
             partyCnpj: unitFilterParams.partyCnpj,
             partyRole: unitFilterParams.partyRole,
             search: historySearch ? historySearch.value.trim() : '',
-            includeCancelled: includeCancelled?.checked ? 'true' : 'false'
+            includeCancelled: window.AppUtils.getIncludeCancelledParam()
           });
           window.AppUi.log('Excel da tabela baixado com sucesso.', 'success');
         } catch (err) {
@@ -290,7 +291,7 @@ window.AppEvents = {
             partyCnpj: unitFilterParams.partyCnpj,
             partyRole: unitFilterParams.partyRole,
             search: historySearch ? historySearch.value.trim() : '',
-            includeCancelled: includeCancelled?.checked ? 'true' : 'false'
+            includeCancelled: window.AppUtils.getIncludeCancelledParam()
           });
           window.AppUi.log('ZIP da tabela baixado com sucesso.', 'success');
         } catch (err) {
@@ -604,7 +605,7 @@ window.AppEvents = {
             partyCnpj: unitFilterParams.partyCnpj,
             partyRole: unitFilterParams.partyRole,
             search: historySearch ? historySearch.value.trim() : '',
-            includeCancelled: includeCancelled?.checked ? 'true' : 'false'
+            includeCancelled: window.AppUtils.getIncludeCancelledParam()
           });
           window.AppUi.log('ZIP do periodo baixado com sucesso.', 'success');
         } catch (err) {

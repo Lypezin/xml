@@ -67,6 +67,30 @@ window.AppUtils = {
   },
 
   applyTheme(theme) {
-    document.body.classList.add('light-mode');
+    if (theme === 'dark') {
+      document.body.classList.remove('light-mode');
+    } else {
+      document.body.classList.add('light-mode');
+    }
+  },
+
+  escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
+  /**
+   * Label do checkbox: "Ocultar canceladas"
+   * checked => NAO incluir canceladas na API (includeCancelled=false)
+   * unchecked => incluir canceladas (includeCancelled=true)
+   */
+  getIncludeCancelledParam() {
+    const checked = Boolean(window.includeCancelled?.checked);
+    // "Ocultar" marcado => includeCancelled false
+    return checked ? 'false' : 'true';
   }
 };

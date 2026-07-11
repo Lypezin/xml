@@ -54,26 +54,40 @@ async function handleSyncError({ e, res, selectedCertificate, requestEnvironment
 
   const isTransientError = isTransientTransportError || /Retorno vazio temporario|Erro 200 retornado/i.test(errorMsg);
 
-  if (selectedCertificate && !isTransientError) {
-    const nextAllowedAt = /429|656|Consumo Indevido/i.test(errorMsg) ? new Date(Date.now() + 60 * 60 * 1000).toISOString() : null;
-    await syncSupabaseState({
-      certificateId: selectedCertificate.id,
-      environment: requestEnvironment,
-      cnpjConsulta: requestCnpjConsulta,
-      lastNsu: requestStartNsu,
-      maxNsuSeen: requestStartNsu,
-      status: 'error',
-      nextAllowedAt,
-      lastError: errorMsg
-    });
-    await finishSupabaseRun({
-      runId: supabaseRunId,
-      status: 'error',
-      endNsu: requestStartNsu,
-      maxNsuSeen: requestStartNsu,
-      documentsFound: 0,
-      errorMessage: errorMsg
-    });
+  if (selectedCertificate) {
+    if (isTransientError) {
+      // Finaliza a run para nao ficar "running" eternamente; nao regride last_nsu
+      await finishSupabaseRun({
+        runId: supabaseRunId,
+        status: 'error',
+        endNsu: requestStartNsu,
+        maxNsuSeen: requestStartNsu,
+        documentsFound: 0,
+        errorMessage: errorMsg
+      });
+    } else {
+      const nextAllowedAt = /429|656|Consumo Indevido/i.test(errorMsg)
+        ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        : null;
+      await syncSupabaseState({
+        certificateId: selectedCertificate.id,
+        environment: requestEnvironment,
+        cnpjConsulta: requestCnpjConsulta,
+        lastNsu: requestStartNsu,
+        maxNsuSeen: requestStartNsu,
+        status: 'error',
+        nextAllowedAt,
+        lastError: errorMsg
+      });
+      await finishSupabaseRun({
+        runId: supabaseRunId,
+        status: 'error',
+        endNsu: requestStartNsu,
+        maxNsuSeen: requestStartNsu,
+        documentsFound: 0,
+        errorMessage: errorMsg
+      });
+    }
   }
 
   return res.status(isTransientError ? 503 : 500).json({

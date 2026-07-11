@@ -31,6 +31,12 @@ function clampListLimit(limit) {
   return Math.min(parsed, 10);
 }
 
+function normalizePartyRole(role) {
+  const value = String(role || 'tomador').toLowerCase().trim();
+  if (value === 'prestador' || value === 'ambos' || value === 'tomador') return value;
+  return 'tomador';
+}
+
 function clampListOffset(offset) {
   const parsed = Number(offset || 0);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
@@ -105,12 +111,16 @@ function getDocumentToken(doc) {
 }
 
 async function resolveCertificateMetadataForList(certificateId) {
+  // Preferir lista remota (sem decrypt PFX). Se o id ja veio do cliente, confiar nele.
   const certificates = await listRemoteCertificates();
   if (Array.isArray(certificates) && certificates.length > 0) {
     const cert = certificateId
       ? certificates.find(item => item.id === certificateId)
       : (certificates.find(item => item.active) || certificates[0]);
     if (cert) return cert;
+  }
+  if (certificateId) {
+    return { id: certificateId, cnpj: '' };
   }
   return resolveCertificateForRequest(certificateId);
 }
@@ -287,7 +297,7 @@ router.get('/list-documents', async (req, res) => {
       endDate: endDate || null,
       cnpj: '',
       partyCnpj: receiverCnpj,
-      partyRole: 'tomador',
+      partyRole: normalizePartyRole(partyRole),
       search,
       includeCancelled: String(includeCancelled).toLowerCase() === 'true',
       limit: clampListLimit(limit),
@@ -335,6 +345,7 @@ router.get('/download-excel', async (req, res) => {
       endDate,
       cnpj,
       partyCnpj,
+      partyRole,
       search = '',
       includeCancelled = 'false'
     } = req.query;
@@ -353,7 +364,7 @@ router.get('/download-excel', async (req, res) => {
       endDate: endDate || null,
       cnpj: '',
       partyCnpj: receiverCnpj,
-      partyRole: 'tomador',
+      partyRole: normalizePartyRole(partyRole),
       search,
       includeCancelled: String(includeCancelled).toLowerCase() === 'true',
       limit: 10,
@@ -380,7 +391,7 @@ router.get('/download-excel', async (req, res) => {
       endDate: endDate || null,
       cnpj: '',
       partyCnpj: receiverCnpj,
-      partyRole: 'tomador',
+      partyRole: normalizePartyRole(partyRole),
       search,
       includeCancelled: String(includeCancelled).toLowerCase() === 'true',
       limit: totalMatched,
@@ -524,7 +535,7 @@ router.post('/download-period-zip', async (req, res) => {
       endDate: endDate || null,
       cnpj: '',
       partyCnpj: receiverCnpj,
-      partyRole: 'tomador',
+      partyRole: normalizePartyRole(partyRole),
       search,
       includeCancelled: String(includeCancelled).toLowerCase() === 'true',
       limit: 10,
@@ -553,7 +564,7 @@ router.post('/download-period-zip', async (req, res) => {
         endDate: endDate || null,
         cnpj: '',
         partyCnpj: receiverCnpj,
-        partyRole: 'tomador',
+        partyRole: normalizePartyRole(partyRole),
         search,
         includeCancelled: String(includeCancelled).toLowerCase() === 'true',
         limit: totalMatched,

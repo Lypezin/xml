@@ -28,15 +28,27 @@ const { executeSyncBatch } = require('../utils/syncProcessor');
 const { handleSyncError } = require('../utils/syncErrorHandler');
 
 const router = express.Router();
+let fetchBatchInFlight = false;
 
 router.post('/fetch-batch', async (req, res) => {
   const { startNsu, environment, cnpjConsulta, certificateId, sortOrder = 'asc' } = req.body;
   const requestEnvironment = normalizeEnvironment(environment);
-  const requestStartNsu = startNsu !== undefined ? parseInt(startNsu) : 0;
+  const parsedStart = startNsu !== undefined ? parseInt(startNsu, 10) : 0;
+  const requestStartNsu = Number.isFinite(parsedStart) ? parsedStart : 0;
   let requestCnpjConsulta = cnpjConsulta || '';
-  
+
   let selectedCertificate = null;
   let supabaseRunId = null;
+
+  if (fetchBatchInFlight) {
+    return res.status(409).json({
+      success: false,
+      error: 'Já existe uma varredura em andamento neste servidor. Aguarde o lote atual terminar.',
+      retryable: true
+    });
+  }
+
+  fetchBatchInFlight = true;
 
   try {
     selectedCertificate = await resolveCertificateForRequest(certificateId);
@@ -45,6 +57,31 @@ router.post('/fetch-batch', async (req, res) => {
     if (!selectedCertificate) {
       return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
     }
+
+    const cnpjRootError = validateCnpjConsultaRoot(requestCnpjConsulta, selectedCertificate.cnpj);
+    if (cnpjRootError) {
+      return res.status(400).json({ success: false, error: cnpjRootError });
+    }
+
+    // Respeita cooldown de consumo indevido (429/656)
+    const existingState = await supabaseRpc('xml_nfse_get_sync_state', {
+      p_certificate_id: selectedCertificate.id,
+      p_environment: requestEnvironment,
+      p_cnpj_consulta: requestCnpjConsulta
+    });
+    if (existingState?.next_allowed_at) {
+      const nextAllowed = new Date(existingState.next_allowed_at).getTime();
+      if (Number.isFinite(nextAllowed) && Date.now() < nextAllowed) {
+        return res.status(429).json({
+          success: false,
+          error: `Consumo indevido: aguarde até ${existingState.next_allowed_at} antes de nova consulta no ADN.`,
+          retryable: true,
+          nextAllowedAt: existingState.next_allowed_at
+        });
+      }
+    }
+
+    await syncSupabaseCertificate(selectedCertificate, true);
 
     const runResult = await startSupabaseRun({
       certificateId: selectedCertificate.id,
@@ -75,6 +112,8 @@ router.post('/fetch-batch', async (req, res) => {
       requestCnpjConsulta,
       supabaseRunId
     });
+  } finally {
+    fetchBatchInFlight = false;
   }
 });
 
@@ -147,25 +186,44 @@ router.post('/discover-nsu', async (req, res) => {
 
 router.get('/sync-state', async (req, res) => {
   const { certificateId, environment = 'producao', cnpjConsulta = '' } = req.query;
-  const selectedCertificate = await resolveCertificateForRequest(certificateId);
 
-  if (!selectedCertificate) {
-    return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
+  // Path leve: nao carrega/descriptografa PFX — so metadados + RPCs de estado
+  const { listRemoteCertificates } = require('../services/supabase');
+  const remoteCerts = await listRemoteCertificates();
+  let certMeta = null;
+  if (Array.isArray(remoteCerts) && remoteCerts.length > 0) {
+    certMeta = certificateId
+      ? remoteCerts.find(c => c.id === certificateId)
+      : (remoteCerts.find(c => c.active) || remoteCerts[0]);
   }
 
-  const requestCnpjConsulta = onlyDigits(cnpjConsulta) || onlyDigits(selectedCertificate?.cnpj) || '';
+  // Fallback local sem forcar decrypt remoto se nao houver no Supabase
+  if (!certMeta) {
+    const selectedCertificate = await resolveCertificateForRequest(certificateId);
+    if (!selectedCertificate) {
+      return res.status(400).json({ success: false, error: 'Certificado não configurado ou não encontrado.' });
+    }
+    certMeta = {
+      id: selectedCertificate.id,
+      cnpj: selectedCertificate.cnpj || ''
+    };
+  }
 
-  await syncSupabaseCertificate(selectedCertificate, true);
-  const state = await supabaseRpc('xml_nfse_get_sync_state', {
-    p_certificate_id: selectedCertificate.id,
-    p_environment: normalizeEnvironment(environment),
-    p_cnpj_consulta: requestCnpjConsulta
-  });
-  const lastReceived = await supabaseRpc('xml_nfse_get_last_received_nsu', {
-    p_certificate_id: selectedCertificate.id,
-    p_environment: normalizeEnvironment(environment),
-    p_cnpj_consulta: requestCnpjConsulta
-  });
+  const requestCnpjConsulta = onlyDigits(cnpjConsulta) || onlyDigits(certMeta?.cnpj) || '';
+  const env = normalizeEnvironment(environment);
+
+  const [state, lastReceived] = await Promise.all([
+    supabaseRpc('xml_nfse_get_sync_state', {
+      p_certificate_id: certMeta.id,
+      p_environment: env,
+      p_cnpj_consulta: requestCnpjConsulta
+    }),
+    supabaseRpc('xml_nfse_get_last_received_nsu', {
+      p_certificate_id: certMeta.id,
+      p_environment: env,
+      p_cnpj_consulta: requestCnpjConsulta
+    })
+  ]);
 
   return res.json({
     success: Boolean(state),

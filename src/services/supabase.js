@@ -106,7 +106,11 @@ async function syncSupabaseDocument({ certificateId, environment, doc }) {
       municipioPrestacao: doc.municipioPrestacao,
       codigoTributacao: doc.codigoTributacao,
       competencia: doc.competencia,
-      status: doc.status,
+      status: doc.status || 'Autorizada',
+      eventoDescricao: doc.eventoDescricao || 'N/A',
+      eventoMotivo: doc.eventoMotivo || 'N/A',
+      tpEvento: doc.tpEvento || 'N/A',
+      isCancellation: Boolean(doc.isCancellation),
       token: doc.token,
       arquivo: doc.arquivo,
       xmlSha256: doc.xmlSha256
@@ -122,6 +126,22 @@ async function storeSupabaseXmlPayload({ token, certificateId, environment, nsu,
     p_nsu: nsu === undefined || nsu === null ? null : Number(nsu),
     p_file_name: fileName,
     p_xml_content: xmlString
+  });
+}
+
+async function markSupabaseDocumentCancelledByChave({
+  certificateId,
+  environment,
+  chave,
+  eventNsu = null,
+  eventMeta = {}
+}) {
+  return supabaseRpc('xml_nfse_mark_cancelled_by_chave', {
+    p_certificate_id: certificateId,
+    p_environment: normalizeEnvironment(environment),
+    p_chave: chave || '',
+    p_event_nsu: eventNsu === null || eventNsu === undefined ? null : Number(eventNsu),
+    p_event_meta: eventMeta || {}
   });
 }
 
@@ -297,6 +317,7 @@ module.exports = {
   startSupabaseRun,
   finishSupabaseRun,
   syncSupabaseDocument,
+  markSupabaseDocumentCancelledByChave,
   storeSupabaseXmlPayload,
   getSupabaseXmlPayload,
   getSupabaseXmlPayloads,
