@@ -24,6 +24,7 @@
 
 .navbar-title {
   min-width: 0;
+  overflow: hidden;
 }
 
 .navbar-eyebrow {
@@ -33,6 +34,9 @@
   letter-spacing: 0.07em;
   color: var(--brand);
   margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navbar-title h1 {
@@ -43,6 +47,9 @@
   color: var(--text-primary);
   line-height: 1.2;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .navbar-title p:not(.navbar-eyebrow) {
@@ -50,6 +57,11 @@
   color: var(--text-secondary);
   margin: 4px 0 0;
   line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .navbar-actions {

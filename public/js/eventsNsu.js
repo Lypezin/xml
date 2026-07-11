@@ -82,9 +82,9 @@ window.AppEventsNsu = {
           statNsuMax.innerText = String(window.maxNsu || savedNsu);
           window.totalDownloaded = 0;
           window.isPaused = false;
-          window.AppUi.log(`NSU inicial ajustado para o ultimo recebido salvo: ${savedNsu}.`, 'success');
+          window.AppUi.log(`NSU inicial ajustado para o último NSU recebido e salvo: ${savedNsu}.`, 'success');
         } catch (err) {
-          window.AppUi.log(`Erro ao buscar ultimo NSU salvo: ${err.message}`, 'error');
+          window.AppUi.log(`Erro ao buscar o último NSU salvo: ${err.message}`, 'error');
         } finally {
           btnUseSavedNsu.disabled = false;
         }
@@ -110,9 +110,9 @@ window.AppEventsNsu = {
           statNsuMax.innerText = String(window.maxNsu || nationalNsu);
           window.totalDownloaded = 0;
           window.isPaused = false;
-          window.AppUi.log(`NSU inicial ajustado para o ultimo nacional: ${nationalNsu}.`, 'success');
+          window.AppUi.log(`NSU inicial ajustado para o último NSU nacional: ${nationalNsu}.`, 'success');
         } catch (err) {
-          window.AppUi.log(`Erro ao descobrir ultimo NSU nacional: ${err.message}`, 'error');
+          window.AppUi.log(`Erro ao descobrir o último NSU nacional: ${err.message}`, 'error');
         } finally {
           btnUseNationalNsu.disabled = false;
         }

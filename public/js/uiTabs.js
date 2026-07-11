@@ -145,6 +145,6 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
     const percentage = safeMax > 0 ? Math.min(Math.round((safeCurrent / safeMax) * 100), 100) : 0;
     manualSyncProgressBar.style.width = `${percentage}%`;
     manualSyncProgressPercentage.innerText = `${percentage}%`;
-    manualSyncProgressText.innerText = message || (safeMax > 0 ? `NSU ${safeCurrent} de ${safeMax}` : 'Aguardando atualizacao manual...');
+    manualSyncProgressText.innerText = message || (safeMax > 0 ? `NSU ${safeCurrent} de ${safeMax}` : 'Aguardando atualização manual...');
   }
 });

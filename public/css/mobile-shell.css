@@ -128,9 +128,26 @@
     min-width: 0;
   }
 
+  .xml-list-head,
+  .xml-item {
+    min-width: 0;
+  }
+
+  .overview-metrics,
+  .ops-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .app-footer {
     font-size: 11px;
     padding-bottom: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .overview-metrics,
+  .ops-kpis {
+    grid-template-columns: 1fr;
   }
 }
 

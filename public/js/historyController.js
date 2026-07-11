@@ -142,7 +142,7 @@ _historySnapshotKey(certId, page, unitFilterParams) {
     } catch (err) {
       if (requestId !== window._historyRequestId) return;
       // Página já está ok; totais falharam silenciosamente
-      if (!quiet) window.AppUi.log(`Totais ainda calculando: ${err.message}`, 'warning');
+      if (!quiet) window.AppUi.log(`Totais ainda sendo calculados: ${err.message}`, 'warning');
     }
   },
 

@@ -133,10 +133,12 @@
 
 .xml-list-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--border-radius);
   border: 1px solid var(--card-border);
   background: var(--card-bg);
   box-shadow: var(--shadow-sm);
+  max-width: 100%;
 }
 
 .xml-list-head,
@@ -145,6 +147,13 @@
   grid-template-columns: minmax(160px, 0.9fr) minmax(220px, 1.2fr) minmax(200px, 1.1fr) minmax(140px, 0.8fr) 80px;
   gap: 14px;
   align-items: center;
+  min-width: 820px;
+}
+
+/* Empty state não herda min-width da grade da tabela */
+.xml-list > .xml-empty-state {
+  min-width: 0;
+  width: 100%;
 }
 
 .xml-list-head {

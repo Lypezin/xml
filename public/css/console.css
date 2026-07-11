@@ -66,6 +66,10 @@
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(220px, 45%);
+  min-width: 0;
 }
 
 .console-log {

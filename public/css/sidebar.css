@@ -91,6 +91,13 @@
   font-weight: 500;
   border-radius: var(--radius-md);
   transition: var(--transition);
+  min-width: 0;
+}
+
+.nav-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nav-item::before {

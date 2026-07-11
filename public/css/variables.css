@@ -151,12 +151,18 @@ html.theme-dark-boot body {
   --text-primary: #fafafa;
 }
 
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   font-family: var(--font-sans);
   font-size: var(--text-body);
   background-color: var(--bg-color);
   color: var(--text-primary);
   min-height: 100vh;
+  max-width: 100%;
   overflow-x: hidden;
   line-height: 1.5;
   transition: background-color 0.2s ease, color 0.2s ease;

@@ -20,6 +20,12 @@
   user-select: none;
   text-decoration: none;
   box-shadow: var(--shadow-sm);
+  max-width: 100%;
+}
+
+.btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .btn:hover:not(:disabled) {

@@ -25,7 +25,7 @@ window.AppSyncController = Object.assign(window.AppSyncController || {}, {
     const retryCount = window.transientRetryCount;
 
     if (retryCount > 6) {
-      window.AppUi.log('Limite de tentativas temporarias atingido. Consulta pausada para evitar insistir na API.', 'error');
+      window.AppUi.log('Limite de tentativas temporárias atingido. Consulta pausada para evitar insistir na API.', 'error');
       this.stopQuerying();
       return;
     }
@@ -33,7 +33,7 @@ window.AppSyncController = Object.assign(window.AppSyncController || {}, {
     const retryDelaySeconds = Math.min(120, 10 * retryCount);
     window.currentNsu = requestNsu;
     inputStartNsu.value = requestNsu;
-    window.AppUi.log(`Erro temporario na API (${errorMessage}). Tentativa ${retryCount}/6 em ${retryDelaySeconds}s no mesmo NSU ${requestNsu}.`, 'warning');
+    window.AppUi.log(`Erro temporário na API (${errorMessage}). Tentativa ${retryCount}/6 em ${retryDelaySeconds}s no mesmo NSU ${requestNsu}.`, 'warning');
 
     if (window.queryLoopTimer) clearTimeout(window.queryLoopTimer);
     window.queryLoopTimer = setTimeout(() => {

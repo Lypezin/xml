@@ -140,8 +140,8 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
             window.AppUi.switchTab(
               window.navDownload || document.getElementById('nav-download'),
               window.viewDownloadContent || document.getElementById('view-download-content'),
-              'XMLs por Unidade',
-              'XMLs NFS-e persistidos por certificado e unidade',
+              'XMLs por unidade',
+              'XMLs da NFS-e persistidos por certificado e unidade',
               { forceRefresh }
             );
           };

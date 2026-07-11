@@ -72,7 +72,7 @@ initElements() {
     }
     if (Array.isArray(nationalApi.errors) && nationalApi.errors.length > 0) {
       nationalApi.errors.forEach(err => {
-        this.log(`ADN erro ${err.code || 'sem codigo'}: ${err.description || 'sem descricao'}`, 'error');
+        this.log(`ADN erro ${err.code || 'sem código'}: ${err.description || 'sem descrição'}`, 'error');
       });
     }
   },

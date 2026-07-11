@@ -34,7 +34,7 @@ async checkCertStatus(options = {}) {
         if (!skipSecondary) window.AppUi.log(`Certificado ativo CNPJ: ${data.cnpj}`);
         if (indicator && txt) {
           indicator.className = 'status-indicator online';
-          txt.innerText = `Certificado Ativo: ${data.cnpj}`;
+          txt.innerText = `Certificado ativo: ${data.cnpj}`;
         }
         if (!skipSecondary) {
           const syncVisible = window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none'

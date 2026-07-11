@@ -61,17 +61,17 @@ if (btnRunSchedulerNow) {
 
         finished = Boolean(result.finished || result.started === false);
         if (!finished) {
-          window.AppUi.log(`Pausa segura de ${delaySeconds}s antes do proximo lote para reduzir risco de bloqueio...`, 'warning');
+          window.AppUi.log(`Pausa segura de ${delaySeconds}s antes do próximo lote para reduzir risco de bloqueio...`, 'warning');
           await sleep(delaySeconds * 1000);
         }
       }
 
-      window.AppUi.log('Atualizacao manual concluida.', 'success');
+      window.AppUi.log('Atualização manual concluída.', 'success');
       window.AppSyncController.loadPersistedHistory();
       window.AppSyncController.loadStorageSummary();
       loadSchedulerSettings();
     } catch (err) {
-      window.AppUi.log(`Erro na atualizacao manual: ${err.message}`, 'error');
+      window.AppUi.log(`Erro na atualização manual: ${err.message}`, 'error');
     } finally {
       btnRunSchedulerNow.disabled = false;
       if (btnSaveScheduler) btnSaveScheduler.disabled = false;
@@ -84,13 +84,13 @@ if (btnDownloadPeriod) {
     const startDate = downloadStartDate?.value;
     const endDate = downloadEndDate?.value;
     if (!startDate || !endDate) {
-      window.AppUi.log('Informe data inicial e data final para baixar o periodo.', 'warning');
+      window.AppUi.log('Informe a data inicial e a data final para baixar o período.', 'warning');
       window.AppToast?.warning('Informe início e fim do período');
       return;
     }
 
     btnDownloadPeriod.disabled = true;
-    window.AppUi.log(`Gerando ZIP do periodo ${startDate} a ${endDate}...`);
+    window.AppUi.log(`Gerando ZIP do período ${startDate} a ${endDate}...`);
     window.AppToast?.info('Gerando ZIP…');
     try {
       const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
@@ -105,10 +105,10 @@ if (btnDownloadPeriod) {
         search: historySearch ? historySearch.value.trim() : '',
         includeCancelled: window.AppUtils.getIncludeCancelledParam()
       });
-      window.AppUi.log('ZIP do periodo baixado com sucesso.', 'success');
+      window.AppUi.log('ZIP do período baixado com sucesso.', 'success');
       window.AppToast?.success('ZIP do período baixado');
     } catch (err) {
-      window.AppUi.log(`Erro ao baixar periodo: ${err.message}`, 'error');
+      window.AppUi.log(`Erro ao baixar o período: ${err.message}`, 'error');
       window.AppToast?.error(err.message || 'Falha no ZIP do período');
     } finally {
       btnDownloadPeriod.disabled = false;

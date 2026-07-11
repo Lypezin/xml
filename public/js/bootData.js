@@ -57,7 +57,7 @@ async function bootDataParallel() {
   const titleEl = window.pageTitle || document.getElementById('page-title');
   const subtitleEl = window.pageSubtitle || document.getElementById('page-subtitle');
   if (titleEl) titleEl.innerText = 'Dashboard';
-  if (subtitleEl) subtitleEl.innerText = 'Resumo de cidades e total de XMLs persistidos';
+  if (subtitleEl) subtitleEl.innerText = 'Resumo das cidades e total de XMLs persistidos';
   const crumb = document.getElementById('page-breadcrumb');
   if (crumb) crumb.textContent = 'Visão geral / Dashboard';
 

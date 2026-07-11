@@ -150,7 +150,7 @@ async runQueryLoop(runId = window.activeQueryRunId) {
 
       const safeDelaySeconds = 2;
       const safeDelayMs = safeDelaySeconds * 1000;
-      window.AppUi.log(`Aguardando ${safeDelaySeconds}s antes do proximo bloco...`, 'warning');
+      window.AppUi.log(`Aguardando ${safeDelaySeconds}s antes do próximo bloco...`, 'warning');
       window.queryLoopTimer = setTimeout(() => {
         window.queryLoopTimer = null;
         this.runQueryLoop(runId);

@@ -32,14 +32,14 @@ window.AppEventsNav = {
     if (navDashboard) {
       navDashboard.addEventListener('click', (e) => {
         e.preventDefault();
-        go(navDashboard, viewDashboardContent, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
+        go(navDashboard, viewDashboardContent, 'Dashboard', 'Resumo das cidades e total de XMLs persistidos');
       });
       navDashboard.addEventListener('mouseenter', () => window.AppUi.prefetchTab?.('view-dashboard-content'), { passive: true });
     }
     if (navDownload) {
       navDownload.addEventListener('click', (e) => {
         e.preventDefault();
-        go(navDownload, viewDownloadContent, 'XMLs por Unidade', 'XMLs NFS-e persistidos por certificado e unidade');
+        go(navDownload, viewDownloadContent, 'XMLs por unidade', 'XMLs da NFS-e persistidos por certificado e unidade');
       });
       navDownload.addEventListener('mouseenter', () => window.AppUi.prefetchTab?.('view-download-content'), { passive: true });
     }
@@ -52,7 +52,7 @@ window.AppEventsNav = {
     if (navRegras) {
       navRegras.addEventListener('click', (e) => {
         e.preventDefault();
-        go(navRegras, viewRegrasContent, 'Regras ADN', 'Limites de consulta e boas praticas da NFS-e Nacional');
+        go(navRegras, viewRegrasContent, 'Regras ADN', 'Limites de consulta e boas práticas da NFS-e Nacional');
       });
     }
 

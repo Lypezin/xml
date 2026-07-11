@@ -6,7 +6,7 @@ setBtnStartActive(active, isResume = false) {
           <rect x="6" y="4" width="4" height="16"></rect>
           <rect x="14" y="4" width="4" height="16"></rect>
         </svg>
-        <span>Pausar Consulta</span>
+        <span>Pausar</span>
       `;
       btnStart.className = 'btn btn-danger';
     } else {
@@ -14,7 +14,7 @@ setBtnStartActive(active, isResume = false) {
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;">
           <polygon points="5 3 19 12 5 21 5 3"></polygon>
         </svg>
-        <span>${isResume ? 'Continuar Consulta' : 'Iniciar Consulta'}</span>
+        <span>${isResume ? 'Continuar' : 'Iniciar'}</span>
       `;
       btnStart.className = 'btn btn-success';
     }
@@ -23,7 +23,7 @@ setBtnStartActive(active, isResume = false) {
   updateCrawlerUI() {
     if (window.isCrawlerActive) {
       crawlerStatusContainer.style.display = 'block';
-      crawlerCurrentCnpj.innerText = window.currentCrawlerCnpj || 'CNPJ do Certificado';
+      crawlerCurrentCnpj.innerText = window.currentCrawlerCnpj || 'CNPJ do certificado';
       crawlerVisitedCount.innerText = window.crawlerVisited.size;
       crawlerQueueCount.innerText = window.crawlerQueue.length;
     } else {

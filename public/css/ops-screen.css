@@ -384,5 +384,40 @@
   .data-table-filters .search-field {
     flex: 1;
     min-width: 0;
+    width: 100%;
   }
+
+  .data-table-filters .cancelled-filter-field {
+    width: 100%;
+  }
+
+  .data-table-filters .cancelled-filter-field select {
+    width: 100%;
+  }
+
+  .ops-strip-heading h2 {
+    font-size: 1rem;
+  }
+
+  .ops-nsu-controls {
+    width: 100%;
+  }
+
+  .ops-nsu-input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Selects longos não estouram o card */
+.command-bar-fields select,
+.data-table-filters select,
+#certificate-select,
+#unit-filter {
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+.input-group {
+  min-width: 0;
 }

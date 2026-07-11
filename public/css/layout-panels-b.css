@@ -90,7 +90,7 @@
 }
 
 .action-buttons .btn {
-  min-width: 120px;
+  min-width: min(120px, 100%);
 }
 
 .operation-meta {

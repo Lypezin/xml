@@ -75,7 +75,7 @@ body.light-mode .main-content {
 
 @media (max-width: 768px) {
   .main-content {
-    padding: 20px 16px;
+    padding: 16px 14px 24px;
   }
 
   .navbar,
@@ -86,16 +86,26 @@ body.light-mode .main-content {
     align-items: stretch;
   }
 
+  .navbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .input-row {
     flex-direction: column;
   }
 
   .hero-copy h2 {
-    font-size: 23px;
+    font-size: 22px;
   }
 
   .xml-list-head {
     display: none;
+  }
+
+  .xml-list-head,
+  .xml-item {
+    min-width: 0;
   }
 
   .xml-item {
@@ -110,10 +120,14 @@ body.light-mode .main-content {
 
   .xml-action-cell {
     justify-content: stretch;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .xml-action-cell .btn {
-    width: 100%;
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 72px;
   }
 
   .cert-action-row {
@@ -131,5 +145,17 @@ body.light-mode .main-content {
 
   .cert-list-actions .btn {
     flex: 1;
+  }
+
+  .table-footer,
+  .data-table-card .table-footer {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .app-footer p {
+    line-height: 1.4;
+    padding-inline: 4px;
   }
 }

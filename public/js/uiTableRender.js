@@ -147,7 +147,7 @@ Object.assign(window.AppUiTable = window.AppUiTable || {}, {
             <span class="status-badge ${statusClass}">${esc(doc.status || 'Autorizada')}</span>
           </div>
           <strong>NSU ${esc(doc.nsu || 'N/A')}</strong>
-          <span class="helper-text">NFS-e ${esc(doc.numeroNfse || 'N/A')} | DPS ${esc(doc.numeroDps || 'N/A')} / Serie ${esc(doc.serieDps || 'N/A')}</span>
+          <span class="helper-text">NFS-e ${esc(doc.numeroNfse || 'N/A')} | DPS ${esc(doc.numeroDps || 'N/A')} / Série ${esc(doc.serieDps || 'N/A')}</span>
           <span class="cnpj-badge wrap">${esc(doc.chave || 'Chave não informada')}</span>
         </div>
         <div class="xml-party-cell">
@@ -157,7 +157,7 @@ Object.assign(window.AppUiTable = window.AppUiTable || {}, {
         <div class="xml-service-cell">
           <div class="descricao-texto expanded" title="${esc(descText)}">${esc(descText)}</div>
           <span class="helper-text">Município: ${esc(doc.municipioPrestacao || 'N/A')}</span>
-          <span class="helper-text">Cod. tributação: ${esc(doc.codigoTributacao || 'N/A')}</span>
+          <span class="helper-text">Cód. tributação: ${esc(doc.codigoTributacao || 'N/A')}</span>
         </div>
         <div class="xml-value-cell">
           <strong>${esc(valorFormatado)}</strong>
