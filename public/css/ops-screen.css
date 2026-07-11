@@ -166,6 +166,18 @@
   box-shadow: 0 0 0 3px var(--brand-glow);
 }
 
+.ops-nsu-input.is-locked {
+  opacity: 0.72;
+  cursor: not-allowed;
+  background: var(--surface-muted);
+}
+
+.ops-nsu-toggle:has(input:checked) {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--card-border));
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface-muted));
+  color: var(--text-primary);
+}
+
 .ops-strip-actions {
   display: flex;
   flex-wrap: wrap;

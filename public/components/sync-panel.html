@@ -99,17 +99,17 @@
           <h2>Sincronização por NSU</h2>
         </div>
         <div class="ops-nsu-controls">
-          <label class="ops-nsu-toggle" for="override-nsu">
+          <label class="ops-nsu-toggle" for="override-nsu" title="Requer senha operacional">
             <input type="checkbox" id="override-nsu">
             <span>Forçar NSU</span>
           </label>
-          <input type="number" id="start-nsu" value="0" min="0" class="ops-nsu-input" aria-label="NSU inicial">
+          <input type="number" id="start-nsu" value="0" min="0" class="ops-nsu-input is-locked" aria-label="NSU inicial" readonly title="Marque Forçar NSU e digite a senha para editar">
         </div>
       </div>
       <div class="ops-strip-actions action-buttons">
         <button class="btn btn-success" id="btn-start" disabled type="button"><span>Iniciar</span></button>
         <button class="btn btn-warning" id="btn-pause" disabled type="button"><span>Pausar</span></button>
-        <button class="btn btn-danger" id="btn-reset-nsu" disabled type="button"><span>Zerar NSU</span></button>
+        <button class="btn btn-danger" id="btn-reset-nsu" disabled type="button" title="Requer senha operacional"><span>Zerar NSU</span></button>
       </div>
       <div class="alert-box success" id="alert-sync-success" style="display: none;"><strong>Concluído:</strong> todas as notas foram sincronizadas.</div>
       <div class="alert-box danger" id="alert-rate-limit" style="display: none;"><strong>Consumo indevido:</strong> API bloqueou temporariamente este CNPJ.</div>

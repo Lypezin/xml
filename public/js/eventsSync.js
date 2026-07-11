@@ -87,8 +87,9 @@ if (btnPause) {
 
 if (window.btnResetNsu) {
   window.btnResetNsu.addEventListener('click', async () => {
+    if (!window.AppUtils?.requireOpsPassword?.('zerar o NSU')) return;
     if (!confirm('Tem certeza que deseja zerar o histórico de NSU e começar do 0 para este certificado/unidade?')) return;
-    
+
     window.btnResetNsu.disabled = true;
     try {
       const certId = window.selectCertificate.value;

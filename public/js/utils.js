@@ -122,5 +122,22 @@ window.AppUtils = {
 
   getOnlyCancelledParam() {
     return this.getCancelledMode() === 'cancelled' ? 'true' : 'false';
+  },
+
+  /**
+   * Senha operacional no front (apenas UX — não é segurança real).
+   * Usada em ações sensíveis de NSU: zerar e forçar.
+   */
+  OPS_NSU_PASSWORD: '5585',
+
+  requireOpsPassword(actionLabel = 'esta ação') {
+    const typed = window.prompt(`Digite a senha para ${actionLabel}:`);
+    if (typed === null) return false; // cancelou
+    if (String(typed).trim() !== this.OPS_NSU_PASSWORD) {
+      window.AppUi?.log?.('Senha incorreta. Ação cancelada.', 'error');
+      window.AppToast?.error?.('Senha incorreta');
+      return false;
+    }
+    return true;
   }
 };

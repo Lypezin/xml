@@ -5,6 +5,64 @@ window.AppEventsNsu = {
       selectSearchMode.addEventListener('change', () => window.AppUiTable.renderCurrentPage());
     }
 
+    // Forçar NSU: checkbox + input protegidos por senha (front only)
+    const overrideNsuCheckbox = document.getElementById('override-nsu');
+    const nsuInput = window.inputStartNsu || document.getElementById('start-nsu');
+
+    const setNsuForceUnlocked = (unlocked) => {
+      if (nsuInput) {
+        nsuInput.readOnly = !unlocked;
+        nsuInput.classList.toggle('is-locked', !unlocked);
+        nsuInput.title = unlocked
+          ? 'NSU inicial forçado (editável)'
+          : 'Marque "Forçar NSU" e digite a senha para editar';
+      }
+      if (overrideNsuCheckbox) overrideNsuCheckbox.checked = Boolean(unlocked);
+    };
+
+    // Input bloqueado até destravar com senha
+    setNsuForceUnlocked(false);
+
+    if (overrideNsuCheckbox) {
+      overrideNsuCheckbox.addEventListener('change', () => {
+        if (overrideNsuCheckbox.checked) {
+          if (!window.AppUtils?.requireOpsPassword?.('forçar o NSU')) {
+            setNsuForceUnlocked(false);
+            return;
+          }
+          setNsuForceUnlocked(true);
+          nsuInput?.focus();
+          window.AppUi?.log?.('Forçar NSU desbloqueado. Informe o NSU inicial desejado.', 'warning');
+        } else {
+          setNsuForceUnlocked(false);
+          window.AppUi?.log?.('Forçar NSU desativado. A varredura usará o último NSU salvo.');
+        }
+      });
+    }
+
+    if (nsuInput) {
+      // Qualquer tentativa de editar com o force off pede senha
+      const guardNsuEdit = (e) => {
+        if (overrideNsuCheckbox?.checked) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (!window.AppUtils?.requireOpsPassword?.('forçar o NSU')) {
+          setNsuForceUnlocked(false);
+          return;
+        }
+        setNsuForceUnlocked(true);
+        window.AppUi?.log?.('Forçar NSU desbloqueado. Informe o NSU inicial desejado.', 'warning');
+        // reabre o input no próximo tick
+        setTimeout(() => nsuInput.focus(), 0);
+      };
+      nsuInput.addEventListener('pointerdown', (e) => {
+        if (!overrideNsuCheckbox?.checked) guardNsuEdit(e);
+      });
+      nsuInput.addEventListener('keydown', (e) => {
+        if (!overrideNsuCheckbox?.checked && !['Tab'].includes(e.key)) guardNsuEdit(e);
+      });
+    }
+
     if (btnUseSavedNsu) {
       btnUseSavedNsu.addEventListener('click', async () => {
         btnUseSavedNsu.disabled = true;
