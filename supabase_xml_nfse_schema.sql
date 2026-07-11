@@ -191,6 +191,26 @@ create index if not exists documents_active_count_idx
   on xml_nfse.documents (certificate_id, environment)
   where tipo <> 'EVENTO' and is_cancelled = false;
 
+-- Covering indexes para count+sum (totais da lista) sem heap fetch
+create index if not exists documents_active_valor_cover_idx
+  on xml_nfse.documents (certificate_id, environment)
+  include (valor_servico)
+  where tipo <> 'EVENTO' and is_cancelled = false;
+
+create index if not exists documents_all_nfse_valor_cover_idx
+  on xml_nfse.documents (certificate_id, environment)
+  include (valor_servico)
+  where tipo <> 'EVENTO';
+
+create index if not exists documents_list_cancelled_emissao_idx
+  on xml_nfse.documents (certificate_id, environment, data_emissao desc nulls last, nsu desc)
+  where tipo <> 'EVENTO' and is_cancelled = true;
+
+create index if not exists documents_tomador_active_valor_cover_idx
+  on xml_nfse.documents (certificate_id, environment, tomador_cnpj)
+  include (valor_servico)
+  where tipo <> 'EVENTO' and is_cancelled = false;
+
 create index if not exists documents_nfse_chave_active_idx
   on xml_nfse.documents (certificate_id, environment, chave)
   where tipo <> 'EVENTO' and chave is not null and chave <> '';
@@ -1237,6 +1257,9 @@ declare
   search_numeric numeric;
   lim integer := least(greatest(coalesce(p_limit, 10), 1), 100);
   off integer := greatest(coalesce(p_offset, 0), 0);
+  total_count integer := 0;
+  total_value numeric := 0;
+  docs_json jsonb := '[]'::jsonb;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
@@ -1244,7 +1267,56 @@ begin
     search_numeric := search_decimal::numeric;
   end if;
 
-  with filtered as (
+  -- Totais enxutos (covering indexes em valor_servico)
+  select
+    count(*)::integer,
+    coalesce(sum(
+      case when d.valor_servico >= 0 and d.valor_servico < 1000000000 then d.valor_servico else 0 end
+    ), 0)::numeric
+  into total_count, total_value
+  from xml_nfse.documents d
+  where d.certificate_id = p_certificate_id
+    and d.environment = p_environment
+    and d.tipo <> 'EVENTO'
+    and (
+      case
+        when coalesce(p_only_cancelled, false) then d.is_cancelled = true
+        when coalesce(p_include_cancelled, false) then true
+        else d.is_cancelled = false
+      end
+    )
+    and (p_start_date is null or d.data_emissao >= p_start_date)
+    and (p_end_date is null or d.data_emissao <= p_end_date)
+    and (
+      cnpj_consulta_digits = ''
+      or coalesce(d.tomador_cnpj, '') = cnpj_consulta_digits
+    )
+    and (
+      party_cnpj_digits = ''
+      or (
+        coalesce(p_party_role, 'tomador') in ('prestador', 'ambos')
+        and coalesce(d.prestador_cnpj, '') = party_cnpj_digits
+      )
+      or (
+        coalesce(p_party_role, 'tomador') in ('tomador', 'ambos')
+        and coalesce(d.tomador_cnpj, '') = party_cnpj_digits
+      )
+    )
+    and (
+      search_term = ''
+      or lower(coalesce(d.prestador_nome, '')) like '%' || search_term || '%'
+      or lower(coalesce(d.tomador_nome, '')) like '%' || search_term || '%'
+      or (search_digits <> '' and coalesce(d.prestador_cnpj, '') like '%' || search_digits || '%')
+      or (search_digits <> '' and coalesce(d.tomador_cnpj, '') like '%' || search_digits || '%')
+      or (search_numeric is not null and coalesce(d.valor_servico, 0) = search_numeric)
+      or (search_decimal <> '' and coalesce(d.valor_servico, 0)::text like '%' || search_decimal || '%')
+      or (search_digits <> '' and coalesce(d.chave, '') like '%' || search_digits || '%')
+      or (search_digits <> '' and coalesce(d.numero_nfse, '') like '%' || search_digits || '%')
+    );
+
+  select coalesce(jsonb_agg(to_jsonb(page_rows.*) order by page_rows.ord), '[]'::jsonb)
+  into docs_json
+  from (
     select
       d.id,
       d.certificate_id,
@@ -1263,10 +1335,20 @@ begin
       d.codigo_tributacao,
       d.file_name,
       d.xml_sha256,
-      d.metadata,
+      d.metadata || jsonb_strip_nulls(jsonb_build_object(
+        'prestadorCnpj', d.prestador_cnpj,
+        'prestadorNome', d.prestador_nome,
+        'tomadorCnpj', d.tomador_cnpj,
+        'tomadorNome', d.tomador_nome,
+        'valorServico', d.valor_servico::text,
+        'municipioPrestacao', d.municipio_prestacao,
+        'codigoTributacao', d.codigo_tributacao,
+        'status', case when d.is_cancelled then 'Cancelada' else coalesce(d.metadata ->> 'status', 'Autorizada') end,
+        'isCancellation', d.is_cancelled
+      )) as metadata,
       d.first_seen_at,
       d.last_seen_at,
-      d.is_cancelled
+      row_number() over (order by d.data_emissao desc nulls last, d.nsu desc) as ord
     from xml_nfse.documents d
     where d.certificate_id = p_certificate_id
       and d.environment = p_environment
@@ -1306,66 +1388,21 @@ begin
         or (search_digits <> '' and coalesce(d.chave, '') like '%' || search_digits || '%')
         or (search_digits <> '' and coalesce(d.numero_nfse, '') like '%' || search_digits || '%')
       )
-  ),
-  totals as (
-    select
-      count(*)::integer as total_count,
-      coalesce(sum(
-        case
-          when valor_servico >= 0 and valor_servico < 1000000000 then valor_servico
-          else 0
-        end
-      ), 0)::numeric as total_value
-    from filtered
-  ),
-  page_rows as (
-    select
-      d.id,
-      d.certificate_id,
-      d.environment,
-      d.nsu,
-      d.tipo,
-      d.chave,
-      d.numero_nfse,
-      d.data_emissao,
-      d.prestador_cnpj,
-      d.prestador_nome,
-      d.tomador_cnpj,
-      d.tomador_nome,
-      d.valor_servico,
-      d.municipio_prestacao,
-      d.codigo_tributacao,
-      d.file_name,
-      d.xml_sha256,
-      metadata || jsonb_strip_nulls(jsonb_build_object(
-        'prestadorCnpj', d.prestador_cnpj,
-        'prestadorNome', d.prestador_nome,
-        'tomadorCnpj', d.tomador_cnpj,
-        'tomadorNome', d.tomador_nome,
-        'valorServico', d.valor_servico::text,
-        'municipioPrestacao', d.municipio_prestacao,
-        'codigoTributacao', d.codigo_tributacao,
-        'status', case when d.is_cancelled then 'Cancelada' else coalesce(d.metadata ->> 'status', 'Autorizada') end,
-        'isCancellation', d.is_cancelled
-      )) as metadata,
-      d.first_seen_at,
-      d.last_seen_at
-    from filtered d
     order by d.data_emissao desc nulls last, d.nsu desc
     limit lim
     offset off
-  )
-  select jsonb_build_object(
-    'documents', coalesce((select jsonb_agg(to_jsonb(page_rows.*)) from page_rows), '[]'::jsonb),
-    'total', coalesce(totals.total_count, 0),
-    'totalValue', coalesce(totals.total_value, 0)
-  )
-  into result_data
-  from totals;
+  ) page_rows;
 
-  return coalesce(result_data, jsonb_build_object('documents', '[]'::jsonb, 'total', 0, 'totalValue', 0));
+  result_data := jsonb_build_object(
+    'documents', coalesce(docs_json, '[]'::jsonb),
+    'total', coalesce(total_count, 0),
+    'totalValue', coalesce(total_value, 0)
+  );
+
+  return result_data;
 end;
 $$;
+
 
 grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, boolean, integer, integer) to anon, authenticated;
 grant execute on function public.xml_nfse_list_units(text) to anon, authenticated;
@@ -1387,45 +1424,35 @@ declare
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  select coalesce(jsonb_agg(jsonb_build_object(
-    'certificateId', c.id,
-    'filename', c.filename,
-    'cnpj', c.cnpj,
-    'active', c.active,
-    'totalXmls', coalesce(
-      (
-        select count(*)::integer 
-        from xml_nfse.documents d
-        where d.certificate_id = c.id 
-          and d.environment = 'producao'
-          and d.tipo <> 'EVENTO'
-      ), 0
-    ),
-    'lastUpdate', coalesce(
-      (
-        select coalesce(
-          last_doc.metadata ->> 'dataEmissaoCompleta',
-          case when last_doc.data_emissao is not null then to_char(last_doc.data_emissao, 'YYYY-MM-DD') else to_char(last_doc.first_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS') end
-        )
-        from (
-          select metadata, data_emissao, first_seen_at, nsu
-          from xml_nfse.documents
-          where certificate_id = c.id
-            and environment = 'producao'
-          order by nsu desc
-          limit 1
-        ) last_doc
-      ),
-      'Sem XMLs'
-    )
-  )), '[]'::jsonb)
+  -- Uma agregacao por certificado (evita N subqueries correlacionadas)
+  select coalesce(jsonb_agg(row_to_json(t)::jsonb), '[]'::jsonb)
   into result_json
-  from xml_nfse.certificates c
-  where exists (
-    select 1
-    from xml_nfse.certificate_secrets s
-    where s.certificate_id = c.id
-  );
+  from (
+    select
+      c.id as "certificateId",
+      c.filename,
+      c.cnpj,
+      c.active,
+      coalesce(agg.total_xmls, 0)::integer as "totalXmls",
+      coalesce(agg.last_update, 'Sem XMLs') as "lastUpdate"
+    from xml_nfse.certificates c
+    inner join xml_nfse.certificate_secrets s on s.certificate_id = c.id
+    left join (
+      select
+        d.certificate_id,
+        count(*)::integer as total_xmls,
+        coalesce(
+          to_char(max(d.data_emissao), 'YYYY-MM-DD'),
+          to_char(max(d.first_seen_at), 'YYYY-MM-DD"T"HH24:MI:SS'),
+          'Sem XMLs'
+        ) as last_update
+      from xml_nfse.documents d
+      where d.environment = 'producao'
+        and d.tipo <> 'EVENTO'
+      group by d.certificate_id
+    ) agg on agg.certificate_id = c.id
+    order by c.active desc, c.filename
+  ) t;
 
   return result_json;
 end;

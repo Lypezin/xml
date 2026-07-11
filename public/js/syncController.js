@@ -119,6 +119,44 @@ window.AppSyncController = {
     }
   },
 
+  _historySnapshotKey(certId, page, unitFilterParams) {
+    const env = selectEnvironment ? selectEnvironment.value : 'producao';
+    const mode = window.AppUtils?.getCancelledMode?.() || 'active';
+    const search = historySearch ? historySearch.value.trim() : '';
+    const party = unitFilterParams?.partyCnpj || '';
+    return `hist_snap:${certId}|${env}|${mode}|${party}|${search}|p${page}`;
+  },
+
+  _restoreHistorySnapshot(key) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return false;
+      const snap = JSON.parse(raw);
+      if (!snap || !Array.isArray(snap.documents)) return false;
+      // snapshot valido por 10 min
+      if (snap.at && Date.now() - snap.at > 600000) return false;
+      window.AppUiTable.setDocuments(snap.documents, snap.total || 0, snap.page || 1, snap.totalValue || 0);
+      if (window.btnDownloadZip) window.btnDownloadZip.disabled = !(snap.documents && snap.documents.length > 0);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  _saveHistorySnapshot(key, documents, total, page, totalValue) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify({
+        at: Date.now(),
+        documents,
+        total,
+        page,
+        totalValue
+      }));
+    } catch (e) {
+      // quota / private mode
+    }
+  },
+
   async loadPersistedHistory(page = 1, options = {}) {
     const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
     if (!certId || !window.AppApi?.listDocuments || !window.AppUiTable?.setDocuments) return;
@@ -127,16 +165,20 @@ window.AppSyncController = {
     const quiet = Boolean(options.quiet);
     const keepVisible = Boolean(options.keepVisible);
     const hasRows = Boolean(window.AppUiTable.documents?.length);
+    const safePage = Math.max(1, Number(page || 1));
+    const unitFilterParams = this.getSelectedUnitFilter();
+    const snapKey = this._historySnapshotKey(certId, safePage, unitFilterParams);
 
-    // So skeleton se nao ha nada na tela (evita flash ao trocar de aba)
-    if (!keepVisible && !hasRows && window.AppUiTable.showLoading) {
-      window.AppUiTable.showLoading();
+    // Paint instantaneo a partir do sessionStorage (antes da rede)
+    if (!hasRows) {
+      const restored = this._restoreHistorySnapshot(snapKey);
+      if (!restored && !keepVisible && window.AppUiTable.showLoading) {
+        window.AppUiTable.showLoading();
+      }
     }
 
     try {
-      const safePage = Math.max(1, Number(page || 1));
       const limit = window.AppUiTable.pageSize || 10;
-      const unitFilterParams = this.getSelectedUnitFilter();
       const data = await window.AppApi.listDocuments({
         certificateId: certId,
         environment: selectEnvironment ? selectEnvironment.value : 'producao',
@@ -160,11 +202,13 @@ window.AppSyncController = {
       }
 
       const totalValue = data.summary?.totalValue ?? data.totalValue ?? 0;
-      window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage, totalValue);
-      if (window.btnDownloadZip) btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
+      const docs = data.documents || [];
+      window.AppUiTable.setDocuments(docs, data.total || 0, safePage, totalValue);
+      this._saveHistorySnapshot(snapKey, docs, data.total || 0, safePage, totalValue);
+      if (window.btnDownloadZip) window.btnDownloadZip.disabled = !(docs && docs.length > 0);
       if (!quiet) {
         const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
-        window.AppUi.log(`Histórico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
+        window.AppUi.log(`Histórico carregado${unitLabel}: ${docs.length} de ${data.total || 0} XML(s) salvos.`, 'success');
       }
     } catch (err) {
       if (requestId !== window._historyRequestId) return;

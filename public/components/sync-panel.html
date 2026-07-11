@@ -73,10 +73,7 @@
           <button class="btn btn-danger" id="btn-reset-nsu" disabled><span>Zerar Histórico</span></button>
         </div>
       </div>
-      <div class="progress-container">
-        <div class="progress-bar-wrapper"><div class="progress-bar" id="progress-bar" style="width: 0%;"></div></div>
-        <div class="progress-labels"><span id="progress-text">Aguardando comando...</span><span id="progress-percentage">0%</span></div>
-      </div>
+      <!-- barra de progresso removida: status fica no console/log e nos alertas -->
       <div class="alert-box success" id="alert-sync-success" style="display: none;"><strong>Concluído:</strong> todas as notas foram sincronizadas.</div>
       <div class="alert-box danger" id="alert-rate-limit" style="display: none;"><strong>Consumo indevido:</strong> API bloqueou temporariamente este CNPJ.</div>
       <div class="crawler-status" id="crawler-status-container" style="display: none;"><span id="crawler-current-cnpj">-</span><span id="crawler-visited-count">0</span><span id="crawler-queue-count">0</span></div>

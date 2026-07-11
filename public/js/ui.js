@@ -157,22 +157,25 @@ window.AppUi = {
   },
 
   updateProgress(current, max) {
+    // Barra de progresso removida do card de varredura
+    const bar = window.progressBar || document.getElementById('progress-bar');
+    const pctEl = window.progressPercentage || document.getElementById('progress-percentage');
+    const txt = window.progressText || document.getElementById('progress-text');
+    if (!bar || !pctEl || !txt) return;
+
     if (max === 0) {
-      progressBar.style.width = '0%';
-      progressPercentage.innerText = '0%';
-      progressText.innerText = 'Nenhuma nota disponível';
+      bar.style.width = '0%';
+      pctEl.innerText = '0%';
+      txt.innerText = 'Nenhuma nota disponível';
       return;
     }
-    
+
     const percentage = Math.min(Math.round((current / max) * 100), 100);
-    progressBar.style.width = `${percentage}%`;
-    progressPercentage.innerText = `${percentage}%`;
-    
-    if (percentage >= 100) {
-      progressText.innerText = 'Totalmente sincronizado';
-    } else {
-      progressText.innerText = `Sincronizando: NSU ${current} de ${max}`;
-    }
+    bar.style.width = `${percentage}%`;
+    pctEl.innerText = `${percentage}%`;
+    txt.innerText = percentage >= 100
+      ? 'Totalmente sincronizado'
+      : `Sincronizando: NSU ${current} de ${max}`;
   },
 
   appendDocumentsToTable(docs) {
