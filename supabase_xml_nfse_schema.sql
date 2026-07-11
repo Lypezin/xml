@@ -206,6 +206,11 @@ create index if not exists documents_list_cancelled_emissao_idx
   on xml_nfse.documents (certificate_id, environment, data_emissao desc nulls last, nsu desc)
   where tipo <> 'EVENTO' and is_cancelled = true;
 
+-- Ultima NFS-e por certificado (dashboard / qualquer status)
+create index if not exists documents_dash_latest_emissao_idx
+  on xml_nfse.documents (certificate_id, environment, data_emissao desc nulls last, nsu desc)
+  where tipo <> 'EVENTO';
+
 create index if not exists documents_tomador_active_valor_cover_idx
   on xml_nfse.documents (certificate_id, environment, tomador_cnpj)
   include (valor_servico)
@@ -1614,13 +1619,14 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = xml_nfse, public, extensions
+set statement_timeout = '8000'
 as $$
 declare
   result_json jsonb;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
-  -- total_xmls em agg + ultima NFS-e com horario (dataEmissaoCompleta)
+  -- Stats O(1) + 1 row por certificado (index documents_dash_latest_emissao_idx)
   select coalesce(jsonb_agg(row_to_json(t)::jsonb), '[]'::jsonb)
   into result_json
   from (
@@ -1629,49 +1635,31 @@ begin
       c.filename,
       c.cnpj,
       c.active,
-      coalesce(agg.total_xmls, 0)::integer as "totalXmls",
-      coalesce(agg.last_update, 'Sem XMLs') as "lastUpdate"
+      coalesce(st.active_count, 0) + coalesce(st.cancelled_count, 0) as "totalXmls",
+      coalesce(last_doc.last_update, 'Sem XMLs') as "lastUpdate"
     from xml_nfse.certificates c
     inner join xml_nfse.certificate_secrets s on s.certificate_id = c.id
-    left join (
-      select
-        latest.certificate_id,
-        counts.total_xmls,
-        coalesce(
-          nullif(trim(latest.metadata ->> 'dataEmissaoCompleta'), ''),
-          nullif(trim(latest.metadata ->> 'dataEmissao'), ''),
-          to_char(latest.data_emissao, 'YYYY-MM-DD'),
-          to_char(
-            latest.first_seen_at at time zone 'America/Sao_Paulo',
-            'YYYY-MM-DD"T"HH24:MI:SS'
-          ),
-          'Sem XMLs'
-        ) as last_update
-      from (
-        select distinct on (d.certificate_id)
-          d.certificate_id,
-          d.data_emissao,
-          d.first_seen_at,
-          d.metadata,
-          d.nsu
-        from xml_nfse.documents d
-        where d.environment = 'producao'
-          and d.tipo <> 'EVENTO'
-        order by
-          d.certificate_id,
-          d.data_emissao desc nulls last,
-          d.nsu desc
-      ) latest
-      inner join (
-        select
-          d.certificate_id,
-          count(*)::integer as total_xmls
-        from xml_nfse.documents d
-        where d.environment = 'producao'
-          and d.tipo <> 'EVENTO'
-        group by d.certificate_id
-      ) counts on counts.certificate_id = latest.certificate_id
-    ) agg on agg.certificate_id = c.id
+    left join xml_nfse.document_stats st
+      on st.certificate_id = c.id
+     and st.environment = 'producao'
+    left join lateral (
+      select coalesce(
+        nullif(trim(d.metadata ->> 'dataEmissaoCompleta'), ''),
+        nullif(trim(d.metadata ->> 'dataEmissao'), ''),
+        to_char(d.data_emissao, 'YYYY-MM-DD'),
+        to_char(
+          d.first_seen_at at time zone 'America/Sao_Paulo',
+          'YYYY-MM-DD"T"HH24:MI:SS'
+        ),
+        'Sem XMLs'
+      ) as last_update
+      from xml_nfse.documents d
+      where d.certificate_id = c.id
+        and d.environment = 'producao'
+        and d.tipo <> 'EVENTO'
+      order by d.data_emissao desc nulls last, d.nsu desc
+      limit 1
+    ) last_doc on true
     order by c.active desc, c.filename
   ) t;
 
