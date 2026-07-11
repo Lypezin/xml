@@ -110,6 +110,7 @@ router.get('/download-excel', async (req, res) => {
       { key: 'numero', width: 14 },
       { key: 'status', width: 14 },
       { key: 'dataEmissao', width: 14 },
+      { key: 'competencia', width: 14 },
       { key: 'cnpjPrestador', width: 20 },
       { key: 'nomePrestador', width: 32 },
       { key: 'cnpjTomador', width: 20 },
@@ -121,7 +122,7 @@ router.get('/download-excel', async (req, res) => {
     ];
 
     const headers = [
-      'NSU', 'Tipo', 'Chave', 'Número NFS-e', 'Status', 'Data Emissão',
+      'NSU', 'Tipo', 'Chave', 'Número NFS-e', 'Status', 'Data Emissão', 'Competência',
       'CNPJ Prestador', 'Nome Prestador', 'CNPJ Tomador', 'Nome Tomador',
       'Valor Serviço', 'Descrição', 'Município', 'Cód. Tributação'
     ];
@@ -142,7 +143,7 @@ router.get('/download-excel', async (req, res) => {
 
     worksheet.autoFilter = {
       from: { row: 1, column: 1 },
-      to: { row: 1 + documents.length, column: 14 }
+      to: { row: 1 + documents.length, column: 15 }
     };
 
     let dataRow = 0;
@@ -165,6 +166,9 @@ router.get('/download-excel', async (req, res) => {
         status: isCancelled ? 'Cancelada' : status,
         dataEmissao: formatDateBr(
           metadata.dataEmissaoCompleta || doc.data_emissao || doc.dataEmissao || metadata.dataEmissao || ''
+        ),
+        competencia: formatDateBr(
+          metadata.competencia || doc.competencia || ''
         ),
         cnpjPrestador: formatCnpj(metadata.prestadorCnpj || doc.prestador_cnpj),
         nomePrestador: metadata.prestadorNome || doc.prestador_nome || metadata.prestadorRazaoSocial || '',

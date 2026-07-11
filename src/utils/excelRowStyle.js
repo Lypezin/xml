@@ -22,10 +22,12 @@ function styleDataRow(row, isCancelled, dataRow) {
       left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
       right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
     };
+    // 1 NSU, 2 Tipo, 4 Número, 5 Status, 6 Emissão, 7 Competência,
+    // 8 CNPJ Prest., 10 CNPJ Tom., 15 Cód. Tributação
     cell.alignment = {
       vertical: 'middle',
-      horizontal: [1, 2, 4, 5, 6, 7, 9, 14].includes(colNumber) ? 'center' : 'left',
-      wrapText: colNumber === 12
+      horizontal: [1, 2, 4, 5, 6, 7, 8, 10, 15].includes(colNumber) ? 'center' : 'left',
+      wrapText: colNumber === 13
     };
   });
 
