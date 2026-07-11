@@ -58,6 +58,8 @@ async function bootDataParallel() {
   const subtitleEl = window.pageSubtitle || document.getElementById('page-subtitle');
   if (titleEl) titleEl.innerText = 'Dashboard';
   if (subtitleEl) subtitleEl.innerText = 'Resumo de cidades e total de XMLs persistidos';
+  const crumb = document.getElementById('page-breadcrumb');
+  if (crumb) crumb.textContent = 'Visão geral / Dashboard';
 
   await Promise.allSettled(tasks);
 }
