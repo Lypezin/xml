@@ -14,6 +14,7 @@ const {
   isSupabaseAuthRequired
 } = require('./src/config/auth');
 const { getSupabaseConfig } = require('./src/services/supabase');
+const { createRateLimiter } = require('./src/middleware/rateLimit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,6 +58,19 @@ app.use(basicAuthMiddleware);
 
 // Middleware de Autenticação do Supabase (para rotas /api)
 app.use('/api', requireSupabaseAuth);
+
+// Rate limits por grupo de rotas (apos auth, por IP)
+const rlGeneral = createRateLimiter({ windowMs: 60_000, max: 120, keyPrefix: 'api' });
+const rlHeavy = createRateLimiter({ windowMs: 60_000, max: 20, keyPrefix: 'heavy' });
+const rlUpload = createRateLimiter({ windowMs: 60_000, max: 10, keyPrefix: 'upload' });
+
+app.use('/api', rlGeneral);
+app.use('/api/fetch-batch', rlHeavy);
+app.use('/api/discover-nsu', rlHeavy);
+app.use('/api/scan-cancellations', rlHeavy);
+app.use('/api/download-period-zip', rlHeavy);
+app.use('/api/download-excel', rlHeavy);
+app.use('/api/upload-certificate', rlUpload);
 
 // Importar e associar Rotas do Sistema
 app.use('/api', require('./src/routes/certificatesList'));

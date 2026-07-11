@@ -43,6 +43,24 @@ function clampListOffset(offset) {
   return parsed;
 }
 
+/** Interpreta cancelledMode / includeCancelled / onlyCancelled do request. */
+function parseCancelledFlags(source = {}) {
+  const mode = String(source.cancelledMode || '').toLowerCase();
+  let include = String(source.includeCancelled ?? 'false').toLowerCase() === 'true';
+  let only = String(source.onlyCancelled ?? 'false').toLowerCase() === 'true';
+  if (mode === 'active') {
+    include = false;
+    only = false;
+  } else if (mode === 'all') {
+    include = true;
+    only = false;
+  } else if (mode === 'cancelled') {
+    include = true;
+    only = true;
+  }
+  return { includeCancelled: include, onlyCancelled: only };
+}
+
 function getUniqueXmlKey(item) {
   const metadata = item.metadata || {};
   const chave = String(item.chave || metadata.chave || '').trim();
@@ -280,6 +298,8 @@ router.get('/list-documents', async (req, res) => {
       partyRole,
       search = '',
       includeCancelled = 'false',
+      onlyCancelled = 'false',
+      cancelledMode = '',
       limit,
       offset
     } = req.query;
@@ -289,6 +309,7 @@ router.get('/list-documents', async (req, res) => {
     }
 
     const receiverCnpj = onlyDigits(partyCnpj) || onlyDigits(cnpj) || onlyDigits(cert.cnpj);
+    const flags = parseCancelledFlags({ includeCancelled, onlyCancelled, cancelledMode });
 
     const result = await listRemoteDocuments({
       certificateId: cert.id,
@@ -299,7 +320,8 @@ router.get('/list-documents', async (req, res) => {
       partyCnpj: receiverCnpj,
       partyRole: normalizePartyRole(partyRole),
       search,
-      includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+      includeCancelled: flags.includeCancelled,
+      onlyCancelled: flags.onlyCancelled,
       limit: clampListLimit(limit),
       offset: clampListOffset(offset)
     });
@@ -347,7 +369,9 @@ router.get('/download-excel', async (req, res) => {
       partyCnpj,
       partyRole,
       search = '',
-      includeCancelled = 'false'
+      includeCancelled = 'false',
+      onlyCancelled = 'false',
+      cancelledMode = ''
     } = req.query;
     
     const cert = await resolveCertificateMetadataForList(certificateId);
@@ -356,6 +380,7 @@ router.get('/download-excel', async (req, res) => {
     }
 
     const receiverCnpj = onlyDigits(partyCnpj) || onlyDigits(cnpj) || onlyDigits(cert.cnpj);
+    const flags = parseCancelledFlags({ includeCancelled, onlyCancelled, cancelledMode });
 
     const initialResult = await listRemoteDocuments({
       certificateId: cert.id,
@@ -366,7 +391,8 @@ router.get('/download-excel', async (req, res) => {
       partyCnpj: receiverCnpj,
       partyRole: normalizePartyRole(partyRole),
       search,
-      includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+      includeCancelled: flags.includeCancelled,
+      onlyCancelled: flags.onlyCancelled,
       limit: 10,
       offset: 0
     });
@@ -393,7 +419,8 @@ router.get('/download-excel', async (req, res) => {
       partyCnpj: receiverCnpj,
       partyRole: normalizePartyRole(partyRole),
       search,
-      includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+      includeCancelled: flags.includeCancelled,
+      onlyCancelled: flags.onlyCancelled,
       limit: totalMatched,
       offset: 0
     });
@@ -519,7 +546,9 @@ router.post('/download-period-zip', async (req, res) => {
       partyCnpj,
       partyRole,
       search = '',
-      includeCancelled = 'false'
+      includeCancelled = 'false',
+      onlyCancelled = 'false',
+      cancelledMode = ''
     } = req.body;
     const cert = await resolveCertificateMetadataForList(certificateId);
     if (!cert) {
@@ -527,6 +556,7 @@ router.post('/download-period-zip', async (req, res) => {
     }
 
     const receiverCnpj = onlyDigits(partyCnpj) || onlyDigits(cnpj) || onlyDigits(cert.cnpj);
+    const flags = parseCancelledFlags({ includeCancelled, onlyCancelled, cancelledMode });
 
     const result = await listRemoteDocuments({
       certificateId: cert.id,
@@ -537,7 +567,8 @@ router.post('/download-period-zip', async (req, res) => {
       partyCnpj: receiverCnpj,
       partyRole: normalizePartyRole(partyRole),
       search,
-      includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+      includeCancelled: flags.includeCancelled,
+      onlyCancelled: flags.onlyCancelled,
       limit: 10,
       offset: 0
     });
@@ -566,7 +597,8 @@ router.post('/download-period-zip', async (req, res) => {
         partyCnpj: receiverCnpj,
         partyRole: normalizePartyRole(partyRole),
         search,
-        includeCancelled: String(includeCancelled).toLowerCase() === 'true',
+        includeCancelled: flags.includeCancelled,
+        onlyCancelled: flags.onlyCancelled,
         limit: totalMatched,
         offset: 0
       });

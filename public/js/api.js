@@ -354,12 +354,22 @@ window.AppApi = {
     const key = `history:${qs}`;
     const cache = window.AppDataCache;
     if (!cache) {
-      return (await fetch(`/api/list-documents?${qs}`)).json();
+      const res = await fetch(`/api/list-documents?${qs}`);
+      return this._jsonOrThrow(res, 'Falha ao listar documentos.');
     }
     return cache.getOrFetch(key, 25000, async () => {
       const res = await fetch(`/api/list-documents?${qs}`);
-      return res.json();
+      return this._jsonOrThrow(res, 'Falha ao listar documentos.');
     });
+  },
+
+  async scanCancellations(body) {
+    const res = await fetch('/api/scan-cancellations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    });
+    return this._jsonOrThrow(res, 'Falha ao verificar canceladas na ADN.');
   },
 
   async fetchStorageSummary(params = {}) {

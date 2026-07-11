@@ -213,6 +213,7 @@ async function listRemoteDocuments({
   partyRole = 'tomador',
   search = '',
   includeCancelled = false,
+  onlyCancelled = false,
   limit = null,
   offset = null
 }) {
@@ -225,7 +226,8 @@ async function listRemoteDocuments({
     p_party_cnpj: partyCnpj || '',
     p_party_role: partyRole || 'tomador',
     p_search: search || '',
-    p_include_cancelled: Boolean(includeCancelled),
+    p_include_cancelled: Boolean(includeCancelled) || Boolean(onlyCancelled),
+    p_only_cancelled: Boolean(onlyCancelled),
     p_limit: limit === null ? null : Number(limit),
     p_offset: offset === null ? null : Number(offset)
   });

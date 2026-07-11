@@ -32,14 +32,24 @@
 
 .results-filter-bar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 200px) auto;
   gap: 12px;
-  align-items: center;
+  align-items: end;
   margin-bottom: 16px;
   padding: 10px 14px;
   background: var(--surface-muted);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
+}
+
+.cancelled-filter-field select {
+  min-height: 38px;
+  width: 100%;
+}
+
+#btn-scan-cancellations {
+  min-height: 38px;
+  white-space: nowrap;
 }
 
 .results-filter-bar .input-group {

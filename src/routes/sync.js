@@ -26,9 +26,14 @@ const {
 } = require('../services/supabase');
 const { executeSyncBatch } = require('../utils/syncProcessor');
 const { handleSyncError } = require('../utils/syncErrorHandler');
+const {
+  scanCancellationsForPeriod,
+  currentMonthRange
+} = require('../services/cancellationScanner');
 
 const router = express.Router();
 let fetchBatchInFlight = false;
+let cancelScanInFlight = false;
 
 router.post('/fetch-batch', async (req, res) => {
   const { startNsu, environment, cnpjConsulta, certificateId, sortOrder = 'asc' } = req.body;
@@ -261,6 +266,56 @@ router.post('/reset-nsu', async (req, res) => {
   } catch (err) {
     console.error('Erro ao zerar NSU no Supabase:', err);
     return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Verifica cancelamentos na ADN para NFSe do periodo (padrao: mes atual).
+ * Body: { certificateId, environment, startDate?, endDate?, maxKeys? }
+ */
+router.post('/scan-cancellations', async (req, res) => {
+  if (cancelScanInFlight) {
+    return res.status(409).json({
+      success: false,
+      error: 'Ja existe uma verificacao de canceladas em andamento.',
+      retryable: true
+    });
+  }
+
+  cancelScanInFlight = true;
+  try {
+    const {
+      certificateId,
+      environment = 'producao',
+      startDate,
+      endDate,
+      maxKeys = 80
+    } = req.body || {};
+
+    const certificate = await resolveCertificateForRequest(certificateId);
+    if (!certificate) {
+      return res.status(400).json({ success: false, error: 'Certificado nao configurado.' });
+    }
+
+    const range = (startDate && endDate)
+      ? { startDate, endDate }
+      : currentMonthRange();
+
+    const result = await scanCancellationsForPeriod({
+      certificate,
+      environment: normalizeEnvironment(environment),
+      startDate: range.startDate,
+      endDate: range.endDate,
+      maxKeys: Number(maxKeys) || 80,
+      delayMs: 400
+    });
+
+    return res.json(result);
+  } catch (err) {
+    console.error('Erro em scan-cancellations:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  } finally {
+    cancelScanInFlight = false;
   }
 });
 

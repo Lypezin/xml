@@ -271,7 +271,9 @@ window.AppEvents = {
             partyCnpj: unitFilterParams.partyCnpj,
             partyRole: unitFilterParams.partyRole,
             search: historySearch ? historySearch.value.trim() : '',
-            includeCancelled: window.AppUtils.getIncludeCancelledParam()
+            cancelledMode: window.AppUtils.getCancelledMode(),
+            includeCancelled: window.AppUtils.getIncludeCancelledParam(),
+            onlyCancelled: window.AppUtils.getOnlyCancelledParam()
           });
           window.AppUi.log('Excel da tabela baixado com sucesso.', 'success');
         } catch (err) {
@@ -300,7 +302,9 @@ window.AppEvents = {
             partyCnpj: unitFilterParams.partyCnpj,
             partyRole: unitFilterParams.partyRole,
             search: historySearch ? historySearch.value.trim() : '',
-            includeCancelled: window.AppUtils.getIncludeCancelledParam()
+            cancelledMode: window.AppUtils.getCancelledMode(),
+            includeCancelled: window.AppUtils.getIncludeCancelledParam(),
+            onlyCancelled: window.AppUtils.getOnlyCancelledParam()
           });
           window.AppUi.log('ZIP da tabela baixado com sucesso.', 'success');
         } catch (err) {
@@ -382,6 +386,47 @@ window.AppEvents = {
       includeCancelled.addEventListener('change', () => {
         if (window.AppDataCache) window.AppDataCache.invalidate('history:');
         window.AppSyncController.loadPersistedHistory(1, { quiet: true });
+      });
+    }
+
+    if (window.cancelledFilter) {
+      window.cancelledFilter.addEventListener('change', () => {
+        if (window.AppDataCache) window.AppDataCache.invalidate('history:');
+        window.AppSyncController.loadPersistedHistory(1, { quiet: true });
+      });
+    }
+
+    if (window.btnScanCancellations) {
+      window.btnScanCancellations.addEventListener('click', async () => {
+        const certId = window.selectCertificate?.value || window.activeCertificateId;
+        if (!certId) {
+          window.AppUi.log('Selecione um certificado antes de verificar canceladas.', 'warning');
+          return;
+        }
+        const startDate = window.downloadStartDate?.value || '';
+        const endDate = window.downloadEndDate?.value || '';
+        window.btnScanCancellations.disabled = true;
+        window.AppUi.log('Consultando cancelamentos na ADN (pode levar alguns minutos)...', 'warning');
+        try {
+          const result = await window.AppApi.scanCancellations({
+            certificateId: certId,
+            environment: window.selectEnvironment?.value || 'producao',
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            maxKeys: 100
+          });
+          if (!result.success) throw new Error(result.error || 'Falha no scan.');
+          window.AppUi.log(
+            `Canceladas: ${result.marked || 0} marcadas de ${result.checked || 0} consultadas (ADN encontrou ${result.foundOnAdn || 0}).`,
+            result.marked > 0 ? 'success' : 'system'
+          );
+          if (window.AppDataCache) window.AppDataCache.invalidate('history:');
+          await window.AppSyncController.loadPersistedHistory(1, { quiet: true });
+        } catch (err) {
+          window.AppUi.log(`Erro ao verificar canceladas: ${err.message}`, 'error');
+        } finally {
+          window.btnScanCancellations.disabled = false;
+        }
       });
     }
 

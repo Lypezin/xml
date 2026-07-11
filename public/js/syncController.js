@@ -142,7 +142,9 @@ window.AppSyncController = {
         partyCnpj: unitFilterParams.partyCnpj,
         partyRole: unitFilterParams.partyRole,
         search: historySearch ? historySearch.value.trim() : '',
+        cancelledMode: window.AppUtils.getCancelledMode(),
         includeCancelled: window.AppUtils.getIncludeCancelledParam(),
+        onlyCancelled: window.AppUtils.getOnlyCancelledParam(),
         limit,
         offset: (safePage - 1) * limit
       });

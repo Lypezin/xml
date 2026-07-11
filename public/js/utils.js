@@ -103,13 +103,24 @@ window.AppUtils = {
   },
 
   /**
-   * Label do checkbox: "Ocultar canceladas"
-   * checked => NAO incluir canceladas na API (includeCancelled=false)
-   * unchecked => incluir canceladas (includeCancelled=true)
+   * Modo de filtro de canceladas na lista.
+   * active | all | cancelled
    */
+  getCancelledMode() {
+    const el = window.cancelledFilter || document.getElementById('cancelled-filter');
+    const mode = String(el?.value || 'active').toLowerCase();
+    if (mode === 'all' || mode === 'cancelled') return mode;
+    return 'active';
+  },
+
+  /** Compat: includeCancelled=true quando mostra todas ou so canceladas */
   getIncludeCancelledParam() {
-    const checked = Boolean(window.includeCancelled?.checked);
-    // "Ocultar" marcado => includeCancelled false
-    return checked ? 'false' : 'true';
+    const mode = this.getCancelledMode();
+    if (mode === 'active') return 'false';
+    return 'true';
+  },
+
+  getOnlyCancelledParam() {
+    return this.getCancelledMode() === 'cancelled' ? 'true' : 'false';
   }
 };

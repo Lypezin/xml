@@ -93,10 +93,19 @@
         <label for="history-search">Buscar na tabela</label>
         <input type="search" id="history-search" placeholder="Valor, CNPJ ou nome">
       </div>
-      <label class="toggle-row" for="include-cancelled">
-        <input type="checkbox" id="include-cancelled">
-        <span>Ocultar canceladas</span>
-      </label>
+      <div class="input-group cancelled-filter-field">
+        <label for="cancelled-filter">Canceladas</label>
+        <select id="cancelled-filter">
+          <option value="active" selected>Ocultar canceladas</option>
+          <option value="all">Mostrar todas</option>
+          <option value="cancelled">Só canceladas</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-scan-cancellations" title="Consulta Eventos na ADN para notas do período/mês">
+        Verificar canceladas
+      </button>
+      <!-- legado: mantido oculto para nao quebrar refs antigas -->
+      <input type="checkbox" id="include-cancelled" style="display:none">
     </div>
     <div class="xml-list-wrapper" id="results-table">
       <div class="xml-list-head">

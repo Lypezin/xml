@@ -1204,6 +1204,7 @@ grant execute on function public.xml_nfse_mark_cancelled_by_chave(text, text, te
 drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, integer, integer);
 drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, integer, integer);
 drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, integer, integer);
+drop function if exists public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, boolean, integer, integer);
 
 create or replace function public.xml_nfse_list_documents(
   p_secret text,
@@ -1216,6 +1217,7 @@ create or replace function public.xml_nfse_list_documents(
   p_party_role text default 'tomador',
   p_search text default '',
   p_include_cancelled boolean default false,
+  p_only_cancelled boolean default false,
   p_limit integer default null,
   p_offset integer default null
 )
@@ -1269,7 +1271,13 @@ begin
     where d.certificate_id = p_certificate_id
       and d.environment = p_environment
       and d.tipo <> 'EVENTO'
-      and (p_include_cancelled or d.is_cancelled = false)
+      and (
+        case
+          when coalesce(p_only_cancelled, false) then d.is_cancelled = true
+          when coalesce(p_include_cancelled, false) then true
+          else d.is_cancelled = false
+        end
+      )
       and (p_start_date is null or d.data_emissao >= p_start_date)
       and (p_end_date is null or d.data_emissao <= p_end_date)
       and (
@@ -1359,7 +1367,7 @@ begin
 end;
 $$;
 
-grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, integer, integer) to anon, authenticated;
+grant execute on function public.xml_nfse_list_documents(text, text, text, date, date, text, text, text, text, boolean, boolean, integer, integer) to anon, authenticated;
 grant execute on function public.xml_nfse_list_units(text) to anon, authenticated;
 grant execute on function public.xml_nfse_upsert_unit(text, uuid, text, text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_delete_unit(text, uuid) to anon, authenticated;
