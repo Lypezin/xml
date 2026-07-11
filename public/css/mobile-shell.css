@@ -49,6 +49,9 @@
 
   .app-layout {
     position: relative;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   .sidebar {
@@ -58,10 +61,12 @@
     bottom: 0;
     width: min(300px, 86vw);
     height: 100vh;
+    height: 100dvh;
     z-index: 50;
     transform: translateX(-105%);
     transition: transform 0.22s var(--ease-out);
     box-shadow: var(--shadow-lg);
+    align-self: auto;
   }
 
   .app-layout.sidebar-open .sidebar {
@@ -85,6 +90,8 @@
   .main-content {
     padding: 10px 14px 24px;
     width: 100%;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .navbar {
