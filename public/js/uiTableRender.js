@@ -1,8 +1,103 @@
 Object.assign(window.AppUiTable = window.AppUiTable || {}, {
-renderCurrentPage() {
+  _prefersReducedMotion() {
+    try {
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  _flashMetric(el) {
+    if (!el || this._prefersReducedMotion()) return;
+    el.classList.remove('metric-flash');
+    // reflow para reiniciar animação
+    void el.offsetWidth;
+    el.classList.add('metric-flash');
+  },
+
+  _setMetricText(el, text, { pending = false, flash = false } = {}) {
+    if (!el) return;
+    const next = String(text);
+    const prev = el.dataset.metricText;
+    el.classList.toggle('is-pending', pending);
+    if (prev === next && !flash) return;
+    el.dataset.metricText = next;
+    el.textContent = next;
+    if (flash && !pending) this._flashMetric(el);
+  },
+
+  _renderEmptyState(tableBody) {
+    const hasCert = Boolean(
+      (window.selectCertificate && window.selectCertificate.value) ||
+      window.activeCertificateId
+    );
+    tableBody.innerHTML = `
+      <div id="empty-row" class="xml-empty-state rich-empty">
+        <div class="empty-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="9" y1="13" x2="15" y2="13"></line>
+            <line x1="9" y1="17" x2="13" y2="17"></line>
+          </svg>
+        </div>
+        <div class="empty-title">Nenhum XML neste recorte</div>
+        <p class="empty-text">
+          ${hasCert
+            ? 'Ajuste a unidade, o filtro de canceladas ou inicie uma varredura para sincronizar notas.'
+            : 'Selecione um certificado e rode a varredura para trazer os XMLs da unidade.'}
+        </p>
+        <div class="empty-actions">
+          ${hasCert
+            ? '<button type="button" class="btn btn-success btn-sm" data-empty-action="start-scan">Iniciar varredura</button>'
+            : '<button type="button" class="btn btn-primary btn-sm" data-empty-action="go-certs">Ir para certificados</button>'}
+          <button type="button" class="btn btn-secondary btn-sm" data-empty-action="clear-filters">Limpar busca</button>
+        </div>
+      </div>
+    `;
+
+    const startBtn = tableBody.querySelector('[data-empty-action="start-scan"]');
+    const certsBtn = tableBody.querySelector('[data-empty-action="go-certs"]');
+    const clearBtn = tableBody.querySelector('[data-empty-action="clear-filters"]');
+
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        const btn = window.btnStart || document.getElementById('btn-start');
+        if (btn && !btn.disabled) btn.click();
+        else if (window.AppUi?.log) window.AppUi.log('Ative um certificado para iniciar a varredura.', 'warning');
+      });
+    }
+    if (certsBtn) {
+      certsBtn.addEventListener('click', () => {
+        const nav = window.navCertificado || document.getElementById('nav-certificado');
+        const view = window.viewCertificadoContent || document.getElementById('view-certificado-content');
+        if (window.AppUi?.switchTab && nav && view) {
+          window.AppUi.switchTab(nav, view, 'Certificados', 'Gerencie certificados A1 e nomes internos');
+        }
+      });
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (window.historySearch) window.historySearch.value = '';
+        if (window.cancelledFilter) window.cancelledFilter.value = 'active';
+        if (window.unitFilter) window.unitFilter.value = '';
+        if (window.AppDataCache) window.AppDataCache.invalidate('history:');
+        if (window.AppSyncController?.loadPersistedHistory) {
+          window.AppSyncController.loadPersistedHistory(1, { quiet: true });
+        }
+      });
+    }
+  },
+
+  renderCurrentPage() {
     const tableBody = window.tableBody || document.getElementById('table-body');
     if (!tableBody) return;
+
+    const pageChanged = this._lastRenderedPage != null && this._lastRenderedPage !== this.currentPage;
+    this._lastRenderedPage = this.currentPage;
+
     tableBody.innerHTML = '';
+    tableBody.classList.remove('is-entering', 'is-paging');
 
     const mode = window.selectSearchMode ? window.selectSearchMode.value : 'asc';
     const orderedDocs = this.remoteMode ? [...this.documents] : [...this.documents].sort((a, b) => {
@@ -18,7 +113,7 @@ renderCurrentPage() {
     const pageDocs = this.remoteMode ? orderedDocs : orderedDocs.slice(start, start + this.pageSize);
 
     if (pageDocs.length === 0) {
-      tableBody.innerHTML = '<div id="empty-row" class="xml-empty-state">Nenhum documento sincronizado ainda.</div>';
+      this._renderEmptyState(tableBody);
       this.updatePagination(totalItems, 0, 0);
       if (window.btnDownloadZip) window.btnDownloadZip.disabled = true;
       if (window.btnExportExcel) window.btnExportExcel.disabled = true;
@@ -94,6 +189,16 @@ renderCurrentPage() {
     });
     tableBody.appendChild(frag);
 
+    if (!this._prefersReducedMotion()) {
+      // Stagger na 1ª pintura da página; fade leve nas demais
+      requestAnimationFrame(() => {
+        tableBody.classList.add(pageChanged ? 'is-paging' : 'is-entering');
+        window.setTimeout(() => {
+          tableBody.classList.remove('is-entering', 'is-paging');
+        }, pageChanged ? 200 : 320);
+      });
+    }
+
     this.updatePagination(totalItems, start + 1, start + pageDocs.length);
   },
 
@@ -116,12 +221,22 @@ renderCurrentPage() {
         ? !fullPage
         : this.currentPage >= Math.ceil(Math.max(total, 1) / this.pageSize);
     }
-    if (statTotalNotas) statTotalNotas.innerText = pending ? '…' : total;
-    if (statTotalValue) {
-      statTotalValue.innerText = pending && !this.remoteTotalValue
-        ? '…'
-        : window.AppUtils.formatCurrency(this.remoteTotalValue || 0);
-    }
+
+    const wasPending = this._metricsWerePending;
+    const totalLabel = pending ? '…' : String(total);
+    const valueLabel = pending && !this.remoteTotalValue
+      ? '…'
+      : window.AppUtils.formatCurrency(this.remoteTotalValue || 0);
+
+    this._setMetricText(window.statTotalNotas || document.getElementById('stat-total-notas'), totalLabel, {
+      pending,
+      flash: wasPending && !pending
+    });
+    this._setMetricText(window.statTotalValue || document.getElementById('stat-total-value'), valueLabel, {
+      pending: pending && !this.remoteTotalValue,
+      flash: wasPending && !pending
+    });
+    this._metricsWerePending = pending;
   },
 
   nextPage() {

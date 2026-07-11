@@ -28,6 +28,7 @@ initElements() {
     line.appendChild(timeSpan);
     line.appendChild(badgeSpan);
     line.appendChild(textSpan);
+    line.classList.add('is-new');
 
     if (window.consoleLog) {
       consoleLog.appendChild(line);
@@ -41,6 +42,7 @@ initElements() {
       if ((type === 'error' || type === 'warning') && window.consoleLogDrawer && !consoleLogDrawer.open) {
         consoleLogDrawer.open = true;
       }
+      window.setTimeout(() => line.classList.remove('is-new'), 400);
     }
   },
 

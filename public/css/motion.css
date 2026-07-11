@@ -1,0 +1,212 @@
+/* Microinterações, focus e reduced-motion — Sprint A */
+
+/* ---------- Focus visible (teclado) ---------- */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-soft);
+}
+
+.btn:focus-visible,
+.nav-item:focus-visible,
+button:focus-visible,
+a.nav-item:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.input-group input:focus-visible,
+.input-group select:focus-visible,
+.results-filter-bar input:focus-visible,
+.results-filter-bar select:focus-visible,
+.auth-panel input:focus-visible,
+#history-search:focus-visible,
+#cancelled-filter:focus-visible {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.22);
+}
+
+.console-log-summary:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--secondary);
+}
+
+/* ---------- Metric values: tabular + pulse ---------- */
+.metric-value,
+.metric-number,
+#stat-total-notas,
+#stat-total-value,
+#stat-storage-payloads,
+#dash-stat-cities,
+#dash-stat-active,
+#dash-stat-xmls {
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-value.is-pending,
+.metric-number.is-pending {
+  opacity: 0.55;
+  letter-spacing: 0.04em;
+}
+
+.metric-value.metric-flash,
+.metric-number.metric-flash {
+  animation: metric-flash var(--transition-normal) var(--ease-out);
+}
+
+@keyframes metric-flash {
+  0% {
+    opacity: 0.35;
+    transform: translateY(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Lista: entrada em stagger ---------- */
+.xml-list.is-entering .xml-item {
+  animation: row-enter 0.22s var(--ease-out) both;
+}
+
+.xml-list.is-entering .xml-item:nth-child(1) { animation-delay: 0ms; }
+.xml-list.is-entering .xml-item:nth-child(2) { animation-delay: 25ms; }
+.xml-list.is-entering .xml-item:nth-child(3) { animation-delay: 50ms; }
+.xml-list.is-entering .xml-item:nth-child(4) { animation-delay: 75ms; }
+.xml-list.is-entering .xml-item:nth-child(5) { animation-delay: 100ms; }
+.xml-list.is-entering .xml-item:nth-child(6) { animation-delay: 125ms; }
+.xml-list.is-entering .xml-item:nth-child(7) { animation-delay: 150ms; }
+.xml-list.is-entering .xml-item:nth-child(8) { animation-delay: 175ms; }
+.xml-list.is-entering .xml-item:nth-child(9) { animation-delay: 200ms; }
+.xml-list.is-entering .xml-item:nth-child(10) { animation-delay: 225ms; }
+
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade leve da lista ao trocar página */
+.xml-list.is-paging {
+  animation: list-fade 0.16s var(--ease-out);
+}
+
+@keyframes list-fade {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+
+/* ---------- Empty state da tabela ---------- */
+.xml-empty-state.rich-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 28px;
+  text-align: center;
+  animation: row-enter 0.28s var(--ease-out);
+}
+
+.xml-empty-state.rich-empty .empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--card-border);
+  color: var(--secondary);
+  margin-bottom: 4px;
+}
+
+.xml-empty-state.rich-empty .empty-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.xml-empty-state.rich-empty .empty-title {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.xml-empty-state.rich-empty .empty-text {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.45;
+}
+
+.xml-empty-state.rich-empty .empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: center;
+}
+
+/* ---------- Log: nova linha ---------- */
+.console-log .log-line.is-new {
+  animation: log-in 0.18s var(--ease-out);
+}
+
+.console-log .log-line.is-new.error {
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 4px;
+}
+
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .tab-content.active-tab,
+  .tab-content.active {
+    animation: none;
+    transform: none;
+  }
+
+  .xml-list.is-entering .xml-item,
+  .xml-list.is-paging,
+  .metric-value.metric-flash,
+  .metric-number.metric-flash,
+  .console-log .log-line.is-new,
+  .xml-empty-state.rich-empty {
+    animation: none !important;
+  }
+
+  .btn:hover:not(:disabled),
+  .xml-item:hover,
+  .metric-card:hover,
+  .city-card:hover,
+  .mini-metric-card:hover {
+    transform: none;
+  }
+}

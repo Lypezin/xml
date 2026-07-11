@@ -16,8 +16,8 @@
 
 .input-group input:focus,
 .input-group select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--primary-glow);
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
 }
 
 .helper-text {
