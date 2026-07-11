@@ -60,6 +60,29 @@
   flex-shrink: 0;
 }
 
+/* Excel é a ação principal de exportação; ZIP fica secundário */
+.command-bar-actions .btn-export-excel {
+  min-width: 158px;
+  font-weight: 650;
+  padding-inline: 18px;
+  box-shadow: var(--shadow-md);
+}
+
+.command-bar-actions .btn-export-excel:hover:not(:disabled) {
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--brand) 28%, transparent);
+}
+
+.command-bar-actions .btn-download-zip {
+  min-width: 0;
+  font-weight: 500;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.command-bar-actions .btn-download-zip:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
 /* ---------- Ops strip (varredura + log) ---------- */
 .ops-strip {
   display: grid;
@@ -326,6 +349,15 @@
 
   .command-bar-actions .btn {
     flex: 1;
+  }
+
+  .command-bar-actions .btn-export-excel {
+    flex: 1.45;
+    min-width: 0;
+  }
+
+  .command-bar-actions .btn-download-zip {
+    flex: 0.7;
   }
 
   .data-table-toolbar {
