@@ -130,32 +130,58 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
         `;
 
         card.addEventListener('click', async () => {
-          if (city.active) {
+          const certId = city.certificateId;
+          if (!certId) {
+            window.AppUi.log('Cidade sem certificado vinculado.', 'error');
+            return;
+          }
+
+          const openXmlsTab = (forceRefresh = true) => {
             window.AppUi.switchTab(
               window.navDownload || document.getElementById('nav-download'),
               window.viewDownloadContent || document.getElementById('view-download-content'),
               'XMLs por Unidade',
-              'XMLs NFS-e persistidos por certificado e unidade'
+              'XMLs NFS-e persistidos por certificado e unidade',
+              { forceRefresh }
             );
-            return;
-          }
+          };
 
-          window.AppUi.log(`Selecionando certificado para a cidade ${cityName}...`);
+          // Sempre rebinda o certificado da cidade clicada. Antes, cards "Ativo"
+          // só trocavam de aba e o cache da lista mantinha XMLs da cidade anterior.
+          const currentId = window.activeCertificateId
+            || (window.selectCertificate && window.selectCertificate.value)
+            || '';
+          const needsSelect = String(currentId) !== String(certId);
+
           try {
-            const res = await window.AppApi.selectCertificate(city.certificateId);
-            if (res.success) {
-              await window.AppSyncController.checkCertStatus();
-              window.AppUi.switchTab(
-                window.navDownload || document.getElementById('nav-download'),
-                window.viewDownloadContent || document.getElementById('view-download-content'),
-                'XMLs por Unidade',
-                'XMLs NFS-e persistidos por certificado e unidade'
-              );
+            if (needsSelect) {
+              window.AppUi.log(`Selecionando certificado para a cidade ${cityName}...`);
+              const res = await window.AppApi.selectCertificate(certId);
+              if (!res.success) {
+                window.AppUi.log(res.error || 'Erro ao selecionar o certificado.', 'error');
+                return;
+              }
+              window.activeCertificateId = res.activeCertificateId || certId;
+              // Evita flash com linhas da cidade anterior
+              if (window.AppUiTable?.setDocuments) {
+                window.AppUiTable.setDocuments([], 0, 1, 0);
+              }
+              if (window.unitFilter) window.unitFilter.value = '';
+              window._historyReloadDirty = true;
+              window._tabCache = window._tabCache || {};
+              window._tabCache.syncAt = 0;
+              window._tabCache.nsuAt = 0;
+              window._tabCache.storageAt = 0;
+              await window.AppSyncController.checkCertStatus({ skipSecondary: true });
             } else {
-              window.AppUi.log('Erro ao selecionar o certificado.', 'error');
+              // Mesmo certificado: ainda força refresh ao abrir pelo card
+              window._historyReloadDirty = true;
+              window._tabCache = window._tabCache || {};
+              window._tabCache.syncAt = 0;
             }
+            openXmlsTab(true);
           } catch (err) {
-            window.AppUi.log(`Erro ao selecionar o certificado: ${err.message}`, 'error');
+            window.AppUi.log(`Erro ao abrir a cidade ${cityName}: ${err.message}`, 'error');
           }
         });
 

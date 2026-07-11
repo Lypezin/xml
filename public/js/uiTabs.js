@@ -73,16 +73,30 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
       const lastNsu = window._tabCache.nsuAt || 0;
       const lastStorage = window._tabCache.storageAt || 0;
       const hasRows = Boolean(window.AppUiTable?.documents?.length);
-      const needHistory = forceRefresh || !hasRows || !lastSync || now - lastSync > cacheTtlMs || window._historyReloadDirty;
-      const needNsu = forceRefresh || !lastNsu || now - lastNsu > cacheTtlMs;
-      const needStorage = forceRefresh || !lastStorage || now - lastStorage > 300000;
+      // Se o certificado da UI diverge do último carregado, força reload da lista
+      const uiCertId = (window.selectCertificate && window.selectCertificate.value)
+        || window.activeCertificateId
+        || '';
+      const certChanged = Boolean(uiCertId)
+        && Boolean(window._lastHistoryCertId)
+        && String(uiCertId) !== String(window._lastHistoryCertId);
+      const needHistory = forceRefresh || certChanged || !hasRows || !lastSync
+        || now - lastSync > cacheTtlMs || window._historyReloadDirty;
+      const needNsu = forceRefresh || certChanged || !lastNsu || now - lastNsu > cacheTtlMs;
+      const needStorage = forceRefresh || certChanged || !lastStorage || now - lastStorage > 300000;
 
       schedule(() => {
         const jobs = [];
         if (needHistory) {
+          const wasDirty = Boolean(window._historyReloadDirty);
           window._tabCache.syncAt = now;
           window._historyReloadDirty = false;
-          jobs.push(window.AppSyncController.loadPersistedHistory(1, { quiet: true, keepVisible: hasRows }));
+          // Não manter linhas da cidade anterior quando o certificado mudou
+          const keep = hasRows && !forceRefresh && !certChanged && !wasDirty;
+          jobs.push(window.AppSyncController.loadPersistedHistory(1, {
+            quiet: true,
+            keepVisible: keep
+          }));
         }
         if (needNsu) {
           window._tabCache.nsuAt = now;

@@ -47,6 +47,14 @@ async fetchCertStatus() {
       window.AppDataCache.invalidate('sync-state:');
       window.AppDataCache.invalidate('storage:');
     }
+    // Troca de certificado invalida a lista da aba XMLs (evita cidade anterior no cache de aba)
+    if (data?.success) {
+      window._historyReloadDirty = true;
+      window._tabCache = window._tabCache || {};
+      window._tabCache.syncAt = 0;
+      window._tabCache.nsuAt = 0;
+      window._tabCache.storageAt = 0;
+    }
     return data;
   },
 

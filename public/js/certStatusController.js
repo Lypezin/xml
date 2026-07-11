@@ -66,14 +66,23 @@ async checkCertStatus(options = {}) {
   async selectCertificateById(certificateId) {
     if (!certificateId) return;
     try {
+      const prevId = window.activeCertificateId
+        || (window.selectCertificate && window.selectCertificate.value)
+        || '';
       const data = await window.AppApi.selectCertificate(certificateId);
       if (!data.success) {
         window.AppUi.log(`Erro ao selecionar: ${data.error}`, 'error');
         return;
       }
-      window.activeCertificateId = data.activeCertificateId;
+      window.activeCertificateId = data.activeCertificateId || certificateId;
+      if (String(prevId) !== String(window.activeCertificateId)) {
+        if (window.AppUiTable?.setDocuments) {
+          window.AppUiTable.setDocuments([], 0, 1, 0);
+        }
+        if (window.unitFilter) window.unitFilter.value = '';
+      }
       window.AppUi.log('Certificado selecionado.', 'success');
-      this.checkCertStatus();
+      await this.checkCertStatus();
     } catch (err) {
       window.AppUi.log(`Erro ao selecionar: ${err.message}`, 'error');
     }

@@ -45,10 +45,17 @@ _historySnapshotKey(certId, page, unitFilterParams) {
     const requestId = (window._historyRequestId = (window._historyRequestId || 0) + 1);
     const quiet = Boolean(options.quiet);
     const keepVisible = Boolean(options.keepVisible);
-    const hasRows = Boolean(window.AppUiTable.documents?.length);
+    const prevCertId = window._lastHistoryCertId || '';
+    const certSwitched = Boolean(prevCertId) && String(prevCertId) !== String(certId);
+    // Se o certificado mudou, nunca reutilizar linhas/snapshot da cidade anterior
+    if (certSwitched && window.AppUiTable.documents?.length) {
+      window.AppUiTable.setDocuments([], 0, 1, 0);
+    }
+    const hasRows = Boolean(window.AppUiTable.documents?.length) && !certSwitched;
     const safePage = Math.max(1, Number(page || 1));
     const unitFilterParams = this.getSelectedUnitFilter();
     const snapKey = this._historySnapshotKey(certId, safePage, unitFilterParams);
+    window._lastHistoryCertId = certId;
 
     // Paint instantaneo a partir do sessionStorage (antes da rede)
     if (!hasRows) {
