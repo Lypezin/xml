@@ -2,6 +2,11 @@
 
 window.AppEventsCert = {
   bindCertEvents() {
+    // Painel de certificados pode ainda nao existir se o HTML secundario nao carregou
+    if (!dropZone || !fileInput || !formCert) {
+      return;
+    }
+
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -27,11 +32,12 @@ window.AppEventsCert = {
 
       const formData = new FormData();
       formData.append('pfx', window.selectedFile);
-      formData.append('passphrase', passphraseInput.value);
-      formData.append('cnpj', certCnpjInput.value);
+      formData.append('passphrase', passphraseInput ? passphraseInput.value : '');
+      formData.append('cnpj', certCnpjInput ? certCnpjInput.value : '');
 
       window.AppUi.log('Enviando certificado para validação local...');
-      document.getElementById('btn-save-cert-view').disabled = true;
+      const saveBtn = document.getElementById('btn-save-cert-view');
+      if (saveBtn) saveBtn.disabled = true;
 
       try {
         const data = await window.AppApi.uploadCertificate(formData);
@@ -40,7 +46,7 @@ window.AppEventsCert = {
           window.AppSyncController.checkCertStatus();
           formCert.reset();
           window.selectedFile = null;
-          fileNamePreview.innerText = '';
+          if (fileNamePreview) fileNamePreview.innerText = '';
         } else {
           window.AppUi.log(`Erro na validação: ${data.error}`, 'error');
           alert(`Falha no certificado: ${data.error}`);
@@ -48,7 +54,7 @@ window.AppEventsCert = {
       } catch (err) {
         window.AppUi.log(`Erro de rede ao salvar certificado: ${err.message}`, 'error');
       } finally {
-        document.getElementById('btn-save-cert-view').disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
       }
     });
 
@@ -95,19 +101,21 @@ window.AppEventsCert = {
       });
     }
 
-    btnReplaceCert.addEventListener('click', async () => {
-      if (!window.activeCertificateId || !confirm('Deseja realmente remover o certificado ativo?')) return;
-      try {
-        const data = await window.AppApi.removeCertificate(window.activeCertificateId);
-        if (data.success) {
-          window.AppUi.log('Certificado ativo removido.');
-          window.AppSyncController.checkCertStatus();
-          window.AppSyncController.stopQuerying();
+    if (btnReplaceCert) {
+      btnReplaceCert.addEventListener('click', async () => {
+        if (!window.activeCertificateId || !confirm('Deseja realmente remover o certificado ativo?')) return;
+        try {
+          const data = await window.AppApi.removeCertificate(window.activeCertificateId);
+          if (data.success) {
+            window.AppUi.log('Certificado ativo removido.');
+            window.AppSyncController.checkCertStatus();
+            window.AppSyncController.stopQuerying();
+          }
+        } catch (err) {
+          window.AppUi.log(`Erro ao remover: ${err.message}`, 'error');
         }
-      } catch (err) {
-        window.AppUi.log(`Erro ao remover: ${err.message}`, 'error');
-      }
-    });
+      });
+    }
 
     if (btnDiagnoseCert) {
       btnDiagnoseCert.addEventListener('click', async () => {

@@ -22,34 +22,30 @@ window.isCrawlerActive = false;
 window.currentCrawlerCnpj = '';
 
 async function loadAllComponents() {
-  // Core primeiro (auth + sidebar + dashboard) para first paint mais rapido
-  const core = [
+  const components = [
     { id: 'auth-screen-container', path: 'components/auth-screen.html' },
     { id: 'sidebar-container', path: 'components/sidebar.html' },
-    { id: 'view-dashboard-container', path: 'components/dashboard-panel.html' }
-  ];
-  const secondary = [
+    { id: 'view-dashboard-container', path: 'components/dashboard-panel.html' },
     { id: 'view-download-container', path: 'components/sync-panel.html' },
     { id: 'view-certificado-container', path: 'components/certificates-panel.html' },
     { id: 'view-regras-container', path: 'components/rules-panel.html' }
   ];
 
-  const loadOne = async (component) => {
+  // Todos em paralelo (mais rapido que cascata), mas so binda DEPOIS
+  const results = await Promise.all(components.map(async (component) => {
     const el = document.getElementById(component.id);
     if (!el) return null;
-    const res = await fetch(component.path, { cache: 'force-cache' });
-    const html = await res.text();
-    return { el, html };
-  };
+    try {
+      const res = await fetch(component.path, { cache: 'force-cache' });
+      if (!res.ok) throw new Error(`HTTP ${res.status} em ${component.path}`);
+      return { el, html: await res.text() };
+    } catch (err) {
+      console.error('Falha ao carregar componente:', component.path, err);
+      return null;
+    }
+  }));
 
-  const coreResults = await Promise.all(core.map(loadOne));
-  coreResults.forEach(result => {
-    if (result) result.el.outerHTML = result.html;
-  });
-
-  // Secundarios em paralelo logo apos (nao bloqueia initElements do core se falhar)
-  const secondaryResults = await Promise.all(secondary.map(loadOne));
-  secondaryResults.forEach(result => {
+  results.forEach(result => {
     if (result) result.el.outerHTML = result.html;
   });
 }
@@ -71,12 +67,11 @@ async function initializeAuthenticatedApp() {
   };
 
   const bootData = () => {
-    // Fire-and-forget em paralelo (sem await em cadeia)
     window.AppSyncController.checkCertStatus();
     if (window.loadSchedulerSettings) window.loadSchedulerSettings();
     window.AppUi.updateProgress(0, 0);
     updateEnvBadge();
-    if (window.navDashboard) {
+    if (window.navDashboard && window.viewDashboardContent) {
       window.AppUi.switchTab(
         window.navDashboard,
         window.viewDashboardContent,
@@ -106,45 +101,13 @@ async function initializeAuthenticatedApp() {
 }
 
 async function bootstrap() {
-  // Carrega core; inicia UI; carrega o resto em paralelo com auth
-  const corePromise = (async () => {
-    const core = [
-      { id: 'auth-screen-container', path: 'components/auth-screen.html' },
-      { id: 'sidebar-container', path: 'components/sidebar.html' },
-      { id: 'view-dashboard-container', path: 'components/dashboard-panel.html' }
-    ];
-    const results = await Promise.all(core.map(async (component) => {
-      const el = document.getElementById(component.id);
-      if (!el) return null;
-      const res = await fetch(component.path, { cache: 'force-cache' });
-      return { el, html: await res.text() };
-    }));
-    results.forEach(r => { if (r) r.el.outerHTML = r.html; });
-  })();
-
-  await corePromise;
+  // 1) Carrega TODOS os HTMLs em paralelo
+  await loadAllComponents();
+  // 2) So entao mapeia DOM e binda eventos (elementos ja existem)
   window.AppUi.initElements();
   window.AppEvents.bindEvents();
-
-  // Painéis secundarios + auth em paralelo
-  const secondaryPromise = (async () => {
-    const secondary = [
-      { id: 'view-download-container', path: 'components/sync-panel.html' },
-      { id: 'view-certificado-container', path: 'components/certificates-panel.html' },
-      { id: 'view-regras-container', path: 'components/rules-panel.html' }
-    ];
-    const results = await Promise.all(secondary.map(async (component) => {
-      const el = document.getElementById(component.id);
-      if (!el) return null;
-      const res = await fetch(component.path, { cache: 'force-cache' });
-      return { el, html: await res.text() };
-    }));
-    results.forEach(r => { if (r) r.el.outerHTML = r.html; });
-    // Re-scan DOM para elementos dos paineis novos
-    window.AppUi.initElements();
-  })();
-
-  await Promise.all([initializeAuthenticatedApp(), secondaryPromise]);
+  // 3) Auth + dados
+  await initializeAuthenticatedApp();
 }
 
 window.addEventListener('DOMContentLoaded', bootstrap);

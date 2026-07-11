@@ -54,7 +54,7 @@ window.AppEvents = {
           window.AppSyncController.checkCertStatus();
           loadSchedulerSettings();
           window.AppUi.updateProgress(0, 0);
-          selectEnvironment.dispatchEvent(new Event('change'));
+          if (selectEnvironment) selectEnvironment.dispatchEvent(new Event('change'));
         } catch (err) {
           window.AppUtils.clearAuthSession();
           window.AppUi.setAuthMessage(err.message, 'error');
@@ -81,8 +81,76 @@ window.AppEvents = {
       });
     }
 
-    btnStart.addEventListener('click', async () => {
-      if (window.isQuerying) {
+    if (btnStart) {
+      btnStart.addEventListener('click', async () => {
+        if (window.isQuerying) {
+          window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
+          if (window.queryLoopTimer) {
+            clearTimeout(window.queryLoopTimer);
+            window.queryLoopTimer = null;
+          }
+          window.isPaused = true;
+          window.AppUi.setBtnStartActive(false, true);
+          if (btnPause) btnPause.disabled = true;
+          if (window.btnResetNsu) window.btnResetNsu.disabled = false;
+          window.AppUi.log('Sincronização pausada pelo usuário.', 'warning');
+          window.isQuerying = false;
+        } else {
+          const wasPaused = window.isPaused;
+          window.isQuerying = true;
+          window.isPaused = false;
+          const runId = window.AppSyncController.beginQueryRun();
+          if (alertRateLimit) alertRateLimit.style.display = 'none';
+          if (alertSyncSuccess) alertSyncSuccess.style.display = 'none';
+          window.AppUi.setBtnStartActive(true);
+          if (btnPause) btnPause.disabled = false;
+          if (window.btnResetNsu) window.btnResetNsu.disabled = true;
+
+          const overrideNsuCheckbox = document.getElementById('override-nsu');
+          const isOverridden = overrideNsuCheckbox && overrideNsuCheckbox.checked;
+
+          if (isOverridden) {
+            window.currentNsu = parseInt(inputStartNsu?.value) || 0;
+            window.AppUi.log(`Varredura iniciada manualmente forçando o NSU inicial: ${window.currentNsu}.`);
+          }
+
+          if (!wasPaused) {
+            window.totalDownloaded = 0;
+            const mode = 'asc';
+            window.isCrawlerActive = false;
+            window.crawlerVisited = new Set();
+            window.crawlerQueue = [];
+            const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
+            window.currentCrawlerCnpj = unitFilterParams.partyCnpj || (inputCnpjConsulta ? inputCnpjConsulta.value.trim() : '');
+            window.AppUi.updateCrawlerUI();
+
+            if (!isOverridden) {
+              try {
+                const savedNsu = await window.AppSyncController.loadSavedStartNsu();
+                window.AppUi.log(`Iniciando varredura a partir do último NSU recebido salvo: ${savedNsu}.`);
+              } catch (err) {
+                window.currentNsu = 0;
+                if (inputStartNsu) inputStartNsu.value = 0;
+                window.AppUi.log(`Não foi possível carregar o último NSU salvo (${err.message}). Iniciando do NSU 0.`, 'warning');
+              }
+            }
+
+            if (mode === 'desc' && window.currentNsu === 0) {
+              window.AppUi.log(`Descobrindo NSU mais recente na Receita Federal para busca reversa...`);
+              window.AppSyncController.discoverAndStart(runId);
+              return;
+            }
+          } else if (!isOverridden) {
+            window.AppUi.log(`Retomando busca a partir do NSU ${window.currentNsu}...`);
+          }
+
+          window.AppSyncController.runQueryLoop(runId);
+        }
+      });
+    }
+
+    if (btnPause) {
+      btnPause.addEventListener('click', () => {
         window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
         if (window.queryLoopTimer) {
           clearTimeout(window.queryLoopTimer);
@@ -94,74 +162,8 @@ window.AppEvents = {
         if (window.btnResetNsu) window.btnResetNsu.disabled = false;
         window.AppUi.log('Sincronização pausada pelo usuário.', 'warning');
         window.isQuerying = false;
-      } else {
-        const wasPaused = window.isPaused;
-        window.isQuerying = true;
-        window.isPaused = false;
-        const runId = window.AppSyncController.beginQueryRun();
-        alertRateLimit.style.display = 'none';
-        alertSyncSuccess.style.display = 'none';
-        window.AppUi.setBtnStartActive(true);
-        btnPause.disabled = false;
-        if (window.btnResetNsu) window.btnResetNsu.disabled = true;
-        
-        const overrideNsuCheckbox = document.getElementById('override-nsu');
-        const isOverridden = overrideNsuCheckbox && overrideNsuCheckbox.checked;
-
-        if (isOverridden) {
-          window.currentNsu = parseInt(inputStartNsu.value) || 0;
-          window.AppUi.log(`Varredura iniciada manualmente forçando o NSU inicial: ${window.currentNsu}.`);
-        }
-
-        if (!wasPaused) {
-          window.totalDownloaded = 0;
-          const mode = 'asc';
-          window.isCrawlerActive = false;
-          window.crawlerVisited = new Set();
-          window.crawlerQueue = [];
-          const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
-          window.currentCrawlerCnpj = unitFilterParams.partyCnpj || inputCnpjConsulta.value.trim();
-          window.AppUi.updateCrawlerUI();
-
-          if (!isOverridden) {
-            try {
-              const savedNsu = await window.AppSyncController.loadSavedStartNsu();
-              window.AppUi.log(`Iniciando varredura a partir do último NSU recebido salvo: ${savedNsu}.`);
-            } catch (err) {
-              window.currentNsu = 0;
-              inputStartNsu.value = 0;
-              window.AppUi.log(`Não foi possível carregar o último NSU salvo (${err.message}). Iniciando do NSU 0.`, 'warning');
-            }
-          }
-
-          if (mode === 'desc' && window.currentNsu === 0) {
-            window.AppUi.log(`Descobrindo NSU mais recente na Receita Federal para busca reversa...`);
-            window.AppSyncController.discoverAndStart(runId);
-            return;
-          }
-        } else {
-          if (!isOverridden) {
-            window.AppUi.log(`Retomando busca a partir do NSU ${window.currentNsu}...`);
-          }
-        }
-        
-        window.AppSyncController.runQueryLoop(runId);
-      }
-    });
-
-    btnPause.addEventListener('click', () => {
-      window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
-      if (window.queryLoopTimer) {
-        clearTimeout(window.queryLoopTimer);
-        window.queryLoopTimer = null;
-      }
-      window.isPaused = true;
-      window.AppUi.setBtnStartActive(false, true);
-      btnPause.disabled = true;
-      if (window.btnResetNsu) window.btnResetNsu.disabled = false;
-      window.AppUi.log('Sincronização pausada pelo usuário.', 'warning');
-      window.isQuerying = false;
-    });
+      });
+    }
 
     if (window.btnResetNsu) {
       window.btnResetNsu.addEventListener('click', async () => {
@@ -201,28 +203,30 @@ window.AppEvents = {
       });
     }
 
-    tableBody.addEventListener('click', async (e) => {
-      const xmlButton = e.target.closest('button[data-action="download-xml"]');
-      const pdfButton = e.target.closest('button[data-action="download-pdf"]');
-      if (!xmlButton && !pdfButton) return;
+    if (tableBody) {
+      tableBody.addEventListener('click', async (e) => {
+        const xmlButton = e.target.closest('button[data-action="download-xml"]');
+        const pdfButton = e.target.closest('button[data-action="download-pdf"]');
+        if (!xmlButton && !pdfButton) return;
 
-      try {
-        if (xmlButton) {
-          await window.AppApi.downloadFromApi(`/api/download-xml/${xmlButton.dataset.token}`, 'nfse.xml');
-          window.AppUi.log('XML baixado com sucesso.', 'success');
-          return;
+        try {
+          if (xmlButton) {
+            await window.AppApi.downloadFromApi(`/api/download-xml/${xmlButton.dataset.token}`, 'nfse.xml');
+            window.AppUi.log('XML baixado com sucesso.', 'success');
+            return;
+          }
+
+          const params = new URLSearchParams({
+            certificateId: selectCertificate ? selectCertificate.value : (window.activeCertificateId || ''),
+            environment: selectEnvironment ? selectEnvironment.value : 'producao'
+          });
+          await window.AppApi.downloadFromApi(`/api/download-pdf/${encodeURIComponent(pdfButton.dataset.chave)}?${params.toString()}`, 'danfse.pdf');
+          window.AppUi.log('PDF baixado com sucesso.', 'success');
+        } catch (err) {
+          window.AppUi.log(`Erro ao baixar documento: ${err.message}`, 'error');
         }
-
-        const params = new URLSearchParams({
-          certificateId: selectCertificate ? selectCertificate.value : (window.activeCertificateId || ''),
-          environment: selectEnvironment ? selectEnvironment.value : 'producao'
-        });
-        await window.AppApi.downloadFromApi(`/api/download-pdf/${encodeURIComponent(pdfButton.dataset.chave)}?${params.toString()}`, 'danfse.pdf');
-        window.AppUi.log('PDF baixado com sucesso.', 'success');
-      } catch (err) {
-        window.AppUi.log(`Erro ao baixar documento: ${err.message}`, 'error');
-      }
-    });
+      });
+    }
 
     if (btnClearDownloads) btnClearDownloads.addEventListener('click', async () => {
       if (!confirm('Limpar apenas arquivos temporários? Os XMLs permanentes no banco de dados serão preservados.')) return;
@@ -304,21 +308,23 @@ window.AppEvents = {
       });
     }
 
-    selectEnvironment.addEventListener('change', async () => {
-      const envText = selectEnvironment.value === 'producao' ? 'Produção' : 'Homologação';
-      const statAmbiente = document.getElementById('stat-ambiente');
-      if (statAmbiente) {
-        statAmbiente.innerText = envText;
-        statAmbiente.className = selectEnvironment.value === 'producao' ? 'metric-value text-primary' : 'metric-value text-warning';
-      }
-      if (selectEnvironment.offsetParent !== null) {
-        window.AppUi.log(`Ambiente alterado para: ${envText}`);
-      }
-      if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
-        window.AppSyncController.loadPersistedHistory();
-        await window.AppSyncController.loadSavedStartNsu();
-      }
-    });
+    if (selectEnvironment) {
+      selectEnvironment.addEventListener('change', async () => {
+        const envText = selectEnvironment.value === 'producao' ? 'Produção' : 'Homologação';
+        const statAmbiente = document.getElementById('stat-ambiente');
+        if (statAmbiente) {
+          statAmbiente.innerText = envText;
+          statAmbiente.className = selectEnvironment.value === 'producao' ? 'metric-value text-primary' : 'metric-value text-warning';
+        }
+        if (selectEnvironment.offsetParent !== null) {
+          window.AppUi.log(`Ambiente alterado para: ${envText}`);
+        }
+        if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
+          window.AppSyncController.loadPersistedHistory();
+          await window.AppSyncController.loadSavedStartNsu();
+        }
+      });
+    }
 
     if (inputCnpjConsulta) {
       inputCnpjConsulta.addEventListener('change', async () => {
