@@ -1,136 +1,182 @@
-<div id="view-download-content" class="tab-content nfse-dashboard">
-  <section class="dashboard-hero">
-    <div class="hero-copy">
-      <span class="eyebrow">Operação NFS-e</span>
-      <h2>Central de XMLs por unidade</h2>
-      <p>Varra, filtre e baixe XMLs NFS-e persistidos com controles enxutos para operação em lote.</p>
+<div id="view-download-content" class="tab-content nfse-dashboard ops-screen">
+  <!-- KPI strip -->
+  <section class="overview-metrics ops-kpis">
+    <div class="metric-card">
+      <div class="metric-data">
+        <span class="metric-label">Total de notas</span>
+        <h3 class="metric-value" id="stat-total-notas">0</h3>
+        <span class="helper-text">Filtro atual</span>
+      </div>
+    </div>
+    <div class="metric-card metric-card-primary">
+      <div class="metric-data">
+        <span class="metric-label">Valor total</span>
+        <h3 class="metric-value text-primary" id="stat-total-value">R$ 0,00</h3>
+        <span class="helper-text">Notas no filtro</span>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-data">
+        <span class="metric-label">Cursor NSU</span>
+        <h3 class="metric-value">
+          <span id="stat-nsu-atual">0</span>
+          <span class="metric-divider">/</span>
+          <span id="stat-nsu-max">0</span>
+        </h3>
+        <span class="helper-text">Última varredura</span>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-data">
+        <span class="metric-label">XMLs permanentes</span>
+        <h3 class="metric-value text-success" id="stat-storage-payloads">0</h3>
+        <span class="helper-text" id="stat-storage-size">Armazenamento</span>
+      </div>
     </div>
   </section>
 
-  <section class="overview-metrics">
-    <div class="metric-card"><div class="metric-data"><span class="metric-label">Total de notas</span><h3 class="metric-value" id="stat-total-notas">0</h3><span class="helper-text">Filtro atual</span></div></div>
-    <div class="metric-card metric-card-primary"><div class="metric-data"><span class="metric-label">Valor total</span><h3 class="metric-value text-primary" id="stat-total-value">R$ 0,00</h3><span class="helper-text">Notas exibidas no filtro</span></div></div>
-    <div class="metric-card"><div class="metric-data"><span class="metric-label">Cursor NSU</span><h3 class="metric-value"><span id="stat-nsu-atual">0</span> <span class="metric-divider">/</span> <span id="stat-nsu-max">0</span></h3><span class="helper-text">Última varredura</span></div></div>
-    <div class="metric-card"><div class="metric-data"><span class="metric-label">Total XMLs</span><h3 class="metric-value text-success" id="stat-storage-payloads">0</h3><span class="helper-text" id="stat-storage-size">Permanentes</span></div></div>
+  <!-- Command bar: recorte + export -->
+  <section class="command-bar" aria-label="Recorte e exportação">
+    <div class="command-bar-main">
+      <div class="command-bar-fields">
+        <div class="input-group certificate-field">
+          <label for="certificate-select">Certificado</label>
+          <select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select>
+        </div>
+        <div class="input-group">
+          <label for="unit-filter">Unidade</label>
+          <select id="unit-filter"><option value="">CNPJ do certificado ativo</option></select>
+        </div>
+        <div class="input-group">
+          <label for="download-start-date">Início</label>
+          <input type="date" id="download-start-date">
+        </div>
+        <div class="input-group">
+          <label for="download-end-date">Fim</label>
+          <input type="date" id="download-end-date">
+        </div>
+      </div>
+      <div class="command-bar-actions">
+        <button class="btn btn-secondary" id="btn-export-excel" disabled type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+          <span>Excel</span>
+        </button>
+        <button class="btn btn-primary" id="btn-download-period" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Baixar ZIP</span>
+        </button>
+      </div>
+    </div>
   </section>
 
-  <section class="operation-layout">
-    <div class="toolbar-card">
-      <div class="panel-heading">
+  <!-- Hidden legacy fields -->
+  <input type="text" id="cnpj-consulta" value="" style="display: none;">
+  <select id="environment" style="display: none;"><option value="producao" selected>Produção</option></select>
+  <select id="search-mode" style="display: none;"><option value="asc" selected>Inicial completa</option></select>
+  <input type="number" id="limite-notas" min="1" style="display: none;">
+  <select id="unit-party-role" style="display: none;"><option value="tomador" selected>Recebidas</option></select>
+  <input type="checkbox" id="scheduler-enabled" style="display: none;">
+  <input type="number" id="scheduler-interval" value="12" min="1" max="168" style="display: none;">
+  <select id="scheduler-env" style="display: none;"><option value="producao" selected>Producao</option></select>
+  <input type="number" id="scheduler-max-batches" value="1" min="1" max="5" style="display: none;">
+  <input type="number" id="scheduler-delay-seconds" value="2" min="2" max="2" style="display: none;">
+  <button class="btn btn-primary btn-sm" id="btn-save-scheduler" style="display: none;" type="button">Salvar config.</button>
+  <button class="btn btn-secondary btn-sm" id="btn-run-scheduler-now" style="display: none;" type="button">Atualizar agora</button>
+  <div style="display: none;">
+    <div id="manual-sync-progress-bar"></div>
+    <span id="manual-sync-progress-text"></span>
+    <span id="manual-sync-progress-percentage"></span>
+    <strong id="scheduler-last-run">-</strong>
+    <strong id="scheduler-status">Manual</strong>
+  </div>
+
+  <!-- Ops strip: varredura + log -->
+  <section class="ops-strip" aria-label="Varredura NSU">
+    <div class="ops-strip-controls">
+      <div class="ops-strip-heading">
         <div>
-          <span class="eyebrow">Recorte</span>
-          <h2>Certificado, unidade e período</h2>
-        </div>
-        <div class="toolbar-actions-group" style="display: flex; gap: 8px; align-items: center;">
-          <button class="btn btn-secondary toolbar-action" id="btn-export-excel" disabled><span>Exportar Excel</span></button>
-          <button class="btn btn-success toolbar-action" id="btn-download-period"><span>Baixar ZIP</span></button>
-        </div>
-      </div>
-      <div class="toolbar-grid compact-toolbar-grid">
-        <div class="input-group certificate-field"><label for="certificate-select">Certificado</label><select id="certificate-select"><option value="">Nenhum certificado cadastrado</option></select></div>
-        <div class="input-group"><label for="unit-filter">Unidade</label><select id="unit-filter"><option value="">CNPJ do certificado ativo</option></select></div>
-        <div class="input-group"><label for="download-start-date">Inicio</label><input type="date" id="download-start-date"></div>
-        <div class="input-group"><label for="download-end-date">Fim</label><input type="date" id="download-end-date"></div>
-      </div>
-    </div>
-
-    <input type="text" id="cnpj-consulta" value="" style="display: none;">
-    <select id="environment" style="display: none;"><option value="producao" selected>Produção</option></select>
-    <select id="search-mode" style="display: none;"><option value="asc" selected>Inicial completa</option></select>
-    <input type="number" id="limite-notas" min="1" style="display: none;">
-    <select id="unit-party-role" style="display: none;"><option value="tomador" selected>Recebidas</option></select>
-    <input type="checkbox" id="scheduler-enabled" style="display: none;">
-    <input type="number" id="scheduler-interval" value="12" min="1" max="168" style="display: none;">
-    <select id="scheduler-env" style="display: none;"><option value="producao" selected>Producao</option></select>
-    <input type="number" id="scheduler-max-batches" value="1" min="1" max="5" style="display: none;">
-    <input type="number" id="scheduler-delay-seconds" value="2" min="2" max="2" style="display: none;">
-    <button class="btn btn-primary btn-sm" id="btn-save-scheduler" style="display: none;">Salvar config.</button>
-    <button class="btn btn-secondary btn-sm" id="btn-run-scheduler-now" style="display: none;">Atualizar agora</button>
-    <div style="display: none;">
-      <div id="manual-sync-progress-bar"></div>
-      <span id="manual-sync-progress-text"></span>
-      <span id="manual-sync-progress-percentage"></span>
-      <strong id="scheduler-last-run">-</strong>
-      <strong id="scheduler-status">Manual</strong>
-    </div>
-
-    <article class="operation-card primary-operation">
-      <div class="operation-header">
-        <div class="operation-intro">
-          <span class="eyebrow">Varredura</span>
+          <span class="eyebrow">Varredura ADN</span>
           <h2>Sincronização por NSU</h2>
-          <div class="manual-nsu-override" style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
-            <label for="override-nsu" style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; color: var(--text-secondary);">
-              <input type="checkbox" id="override-nsu">
-              <span>Forçar NSU inicial:</span>
-            </label>
-            <input type="number" id="start-nsu" value="0" min="0" style="width: 100px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--card-border); background: var(--surface-muted); color: var(--text-primary); font-size: 12px;">
-          </div>
         </div>
-        <div class="action-buttons">
-          <button class="btn btn-success" id="btn-start" disabled><span>Iniciar varredura</span></button>
-          <button class="btn btn-warning" id="btn-pause" disabled><span>Pausar</span></button>
-          <button class="btn btn-danger" id="btn-reset-nsu" disabled><span>Zerar Histórico</span></button>
+        <div class="ops-nsu-controls">
+          <label class="ops-nsu-toggle" for="override-nsu">
+            <input type="checkbox" id="override-nsu">
+            <span>Forçar NSU</span>
+          </label>
+          <input type="number" id="start-nsu" value="0" min="0" class="ops-nsu-input" aria-label="NSU inicial">
         </div>
       </div>
-      <!-- barra de progresso removida: status fica no console/log e nos alertas -->
+      <div class="ops-strip-actions action-buttons">
+        <button class="btn btn-success" id="btn-start" disabled type="button"><span>Iniciar</span></button>
+        <button class="btn btn-warning" id="btn-pause" disabled type="button"><span>Pausar</span></button>
+        <button class="btn btn-danger" id="btn-reset-nsu" disabled type="button"><span>Zerar NSU</span></button>
+      </div>
       <div class="alert-box success" id="alert-sync-success" style="display: none;"><strong>Concluído:</strong> todas as notas foram sincronizadas.</div>
       <div class="alert-box danger" id="alert-rate-limit" style="display: none;"><strong>Consumo indevido:</strong> API bloqueou temporariamente este CNPJ.</div>
       <div class="crawler-status" id="crawler-status-container" style="display: none;"><span id="crawler-current-cnpj">-</span><span id="crawler-visited-count">0</span><span id="crawler-queue-count">0</span></div>
-      <div class="console-log-panel" id="console-log-drawer">
-        <div class="console-log-header">
-          <div class="console-log-title">
-            <span class="console-log-live-dot" aria-hidden="true"></span>
-            <span>Log da varredura</span>
-          </div>
-          <span class="console-log-hint" id="console-log-hint">Aguardando eventos…</span>
+    </div>
+
+    <div class="console-log-panel ops-log" id="console-log-drawer">
+      <div class="console-log-header">
+        <div class="console-log-title">
+          <span class="console-log-live-dot" aria-hidden="true"></span>
+          <span>Log da varredura</span>
         </div>
-        <div id="console-log" class="console-log" role="log" aria-live="polite" aria-relevant="additions">
-          <div class="log-line system log-placeholder">
-            <span class="log-time">[--:--:--]</span>
-            <span class="log-badge system">●</span>
-            <span class="log-text">Pronto. Inicie a varredura para acompanhar o progresso aqui.</span>
-          </div>
+        <span class="console-log-hint" id="console-log-hint">Aguardando eventos…</span>
+      </div>
+      <div id="console-log" class="console-log" role="log" aria-live="polite" aria-relevant="additions">
+        <div class="log-line system log-placeholder">
+          <span class="log-time">[--:--:--]</span>
+          <span class="log-badge system">●</span>
+          <span class="log-text">Pronto. Inicie a varredura para acompanhar o progresso aqui.</span>
         </div>
       </div>
-    </article>
+    </div>
   </section>
 
-  <section class="data-grid-card">
-    <div class="results-header">
-      <div><h2>XMLs da unidade selecionada</h2></div>
-    </div>
-    <div class="results-filter-bar">
-      <div class="input-group search-field">
-        <label for="history-search">Buscar na tabela</label>
-        <input type="search" id="history-search" placeholder="Valor, CNPJ ou nome">
+  <!-- Data table -->
+  <section class="data-grid-card data-table-card">
+    <div class="data-table-toolbar">
+      <div class="data-table-title">
+        <h2>XMLs da unidade</h2>
+        <span class="results-subtitle" id="history-count-label">0 XMLs sincronizados</span>
       </div>
-      <div class="input-group cancelled-filter-field">
-        <label for="cancelled-filter">Canceladas</label>
-        <select id="cancelled-filter">
-          <option value="active" selected>Ocultar canceladas</option>
-          <option value="all">Mostrar todas</option>
-          <option value="cancelled">Só canceladas</option>
-        </select>
+      <div class="data-table-filters">
+        <div class="input-group search-field">
+          <label for="history-search" class="sr-only">Buscar</label>
+          <input type="search" id="history-search" placeholder="Buscar valor, CNPJ ou nome…">
+        </div>
+        <div class="input-group cancelled-filter-field">
+          <label for="cancelled-filter" class="sr-only">Canceladas</label>
+          <select id="cancelled-filter">
+            <option value="active" selected>Ativas</option>
+            <option value="all">Todas</option>
+            <option value="cancelled">Canceladas</option>
+          </select>
+        </div>
+        <input type="checkbox" id="include-cancelled" style="display:none">
       </div>
-      <!-- legado: mantido oculto para nao quebrar refs antigas -->
-      <input type="checkbox" id="include-cancelled" style="display:none">
     </div>
+
     <div class="xml-list-wrapper" id="results-table">
       <div class="xml-list-head">
         <span>Documento</span>
         <span>Participantes</span>
         <span>Serviço</span>
         <span>Valores</span>
-        <span>Download</span>
+        <span>Ações</span>
       </div>
       <div class="xml-list" id="table-body">
         <div id="empty-row" class="xml-empty-state">Nenhum documento sincronizado ainda.</div>
       </div>
     </div>
+
     <div class="results-actions table-footer">
-      <span class="results-subtitle" id="history-count-label">0 XMLs sincronizados</span>
-      <div class="pagination-actions"><button class="btn btn-secondary btn-sm" id="btn-history-prev" disabled>Anterior</button><span class="helper-text" id="history-page-info">0 de 0</span><button class="btn btn-secondary btn-sm" id="btn-history-next" disabled>Próxima</button></div>
+      <div class="pagination-actions">
+        <button class="btn btn-secondary btn-sm" id="btn-history-prev" disabled type="button">Anterior</button>
+        <span class="helper-text" id="history-page-info">0 de 0</span>
+        <button class="btn btn-secondary btn-sm" id="btn-history-next" disabled type="button">Próxima</button>
+      </div>
     </div>
   </section>
 </div>

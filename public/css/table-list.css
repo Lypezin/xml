@@ -2,9 +2,13 @@
 .data-grid-card {
   padding: 18px 20px 16px;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--card-bg);
   box-shadow: var(--shadow-sm);
+}
+
+.data-grid-card.data-table-card {
+  padding: 0;
 }
 
 .results-header {
