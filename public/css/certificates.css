@@ -45,6 +45,34 @@
   display: block;
 }
 
+.cert-renew-hint {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--card-border));
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface-muted));
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.cert-renew-hint strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+#cert-cnpj-view[readonly] {
+  opacity: 0.85;
+  cursor: not-allowed;
+  background: var(--surface-muted);
+}
+
+.cert-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

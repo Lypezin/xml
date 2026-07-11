@@ -42,6 +42,7 @@ renderCertificateSelector() {
         </div>
         <div class="cert-list-actions">
           <button class="btn btn-secondary btn-sm" data-action="select-cert" data-id="${safeId}" ${cert.id === window.activeCertificateId ? 'disabled' : ''}>Usar</button>
+          <button class="btn btn-primary btn-sm" data-action="renew-cert" data-id="${safeId}" title="Troca o PFX mantendo CNPJ, XMLs e NSU">Renovar</button>
           <button class="btn btn-secondary btn-sm" data-action="rename-cert" data-id="${safeId}">Renomear</button>
           <button class="btn btn-secondary btn-sm text-danger" data-action="remove-cert" data-id="${safeId}">Remover</button>
         </div>

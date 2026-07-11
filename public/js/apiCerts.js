@@ -30,7 +30,25 @@ async fetchCertStatus() {
       method: 'POST',
       body: formData
     });
-    return res.json();
+    const data = await res.json();
+    if (window.AppDataCache && data?.success) {
+      window.AppDataCache.invalidate('cert-status');
+      window.AppDataCache.invalidate('dashboard-summary');
+    }
+    return data;
+  },
+
+  async renewCertificate(formData) {
+    const res = await fetch('/api/renew-certificate', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (window.AppDataCache && data?.success) {
+      window.AppDataCache.invalidate('cert-status');
+      window.AppDataCache.invalidate('dashboard-summary');
+    }
+    return data;
   },
 
   async selectCertificate(certificateId) {

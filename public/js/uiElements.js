@@ -25,7 +25,15 @@ window.AppUiElements = {
     window.activeCertName = document.getElementById('active-cert-name-view');
     window.activeCertCnpj = document.getElementById('active-cert-cnpj-view');
     window.btnReplaceCert = document.getElementById('btn-replace-cert-view');
+    window.btnRenewActiveCert = document.getElementById('btn-renew-active-cert-view');
+    window.btnCancelRenewCert = document.getElementById('btn-cancel-renew-cert');
     window.btnDiagnoseCert = document.getElementById('btn-diagnose-cert-view');
+    window.renewCertificateIdInput = document.getElementById('renew-certificate-id');
+    window.certFormEyebrow = document.getElementById('cert-form-eyebrow');
+    window.certFormTitle = document.getElementById('cert-form-title');
+    window.certRenewHint = document.getElementById('cert-renew-hint');
+    window.btnSaveCertLabel = document.getElementById('btn-save-cert-label');
+    window.certDropText = document.getElementById('cert-drop-text');
     window.certList = document.getElementById('cert-list');
     window.certCountLabel = document.getElementById('cert-count-label');
 
