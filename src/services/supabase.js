@@ -16,6 +16,7 @@ const {
   listSupabaseXmlPayloads,
   getStorageSummary,
   listRemoteDocuments,
+  listAllRemoteDocuments,
   getRemoteDocumentTotals
 } = require('./supabaseDocuments');
 
@@ -195,6 +196,7 @@ module.exports = {
   upsertUnit,
   deleteUnit,
   listRemoteDocuments,
+  listAllRemoteDocuments,
   getRemoteDocumentTotals,
   setRemoteActiveCertificate,
   deleteRemoteCertificate,

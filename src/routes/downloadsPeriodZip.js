@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { DOWNLOADS_DIR, IS_VERCEL } = require('../config/constants');
 const {
-  listRemoteDocuments,
+  listAllRemoteDocuments,
   getSupabaseXmlPayloads
 } = require('../services/supabase');
 const {
@@ -44,33 +44,20 @@ router.post('/download-period-zip', async (req, res) => {
       includeCancelled, onlyCancelled, cancelledMode
     }, cert);
 
-    const result = await listRemoteDocuments({
-      ...filter,
-      limit: 10,
-      offset: 0
-    });
-    let documents = dedupeXmlItems(result.documents || []);
+    const limitMax = IS_VERCEL ? MAX_ZIP_DOCUMENTS_VERCEL : MAX_ZIP_DOCUMENTS_LOCAL;
+    const fullResult = await listAllRemoteDocuments(filter, { maxDocuments: limitMax + 1 });
+    const totalMatched = Number(fullResult.total || (fullResult.documents || []).length);
+    let documents = dedupeXmlItems(fullResult.documents || []);
 
     if (!documents || documents.length === 0) {
       return res.status(400).json({ success: false, error: 'Nenhum documento no período.' });
     }
 
-    const totalMatched = Number(result.total || documents.length);
-    const limitMax = IS_VERCEL ? MAX_ZIP_DOCUMENTS_VERCEL : MAX_ZIP_DOCUMENTS_LOCAL;
-    if (totalMatched > limitMax) {
+    if (totalMatched > limitMax || documents.length > limitMax) {
       return res.status(400).json({
         success: false,
         error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} XMLs. Limite sua busca a no máximo ${limitMax.toLocaleString('pt-BR')} por ZIP.`
       });
-    }
-
-    if (totalMatched > documents.length) {
-      const fullResult = await listRemoteDocuments({
-        ...filter,
-        limit: totalMatched,
-        offset: 0
-      });
-      documents = dedupeXmlItems(fullResult.documents || []);
     }
 
     res.setHeader('Content-Type', 'application/zip');

@@ -1503,7 +1503,8 @@ declare
   cnpj_consulta_digits text := regexp_replace(coalesce(p_cnpj_consulta, ''), '\D', '', 'g');
   party_cnpj_digits text := regexp_replace(coalesce(p_party_cnpj, ''), '\D', '', 'g');
   search_numeric numeric;
-  lim integer := least(greatest(coalesce(p_limit, 10), 1), 100);
+  -- UI pede 10; export pagina até 500 por request (Node faz loop para o total)
+  lim integer := least(greatest(coalesce(p_limit, 10), 1), 500);
   off integer := greatest(coalesce(p_offset, 0), 0);
   total_count integer := 0;
   total_value numeric := 0;

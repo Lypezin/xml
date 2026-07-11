@@ -111,6 +111,9 @@ async function getStorageSummary({ certificateId = '', environment = '' } = {}) 
   });
 }
 
+/** Tamanho de página para exportações. A RPC pode capar (ex.: 100 ou 500); o loop usa o retornado. */
+const EXPORT_PAGE_SIZE = 500;
+
 async function listRemoteDocuments({
   certificateId,
   environment,
@@ -150,6 +153,81 @@ async function listRemoteDocuments({
     total: totalsPending ? null : Number(result?.total || 0),
     totalValue: totalsPending ? null : Number(result?.totalValue || result?.total_value || 0),
     totalsPending
+  };
+}
+
+/**
+ * Busca todos os documentos do filtro em páginas (contorna o teto da RPC).
+ * A listagem da UI continua paginada; só export Excel/ZIP deve usar isto.
+ */
+async function listAllRemoteDocuments(filter = {}, { maxDocuments = null, pageSize = EXPORT_PAGE_SIZE } = {}) {
+  const safePageSize = Math.max(1, Math.min(Number(pageSize) || EXPORT_PAGE_SIZE, 1000));
+  const hardMax = maxDocuments == null || !Number.isFinite(Number(maxDocuments))
+    ? Number.POSITIVE_INFINITY
+    : Math.max(0, Number(maxDocuments));
+
+  if (hardMax === 0) {
+    return { documents: [], total: 0, totalValue: 0 };
+  }
+
+  const first = await listRemoteDocuments({
+    ...filter,
+    limit: Math.min(safePageSize, Number.isFinite(hardMax) ? hardMax : safePageSize),
+    offset: 0,
+    skipTotals: false
+  });
+
+  let total = first.totalsPending ? null : Number(first.total || 0);
+  let totalValue = first.totalsPending ? null : Number(first.totalValue || 0);
+  const documents = [...(first.documents || [])];
+
+  if (total == null) {
+    try {
+      const totals = await getRemoteDocumentTotals(filter);
+      total = Number(totals.total || 0);
+      totalValue = Number(totals.totalValue || 0);
+    } catch (err) {
+      total = documents.length;
+      totalValue = 0;
+    }
+  }
+
+  if (total === 0 && documents.length === 0) {
+    return { documents: [], total: 0, totalValue: 0 };
+  }
+
+  let offset = documents.length;
+  // Se o total da RPC for confiável, usa-o; senão avança até a API esvaziar.
+  const target = Number.isFinite(hardMax)
+    ? Math.min(hardMax, total > 0 ? total : hardMax)
+    : (total > 0 ? total : Number.POSITIVE_INFINITY);
+
+  let pages = 0;
+  const maxPages = 20000; // guarda de segurança
+
+  while (documents.length < target && pages < maxPages) {
+    pages += 1;
+    const remaining = Number.isFinite(target) ? target - documents.length : safePageSize;
+    if (remaining <= 0) break;
+
+    const page = await listRemoteDocuments({
+      ...filter,
+      limit: Math.min(safePageSize, remaining),
+      offset,
+      skipTotals: true
+    });
+    const batch = page.documents || [];
+    if (batch.length === 0) break;
+
+    documents.push(...batch);
+    offset += batch.length;
+  }
+
+  const sliced = Number.isFinite(hardMax) ? documents.slice(0, hardMax) : documents;
+  return {
+    documents: sliced,
+    total: total || sliced.length,
+    totalValue: totalValue || 0
   };
 }
 
@@ -194,5 +272,7 @@ module.exports = {
   listSupabaseXmlPayloads,
   getStorageSummary,
   listRemoteDocuments,
-  getRemoteDocumentTotals
+  listAllRemoteDocuments,
+  getRemoteDocumentTotals,
+  EXPORT_PAGE_SIZE
 };

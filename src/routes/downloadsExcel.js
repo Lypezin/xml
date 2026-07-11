@@ -1,7 +1,7 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
 const { IS_VERCEL } = require('../config/constants');
-const { listRemoteDocuments } = require('../services/supabase');
+const { listAllRemoteDocuments } = require('../services/supabase');
 const {
   MAX_EXCEL_DOCUMENTS_VERCEL,
   MAX_EXCEL_DOCUMENTS_LOCAL,
@@ -58,30 +58,22 @@ router.get('/download-excel', async (req, res) => {
       includeCancelled, onlyCancelled, cancelledMode
     }, cert);
 
-    const initialResult = await listRemoteDocuments({
-      ...filter,
-      limit: 10,
-      offset: 0
-    });
+    const limitMax = IS_VERCEL ? MAX_EXCEL_DOCUMENTS_VERCEL : MAX_EXCEL_DOCUMENTS_LOCAL;
 
-    const totalMatched = Number(initialResult.total || 0);
-    if (totalMatched === 0) {
+    // Pagina a RPC (teto 100/500 por página) até reunir todos os XMLs do filtro
+    const fullResult = await listAllRemoteDocuments(filter, { maxDocuments: limitMax + 1 });
+    const totalMatched = Number(fullResult.total || (fullResult.documents || []).length);
+
+    if (totalMatched === 0 || !(fullResult.documents || []).length) {
       return res.status(400).json({ success: false, error: 'Nenhum documento encontrado.' });
     }
 
-    const limitMax = IS_VERCEL ? MAX_EXCEL_DOCUMENTS_VERCEL : MAX_EXCEL_DOCUMENTS_LOCAL;
-    if (totalMatched > limitMax) {
+    if (totalMatched > limitMax || (fullResult.documents || []).length > limitMax) {
       return res.status(400).json({
         success: false,
         error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} documentos. Para baixar Excel, limite sua busca a no máximo ${limitMax.toLocaleString('pt-BR')} registros.`
       });
     }
-
-    const fullResult = await listRemoteDocuments({
-      ...filter,
-      limit: totalMatched,
-      offset: 0
-    });
 
     const documents = dedupeXmlItems(fullResult.documents || []);
     const fileName = buildExcelFileName(startDate, endDate);
