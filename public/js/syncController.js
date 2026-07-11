@@ -119,17 +119,21 @@ window.AppSyncController = {
     }
   },
 
-  async loadPersistedHistory(page = 1) {
+  async loadPersistedHistory(page = 1, options = {}) {
     const certId = selectCertificate ? selectCertificate.value : window.activeCertificateId;
     if (!certId || !window.AppApi?.listDocuments || !window.AppUiTable?.setDocuments) return;
 
-    if (window.AppUiTable.showLoading) {
+    const requestId = (window._historyRequestId = (window._historyRequestId || 0) + 1);
+    const quiet = Boolean(options.quiet);
+
+    // So mostra skeleton se a tabela estiver vazia (evita flash em troca rapida de aba)
+    if (window.AppUiTable.showLoading && (!window.AppUiTable.documents || window.AppUiTable.documents.length === 0)) {
       window.AppUiTable.showLoading();
     }
 
     try {
       const safePage = Math.max(1, Number(page || 1));
-      const limit = window.AppUiTable.pageSize || 100;
+      const limit = window.AppUiTable.pageSize || 10;
       const unitFilterParams = this.getSelectedUnitFilter();
       const data = await window.AppApi.listDocuments({
         certificateId: certId,
@@ -143,17 +147,23 @@ window.AppSyncController = {
         offset: (safePage - 1) * limit
       });
 
+      // Resposta antiga: ignora
+      if (requestId !== window._historyRequestId) return;
+
       if (!data.success) {
-        window.AppUi.log(`Erro ao carregar histórico: ${data.error}`, 'warning');
+        if (!quiet) window.AppUi.log(`Erro ao carregar histórico: ${data.error}`, 'warning');
         return;
       }
 
       window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage, data.summary?.totalValue || 0);
       if (window.btnDownloadZip) btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
-      const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
-      window.AppUi.log(`Histórico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
+      if (!quiet) {
+        const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
+        window.AppUi.log(`Histórico carregado${unitLabel}: ${(data.documents || []).length} de ${data.total || 0} XML(s) salvos.`, 'success');
+      }
     } catch (err) {
-      window.AppUi.log(`Erro ao carregar histórico: ${err.message}`, 'warning');
+      if (requestId !== window._historyRequestId) return;
+      if (!quiet) window.AppUi.log(`Erro ao carregar histórico: ${err.message}`, 'warning');
     }
   },
 
@@ -179,14 +189,27 @@ window.AppSyncController = {
     return savedNsu;
   },
 
-  async checkCertStatus() {
+  async checkCertStatus(options = {}) {
+    const skipSecondary = Boolean(options.skipSecondary);
     try {
-      const data = await window.AppApi.fetchCertStatus();
+      // Cert + units em paralelo
+      const [data, unitsResult] = await Promise.all([
+        window.AppApi.fetchCertStatus(),
+        window.AppApi.listUnits().catch(() => ({ success: false, units: [] }))
+      ]);
+
       const indicator = document.getElementById('navbar-cert-indicator');
       const txt = document.getElementById('navbar-cert-text');
       window.certificates = data.certificates || [];
       window.activeCertificateId = data.activeCertificateId || null;
-      await this.loadUnits();
+
+      if (unitsResult?.success) {
+        window.units = unitsResult.units || [];
+        this.renderUnitSelector();
+      } else {
+        await this.loadUnits();
+      }
+
       window.AppUi.renderCertificateSelector();
       window.AppUi.renderCertificateList();
 
@@ -197,25 +220,28 @@ window.AppSyncController = {
         if (activeCertCnpj) activeCertCnpj.innerText = `CNPJ: ${data.cnpj || 'Não informado'}`;
         if (btnStart) btnStart.disabled = false;
         if (window.btnResetNsu) window.btnResetNsu.disabled = false;
-        window.AppUi.log(`Certificado ativo CNPJ: ${data.cnpj}`);
+        if (!skipSecondary) window.AppUi.log(`Certificado ativo CNPJ: ${data.cnpj}`);
         if (indicator && txt) {
           indicator.className = 'status-indicator online';
           txt.innerText = `Certificado Ativo: ${data.cnpj}`;
         }
-        // Nao recarregar historico no boot se a aba XMLs nao esta visivel (ganho grande)
-        const syncVisible = window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none'
-          && window.viewDownloadContent.classList.contains('active-tab');
-        if (syncVisible) {
-          this.loadPersistedHistory();
-          this.loadStorageSummary();
-          await this.loadSavedStartNsu();
+        if (!skipSecondary) {
+          const syncVisible = window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none'
+            && window.viewDownloadContent.classList.contains('active-tab');
+          if (syncVisible) {
+            await Promise.allSettled([
+              this.loadPersistedHistory(1, { quiet: true }),
+              this.loadSavedStartNsu(),
+              this.loadStorageSummary()
+            ]);
+          }
         }
       } else {
         if (certUploadState) certUploadState.classList.add('active');
         if (certActiveState) certActiveState.classList.remove('active');
         if (btnStart) btnStart.disabled = true;
         if (window.btnResetNsu) window.btnResetNsu.disabled = true;
-        window.AppUi.log('Nenhum certificado carregado.', 'warning');
+        if (!skipSecondary) window.AppUi.log('Nenhum certificado carregado.', 'warning');
         if (indicator && txt) {
           indicator.className = 'status-indicator offline';
           txt.innerText = `Nenhum certificado carregado`;
@@ -358,11 +384,16 @@ window.AppSyncController = {
         if (window.btnDownloadZip) btnDownloadZip.disabled = false;
         // Throttle: nao recarrega a tabela a cada lote (melhora velocidade da varredura)
         window._historyReloadDirty = true;
+        if (window.AppDataCache) {
+          window.AppDataCache.invalidate('history:');
+          window.AppDataCache.invalidate('storage:');
+          window.AppDataCache.invalidate('dashboard-summary');
+        }
         const now = Date.now();
         if (!window._lastHistoryReloadAt || now - window._lastHistoryReloadAt > 8000) {
           window._lastHistoryReloadAt = now;
           window._historyReloadDirty = false;
-          this.loadPersistedHistory(1);
+          this.loadPersistedHistory(1, { quiet: true });
         }
         
         if (window.isCrawlerActive) {
@@ -593,11 +624,11 @@ window.AppSyncController = {
       dashboardCitiesGrid.style.display = 'grid';
     } catch (err) {
       console.warn(`Tentativa ${retryCount + 1} de carregar o painel falhou: ${err.message}`);
-      if (retryCount < 2) {
-        window.AppUi.log('O banco de dados está iniciando. Retentando conectar em 3s...', 'warning');
+      // 1 retry rapido (800ms) em vez de 2x3s — evita sensacao de "travado"
+      if (retryCount < 1) {
         setTimeout(() => {
           this.loadDashboard(retryCount + 1);
-        }, 3000);
+        }, 800);
       } else {
         dashboardCitiesGrid.innerHTML = `
           <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-top: 20px;">

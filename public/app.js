@@ -13,7 +13,7 @@ window.units = [];
 window.activeCertificateId = null;
 window.authConfig = { authRequired: false, supabaseUrl: null, publishableKey: null };
 window.authSession = null;
-window._tabCache = { dashboardAt: 0, syncAt: 0, storageAt: 0, nsuAt: 0 };
+window._tabCache = { dashboardAt: 0, syncAt: 0, storageAt: 0, nsuAt: 0, dashboardData: null, historyData: null };
 
 // Crawler State
 window.crawlerQueue = [];
@@ -29,47 +29,48 @@ function withTimeout(promise, ms, label = 'operacao') {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-async function fetchText(path, timeoutMs = 12000) {
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
-  try {
-    const res = await fetch(path, {
-      cache: 'no-cache',
-      signal: controller ? controller.signal : undefined
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status} em ${path}`);
-    return await res.text();
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-
+/**
+ * Injeta paineis a partir do bundle embutido (sem 6 round-trips HTTP).
+ * Fallback: fetch individual se bundle nao estiver disponivel.
+ */
 async function loadAllComponents() {
-  const components = [
-    { id: 'auth-screen-container', path: 'components/auth-screen.html' },
-    { id: 'sidebar-container', path: 'components/sidebar.html' },
-    { id: 'view-dashboard-container', path: 'components/dashboard-panel.html' },
-    { id: 'view-download-container', path: 'components/sync-panel.html' },
-    { id: 'view-certificado-container', path: 'components/certificates-panel.html' },
-    { id: 'view-regras-container', path: 'components/rules-panel.html' }
+  const map = [
+    'auth-screen-container',
+    'sidebar-container',
+    'view-dashboard-container',
+    'view-download-container',
+    'view-certificado-container',
+    'view-regras-container'
   ];
 
-  const results = await Promise.all(components.map(async (component) => {
-    const el = document.getElementById(component.id);
-    if (!el) return null;
+  if (window.PANEL_HTML && typeof window.PANEL_HTML === 'object') {
+    map.forEach(id => {
+      const el = document.getElementById(id);
+      const html = window.PANEL_HTML[id];
+      if (el && html) el.outerHTML = html;
+    });
+    return;
+  }
+
+  // Fallback lento: 6 fetches em paralelo
+  await Promise.all(map.map(async (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const file = {
+      'auth-screen-container': 'components/auth-screen.html',
+      'sidebar-container': 'components/sidebar.html',
+      'view-dashboard-container': 'components/dashboard-panel.html',
+      'view-download-container': 'components/sync-panel.html',
+      'view-certificado-container': 'components/certificates-panel.html',
+      'view-regras-container': 'components/rules-panel.html'
+    }[id];
     try {
-      const html = await fetchText(component.path);
-      return { el, html };
+      const res = await fetch(file, { cache: 'force-cache' });
+      if (res.ok) el.outerHTML = await res.text();
     } catch (err) {
-      console.error('Falha ao carregar componente:', component.path, err);
-      el.innerHTML = `<div style="padding:16px;color:#b91c1c;">Falha ao carregar ${component.path}</div>`;
-      return null;
+      console.error('Falha componente', file, err);
     }
   }));
-
-  results.forEach(result => {
-    if (result) result.el.outerHTML = result.html;
-  });
 }
 
 function showBootError(message) {
@@ -85,18 +86,59 @@ function showBootError(message) {
   document.body.appendChild(box);
 }
 
-async function initializeAuthenticatedApp() {
-  try {
-    await withTimeout(window.AppApi.loadAuthConfig(), 10000, 'auth-config');
-  } catch (err) {
-    console.error(err);
-    // Sem config de auth: tenta abrir app local
-    window.authConfig = window.authConfig || { authRequired: false };
+function showAppShell() {
+  if (window.authScreen) window.authScreen.style.display = 'none';
+  if (window.appLayout) window.appLayout.style.display = 'flex';
+  const dash = window.viewDashboardContent || document.getElementById('view-dashboard-content');
+  if (dash) {
+    dash.style.display = 'block';
+    dash.classList.add('active-tab', 'active');
   }
+}
 
-  const updateEnvBadge = () => {
-    const selectEnv = window.selectEnvironment;
-    if (!selectEnv) return;
+/**
+ * Carrega dados iniciais em PARALELO (cert + units + dashboard).
+ */
+async function bootDataParallel() {
+  const tasks = [];
+
+  // Cert + units (sequencia interna leve, mas paralelo ao dashboard)
+  tasks.push(
+    (async () => {
+      try {
+        await window.AppSyncController.checkCertStatus({ skipSecondary: true });
+      } catch (err) {
+        console.warn('checkCertStatus:', err);
+      }
+    })()
+  );
+
+  tasks.push(
+    (async () => {
+      try {
+        if (window.loadSchedulerSettings) await window.loadSchedulerSettings();
+      } catch (err) {
+        console.warn('scheduler:', err);
+      }
+    })()
+  );
+
+  tasks.push(
+    (async () => {
+      try {
+        if (window.AppSyncController?.loadDashboard) {
+          await window.AppSyncController.loadDashboard();
+        }
+      } catch (err) {
+        console.warn('dashboard:', err);
+      }
+    })()
+  );
+
+  if (window.AppUi?.updateProgress) window.AppUi.updateProgress(0, 0);
+
+  const selectEnv = window.selectEnvironment;
+  if (selectEnv) {
     const envText = selectEnv.value === 'producao' ? 'Produção' : 'Homologação';
     const statAmbiente = document.getElementById('stat-ambiente');
     if (statAmbiente) {
@@ -105,107 +147,94 @@ async function initializeAuthenticatedApp() {
         ? 'metric-value text-primary'
         : 'metric-value text-warning';
     }
-  };
+  }
 
-  const bootData = () => {
-    try {
-      if (window.AppSyncController?.checkCertStatus) {
-        window.AppSyncController.checkCertStatus().catch(err => console.warn('checkCertStatus:', err));
-      }
-      if (window.loadSchedulerSettings) {
-        Promise.resolve(window.loadSchedulerSettings()).catch(err => console.warn('scheduler:', err));
-      }
-      if (window.AppUi?.updateProgress) window.AppUi.updateProgress(0, 0);
-      updateEnvBadge();
+  // Marca nav dashboard
+  const nav = window.navDashboard || document.getElementById('nav-dashboard');
+  if (nav) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    nav.classList.add('active');
+  }
+  const titleEl = window.pageTitle || document.getElementById('page-title');
+  const subtitleEl = window.pageSubtitle || document.getElementById('page-subtitle');
+  if (titleEl) titleEl.innerText = 'Dashboard';
+  if (subtitleEl) subtitleEl.innerText = 'Resumo de cidades e total de XMLs persistidos';
 
-      // Garante dashboard visivel
-      const dash = window.viewDashboardContent || document.getElementById('view-dashboard-content');
-      const nav = window.navDashboard || document.getElementById('nav-dashboard');
-      if (dash) {
-        dash.style.display = 'block';
-        dash.classList.add('active-tab', 'active');
-      }
-      if (nav && dash && window.AppUi?.switchTab) {
-        window.AppUi.switchTab(nav, dash, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
-      } else if (window.AppSyncController?.loadDashboard) {
-        window.AppSyncController.loadDashboard();
-      }
-    } catch (err) {
-      console.error('bootData:', err);
-    }
-  };
+  await Promise.allSettled(tasks);
+}
+
+async function initializeAuthenticatedApp() {
+  try {
+    await withTimeout(window.AppApi.loadAuthConfig(), 8000, 'auth-config');
+  } catch (err) {
+    console.error(err);
+    window.authConfig = window.authConfig || { authRequired: false };
+  }
 
   if (!window.authConfig.authRequired) {
-    if (window.appLayout) window.appLayout.style.display = 'flex';
-    if (window.authScreen) window.authScreen.style.display = 'none';
-    bootData();
+    showAppShell();
+    await bootDataParallel();
     return;
   }
 
-  // Auth obrigatoria: valida sessao com timeout para nao travar a tela em branco
+  // Otimista: se ha sessao local, mostra shell ja e valida em paralelo
   const storedSession = window.AppUtils.loadStoredAuthSession();
-  let user = null;
-  try {
-    user = await withTimeout(
-      window.AppApi.validateAuthSession(storedSession),
-      8000,
-      'validate-session'
-    );
-  } catch (err) {
-    console.warn('Sessao nao validada a tempo:', err.message);
-    user = null;
-  }
-
-  if (!user) {
-    window.AppUtils.clearAuthSession();
-    if (window.AppUi?.showLogin) {
-      window.AppUi.showLogin();
-    } else {
-      if (window.appLayout) window.appLayout.style.display = 'none';
-      if (window.authScreen) window.authScreen.style.display = 'grid';
+  if (storedSession?.access_token) {
+    window.authSession = storedSession;
+    showAppShell();
+    if (window.authUserEmail && storedSession.user?.email) {
+      window.authUserEmail.textContent = storedSession.user.email;
     }
+
+    const [userResult] = await Promise.allSettled([
+      withTimeout(window.AppApi.validateAuthSession(storedSession), 6000, 'validate-session'),
+      bootDataParallel()
+    ]);
+
+    if (userResult.status === 'fulfilled' && userResult.value) {
+      if (window.AppUi?.showAuthenticatedApp) {
+        window.AppUi.showAuthenticatedApp(userResult.value);
+      }
+      return;
+    }
+
+    // Sessao invalida: limpa e pede login
+    window.AppUtils.clearAuthSession();
+    if (window.AppUi?.showLogin) window.AppUi.showLogin();
     return;
   }
 
-  if (window.AppUi?.showAuthenticatedApp) {
-    window.AppUi.showAuthenticatedApp(user);
-  } else {
-    if (window.authScreen) window.authScreen.style.display = 'none';
-    if (window.appLayout) window.appLayout.style.display = 'flex';
+  // Sem sessao
+  if (window.AppUi?.showLogin) {
+    window.AppUi.showLogin();
+  } else if (window.authScreen) {
+    window.authScreen.style.display = 'grid';
   }
-  bootData();
 }
 
 async function bootstrap() {
+  const t0 = performance.now();
   try {
+    // 1) Painels do bundle (sincrono, instantaneo)
     await loadAllComponents();
     window.AppUi.initElements();
 
     try {
       window.AppEvents.bindEvents();
     } catch (err) {
-      console.error('bindEvents falhou (continuando boot):', err);
+      console.error('bindEvents:', err);
     }
 
+    // 2) Auth + dados
     await initializeAuthenticatedApp();
 
-    // Safety: se apos boot nada ficou visivel, mostra login ou app
-    const authVisible = window.authScreen && window.authScreen.style.display !== 'none' && window.authScreen.offsetParent !== null;
-    const appVisible = window.appLayout && window.appLayout.style.display !== 'none';
-    if (!authVisible && !appVisible) {
-      if (window.authConfig?.authRequired) {
-        window.AppUi.showLogin();
-      } else if (window.appLayout) {
-        window.appLayout.style.display = 'flex';
-      }
-    }
+    console.info(`[boot] ready in ${Math.round(performance.now() - t0)}ms`);
   } catch (err) {
     console.error('bootstrap fatal:', err);
     showBootError(err.message || String(err));
   }
 }
 
-// defer scripts: se DOM ja estiver pronto, inicia na hora
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', bootstrap);
 } else {

@@ -4,6 +4,8 @@
   "description": "Ferramenta local para download em lote de XMLs de NFS-e Nacional via mTLS",
   "main": "server.js",
   "scripts": {
+    "build:panels": "node scripts/build-panels-bundle.js",
+    "prestart": "node scripts/build-panels-bundle.js",
     "start": "node server.js",
     "dev": "node server.js"
   },

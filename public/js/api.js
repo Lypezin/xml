@@ -165,13 +165,25 @@ window.AppApi = {
   },
 
   async fetchCertStatus() {
-    const res = await fetch('/api/certificate-status');
-    return res.json();
+    const cache = window.AppDataCache;
+    if (!cache) {
+      return (await fetch('/api/certificate-status')).json();
+    }
+    return cache.getOrFetch('cert-status', 30000, async () => {
+      const res = await fetch('/api/certificate-status');
+      return res.json();
+    });
   },
 
   async fetchDashboardSummary() {
-    const res = await fetch('/api/dashboard-summary');
-    return res.json();
+    const cache = window.AppDataCache;
+    if (!cache) {
+      return (await fetch('/api/dashboard-summary')).json();
+    }
+    return cache.getOrFetch('dashboard-summary', 45000, async () => {
+      const res = await fetch('/api/dashboard-summary');
+      return res.json();
+    });
   },
 
   async uploadCertificate(formData) {
@@ -188,7 +200,15 @@ window.AppApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ certificateId })
     });
-    return res.json();
+    const data = await res.json();
+    if (window.AppDataCache) {
+      window.AppDataCache.invalidate('cert-status');
+      window.AppDataCache.invalidate('dashboard-summary');
+      window.AppDataCache.invalidate('history:');
+      window.AppDataCache.invalidate('sync-state:');
+      window.AppDataCache.invalidate('storage:');
+    }
+    return data;
   },
 
   async removeCertificate(certificateId) {
@@ -197,7 +217,9 @@ window.AppApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ certificateId })
     });
-    return res.json();
+    const data = await res.json();
+    if (window.AppDataCache) window.AppDataCache.invalidateAll();
+    return data;
   },
 
   async renameCertificate(certificateId, filename) {
@@ -206,7 +228,12 @@ window.AppApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ certificateId, filename })
     });
-    return res.json();
+    const data = await res.json();
+    if (window.AppDataCache) {
+      window.AppDataCache.invalidate('cert-status');
+      window.AppDataCache.invalidate('dashboard-summary');
+    }
+    return data;
   },
 
   async diagnoseCertificate(certificateId, environment) {
@@ -245,8 +272,15 @@ window.AppApi = {
       cnpjConsulta: cnpjConsulta || '',
       certificateId: certificateId || ''
     });
-    const res = await fetch(`/api/sync-state?${params.toString()}`);
-    return res.json();
+    const key = `sync-state:${params.toString()}`;
+    const cache = window.AppDataCache;
+    if (!cache) {
+      return (await fetch(`/api/sync-state?${params.toString()}`)).json();
+    }
+    return cache.getOrFetch(key, 20000, async () => {
+      const res = await fetch(`/api/sync-state?${params.toString()}`);
+      return res.json();
+    });
   },
 
   async clearDownloads() {
@@ -301,15 +335,40 @@ window.AppApi = {
   },
 
   async listDocuments(params) {
-    return (await fetch(`/api/list-documents?${new URLSearchParams(params)}`)).json();
+    const qs = new URLSearchParams(params).toString();
+    const key = `history:${qs}`;
+    const cache = window.AppDataCache;
+    if (!cache) {
+      return (await fetch(`/api/list-documents?${qs}`)).json();
+    }
+    return cache.getOrFetch(key, 25000, async () => {
+      const res = await fetch(`/api/list-documents?${qs}`);
+      return res.json();
+    });
   },
 
   async fetchStorageSummary(params = {}) {
-    return (await fetch(`/api/storage-summary?${new URLSearchParams(params)}`)).json();
+    const qs = new URLSearchParams(params).toString();
+    const key = `storage:${qs}`;
+    const cache = window.AppDataCache;
+    if (!cache) {
+      return (await fetch(`/api/storage-summary?${qs}`)).json();
+    }
+    return cache.getOrFetch(key, 120000, async () => {
+      const res = await fetch(`/api/storage-summary?${qs}`);
+      return res.json();
+    });
   },
 
   async listUnits() {
-    return (await fetch('/api/units')).json();
+    const cache = window.AppDataCache;
+    if (!cache) {
+      return (await fetch('/api/units')).json();
+    }
+    return cache.getOrFetch('units', 60000, async () => {
+      const res = await fetch('/api/units');
+      return res.json();
+    });
   },
 
   async saveUnit(unit) {

@@ -182,10 +182,9 @@ window.AppUi = {
   switchTab(activeNav, activeContent, title, subtitle, options = {}) {
     const forceRefresh = Boolean(options.forceRefresh);
     const now = Date.now();
-    // Cache agressivo: 2 min para dados de aba
-    const cacheTtlMs = 120000;
+    // Cache de aba: 3 min (API cache cobre o resto)
+    const cacheTtlMs = 180000;
 
-    // Re-resolve referencias (pos-injecao de HTML)
     const navs = [
       window.navDashboard || document.getElementById('nav-dashboard'),
       window.navDownload || document.getElementById('nav-download'),
@@ -199,6 +198,7 @@ window.AppUi = {
       window.viewRegrasContent || document.getElementById('view-regras-content')
     ];
 
+    // Troca visual imediata (fluidez)
     navs.forEach(nav => {
       if (nav) nav.classList.remove('active');
     });
@@ -222,6 +222,7 @@ window.AppUi = {
     window._tabCache = window._tabCache || {};
     const activeId = activeContent?.id || '';
 
+    // Dados em background (nao bloqueia UI)
     if (activeId === 'view-dashboard-content' && window.AppSyncController?.loadDashboard) {
       const lastDash = window._tabCache.dashboardAt || 0;
       if (forceRefresh || !lastDash || now - lastDash > cacheTtlMs) {
@@ -236,21 +237,29 @@ window.AppUi = {
       const lastStorage = window._tabCache.storageAt || 0;
       const needHistory = forceRefresh || !lastSync || now - lastSync > cacheTtlMs || window._historyReloadDirty;
       const needNsu = forceRefresh || !lastNsu || now - lastNsu > cacheTtlMs;
-      // Storage e pesado: 1a visita da aba ou a cada 5 min
       const needStorage = forceRefresh || !lastStorage || now - lastStorage > 300000;
 
+      // Historico e NSU em paralelo; storage depois (idle)
+      const jobs = [];
       if (needHistory) {
         window._tabCache.syncAt = now;
         window._historyReloadDirty = false;
-        window.AppSyncController.loadPersistedHistory();
+        jobs.push(window.AppSyncController.loadPersistedHistory(1, { quiet: true }));
       }
       if (needNsu) {
         window._tabCache.nsuAt = now;
-        window.AppSyncController.loadSavedStartNsu();
+        jobs.push(window.AppSyncController.loadSavedStartNsu());
       }
+      if (jobs.length) Promise.allSettled(jobs);
+
       if (needStorage) {
         window._tabCache.storageAt = now;
-        window.AppSyncController.loadStorageSummary();
+        const runStorage = () => window.AppSyncController.loadStorageSummary();
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(runStorage, { timeout: 2000 });
+        } else {
+          setTimeout(runStorage, 300);
+        }
       }
     }
   },

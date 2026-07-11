@@ -51,8 +51,13 @@ window.AppEvents = {
           const user = await window.AppApi.loginWithPassword(authEmail.value.trim(), authPassword.value);
           window.AppUi.setAuthMessage('Acesso liberado.', 'success');
           window.AppUi.showAuthenticatedApp(user);
-          window.AppSyncController.checkCertStatus();
-          loadSchedulerSettings();
+          if (window.AppDataCache) window.AppDataCache.invalidateAll();
+          // Paralelo pos-login
+          Promise.allSettled([
+            window.AppSyncController.checkCertStatus({ skipSecondary: true }),
+            window.AppSyncController.loadDashboard(),
+            loadSchedulerSettings()
+          ]);
           window.AppUi.updateProgress(0, 0);
           if (selectEnvironment) selectEnvironment.dispatchEvent(new Event('change'));
         } catch (err) {
@@ -320,40 +325,64 @@ window.AppEvents = {
           window.AppUi.log(`Ambiente alterado para: ${envText}`);
         }
         if (window.viewDownloadContent && window.viewDownloadContent.style.display !== 'none') {
-          window.AppSyncController.loadPersistedHistory();
-          await window.AppSyncController.loadSavedStartNsu();
+          if (window.AppDataCache) {
+            window.AppDataCache.invalidate('history:');
+            window.AppDataCache.invalidate('sync-state:');
+          }
+          await Promise.allSettled([
+            window.AppSyncController.loadPersistedHistory(1, { quiet: true }),
+            window.AppSyncController.loadSavedStartNsu()
+          ]);
         }
       });
     }
 
     if (inputCnpjConsulta) {
       inputCnpjConsulta.addEventListener('change', async () => {
-        window.AppSyncController.loadPersistedHistory();
-        await window.AppSyncController.loadSavedStartNsu();
+        if (window.AppDataCache) {
+          window.AppDataCache.invalidate('history:');
+          window.AppDataCache.invalidate('sync-state:');
+        }
+        await Promise.allSettled([
+          window.AppSyncController.loadPersistedHistory(1, { quiet: true }),
+          window.AppSyncController.loadSavedStartNsu()
+        ]);
       });
     }
 
     if (unitFilter) {
       unitFilter.addEventListener('change', async () => {
         window.AppSyncController.fillUnitFormFromSelection();
-        window.AppSyncController.loadPersistedHistory();
-        await window.AppSyncController.loadSavedStartNsu();
+        if (window.AppDataCache) {
+          window.AppDataCache.invalidate('history:');
+          window.AppDataCache.invalidate('sync-state:');
+        }
+        await Promise.allSettled([
+          window.AppSyncController.loadPersistedHistory(1, { quiet: true }),
+          window.AppSyncController.loadSavedStartNsu()
+        ]);
       });
     }
 
     if (unitPartyRole) {
       unitPartyRole.addEventListener('change', async () => {
-        window.AppSyncController.loadPersistedHistory();
-        await window.AppSyncController.loadSavedStartNsu();
+        if (window.AppDataCache) window.AppDataCache.invalidate('history:');
+        await window.AppSyncController.loadPersistedHistory(1, { quiet: true });
       });
     }
 
     if (historySearch) {
-      historySearch.addEventListener('input', debounce(() => window.AppSyncController.loadPersistedHistory(1), 350));
+      historySearch.addEventListener('input', debounce(() => {
+        if (window.AppDataCache) window.AppDataCache.invalidate('history:');
+        window.AppSyncController.loadPersistedHistory(1, { quiet: true });
+      }, 280));
     }
 
     if (includeCancelled) {
-      includeCancelled.addEventListener('change', () => window.AppSyncController.loadPersistedHistory(1));
+      includeCancelled.addEventListener('change', () => {
+        if (window.AppDataCache) window.AppDataCache.invalidate('history:');
+        window.AppSyncController.loadPersistedHistory(1, { quiet: true });
+      });
     }
 
     if (btnSaveUnit) {
