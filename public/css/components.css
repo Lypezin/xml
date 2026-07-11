@@ -249,7 +249,24 @@ body.light-mode .console-log {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
+  gap: 16px;
+}
+
+.dashboard-header-flex .hero-copy h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.dashboard-header-flex .eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary-hover);
+  margin-bottom: 6px;
 }
 
 #btn-refresh-dashboard {
@@ -350,27 +367,41 @@ body:not(.light-mode) .skeleton-shimmer {
 /* Top Metrics Summary Grid */
 .dashboard-metrics-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
 .mini-metric-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: var(--border-radius);
-  padding: 20px 24px;
+  border-radius: 12px;
+  padding: 16px 18px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-normal), box-shadow var(--transition-normal), transform var(--transition-normal);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.mini-metric-card::after {
+  content: '';
+  position: absolute;
+  right: -12px;
+  top: -12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.12), transparent 70%);
+  pointer-events: none;
 }
 
 .mini-metric-card:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .metric-icon {
@@ -404,24 +435,24 @@ body:not(.light-mode) .skeleton-shimmer {
 
 .dashboard-cities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-  margin-top: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
 }
 
 .city-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: var(--border-radius);
-  padding: 24px;
+  border-radius: 12px;
+  padding: 18px 18px 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 160px;
+  min-height: 148px;
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
-  transition: border-color var(--transition-normal), box-shadow var(--transition-normal), transform var(--transition-normal);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   cursor: pointer;
 }
 
@@ -431,9 +462,10 @@ body:not(.light-mode) .skeleton-shimmer {
   top: 0;
   left: 0;
   width: 100%;
-  height: 4px;
-  background: transparent;
-  transition: background var(--transition-normal);
+  height: 3px;
+  background: linear-gradient(90deg, var(--secondary), transparent 70%);
+  opacity: 0.35;
+  transition: opacity 0.15s ease;
 }
 
 .city-card:hover {
@@ -442,10 +474,19 @@ body:not(.light-mode) .skeleton-shimmer {
   transform: translateY(-2px);
 }
 
+.city-card:hover::before {
+  opacity: 1;
+}
+
 .city-card.active {
-  border-color: var(--primary);
+  border-color: rgba(13, 148, 136, 0.45);
   background: var(--card-bg);
-  box-shadow: 0 0 0 2px var(--primary-glow), var(--shadow-md);
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.12), var(--shadow-md);
+}
+
+.city-card.active::before {
+  opacity: 1;
+  background: linear-gradient(90deg, var(--secondary), var(--secondary-hover));
 }
 
 .city-card-header {
@@ -471,14 +512,15 @@ body:not(.light-mode) .skeleton-shimmer {
 }
 
 .city-card-active-badge {
-  font-size: 9px;
-  background: var(--primary-hover);
-  color: #fff;
-  padding: 3px 8px;
-  border-radius: 12px;
+  font-size: 10px;
+  background: var(--success-bg);
+  color: var(--success-hover);
+  border: 1px solid var(--success-border);
+  padding: 3px 9px;
+  border-radius: 999px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 .city-card-stats {

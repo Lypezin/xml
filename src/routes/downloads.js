@@ -427,103 +427,175 @@ router.get('/download-excel', async (req, res) => {
     
     const documents = dedupeXmlItems(fullResult.documents || []);
 
+    const periodLabel = [startDate, endDate].filter(Boolean).join('_a_') || 'filtro';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_Relatorio.xlsx');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="NFS-e_Relatorio_${periodLabel}.xlsx"`
+    );
 
-    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
-    const worksheet = workbook.addWorksheet('Notas NFS-e');
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: res,
+      useStyles: true
+    });
+    workbook.creator = 'Gestao NFS-e Nacional';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet('Notas NFS-e', {
+      views: [{ state: 'frozen', ySplit: 2, showGridLines: false }],
+      properties: { defaultRowHeight: 18 }
+    });
+
+    // Titulo
+    worksheet.mergeCells('A1:N1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = `Relatório NFS-e · ${documents.length} nota(s)${startDate || endDate ? ` · ${startDate || '…'} a ${endDate || '…'}` : ''}`;
+    titleCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FF0F172A' } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF1F5F9' }
+    };
+    worksheet.getRow(1).height = 30;
+    worksheet.getRow(1).commit();
 
     worksheet.columns = [
-      { header: 'NSU', key: 'nsu', width: 12 },
-      { header: 'Tipo', key: 'tipo', width: 12 },
-      { header: 'Chave', key: 'chave', width: 50 },
-      { header: 'Número NFS-e', key: 'numero', width: 15 },
-      { header: 'Status', key: 'status', width: 15 },
-      { header: 'Data Emissão', key: 'dataEmissao', width: 15 },
-      { header: 'CNPJ Prestador', key: 'cnpjPrestador', width: 22 },
-      { header: 'Nome Prestador', key: 'nomePrestador', width: 35 },
-      { header: 'CNPJ Tomador', key: 'cnpjTomador', width: 22 },
-      { header: 'Nome Tomador', key: 'nomeTomador', width: 35 },
-      { header: 'Valor Serviço', key: 'valor', width: 18, style: { numFormat: '"R$ " #,##0.00' } },
-      { header: 'Descrição', key: 'descricao', width: 50 },
-      { header: 'Município', key: 'municipio', width: 20 },
-      { header: 'Código Tributação', key: 'codigoTributacao', width: 20 }
+      { key: 'nsu', width: 12 },
+      { key: 'tipo', width: 10 },
+      { key: 'chave', width: 48 },
+      { key: 'numero', width: 14 },
+      { key: 'status', width: 14 },
+      { key: 'dataEmissao', width: 14 },
+      { key: 'cnpjPrestador', width: 20 },
+      { key: 'nomePrestador', width: 32 },
+      { key: 'cnpjTomador', width: 20 },
+      { key: 'nomeTomador', width: 32 },
+      { key: 'valor', width: 16 },
+      { key: 'descricao', width: 40 },
+      { key: 'municipio', width: 18 },
+      { key: 'codigoTributacao', width: 16 }
     ];
 
-    // Estilizar a linha de cabeçalho
-    const headerRow = worksheet.getRow(1);
-    headerRow.height = 28;
+    const headers = [
+      'NSU', 'Tipo', 'Chave', 'Número NFS-e', 'Status', 'Data Emissão',
+      'CNPJ Prestador', 'Nome Prestador', 'CNPJ Tomador', 'Nome Tomador',
+      'Valor Serviço', 'Descrição', 'Município', 'Cód. Tributação'
+    ];
+    const headerRow = worksheet.addRow(headers);
+    headerRow.height = 26;
     headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Segoe UI', size: 11 };
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Segoe UI', size: 10 };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF1F4E78' } // Azul corporativo escuro
+        fgColor: { argb: 'FF0F766E' }
       };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF0D9488' } },
+        bottom: { style: 'thin', color: { argb: 'FF0D9488' } },
+        left: { style: 'thin', color: { argb: 'FF0D9488' } },
+        right: { style: 'thin', color: { argb: 'FF0D9488' } }
+      };
     });
     headerRow.commit();
 
-    let rowIdx = 2;
+    // AutoFilter no cabecalho de dados (linha 2)
+    worksheet.autoFilter = {
+      from: { row: 2, column: 1 },
+      to: { row: 2 + documents.length, column: 14 }
+    };
+
+    let dataRow = 0;
     for (const doc of documents) {
       const metadata = doc.metadata || {};
+      const status = metadata.status || doc.status || 'Autorizada';
+      const isCancelled = Boolean(
+        doc.is_cancelled ||
+        metadata.isCancellation ||
+        String(status).toLowerCase().includes('cancel')
+      );
+      const valorRaw = metadata.valorServico ?? doc.valor_servico ?? doc.valorServico;
+      const valorNum = Number(String(valorRaw ?? '').replace(',', '.'));
+
       const row = worksheet.addRow({
-        nsu: doc.nsu || '',
-        tipo: doc.tipo || metadata.tipo || '',
+        nsu: doc.nsu ?? '',
+        tipo: doc.tipo || metadata.tipo || 'NFSE',
         chave: String(doc.chave || metadata.chave || '').trim(),
-        numero: metadata.numeroNfse || doc.numeroNfse || '',
-        status: metadata.status || '',
-        dataEmissao: formatDateBr(metadata.dataEmissaoCompleta || doc.dataEmissao || metadata.dataEmissao || ''),
-        cnpjPrestador: formatCnpj(metadata.prestadorCnpj),
-        nomePrestador: metadata.prestadorNome || metadata.prestadorRazaoSocial || '',
-        cnpjTomador: formatCnpj(metadata.tomadorCnpj),
-        nomeTomador: metadata.tomadorNome || metadata.tomadorRazaoSocial || '',
-        valor: metadata.valorServico ? Number(metadata.valorServico) : 0,
-        descricao: metadata.descricao || '',
-        municipio: metadata.municipioPrestacao || '',
-        codigoTributacao: metadata.codigoTributacao || ''
+        numero: metadata.numeroNfse || doc.numero_nfse || doc.numeroNfse || '',
+        status: isCancelled ? 'Cancelada' : status,
+        dataEmissao: formatDateBr(
+          metadata.dataEmissaoCompleta || doc.data_emissao || doc.dataEmissao || metadata.dataEmissao || ''
+        ),
+        cnpjPrestador: formatCnpj(metadata.prestadorCnpj || doc.prestador_cnpj),
+        nomePrestador: metadata.prestadorNome || doc.prestador_nome || metadata.prestadorRazaoSocial || '',
+        cnpjTomador: formatCnpj(metadata.tomadorCnpj || doc.tomador_cnpj),
+        nomeTomador: metadata.tomadorNome || doc.tomador_nome || metadata.tomadorRazaoSocial || '',
+        valor: Number.isFinite(valorNum) ? valorNum : 0,
+        descricao: metadata.descricao || metadata.descricaoServico || '',
+        municipio: metadata.municipioPrestacao || doc.municipio_prestacao || '',
+        codigoTributacao: metadata.codigoTributacao || doc.codigo_tributacao || ''
       });
 
       row.height = 20;
+      dataRow += 1;
 
-      // Alinhamento específico por tipo de coluna
-      row.getCell('nsu').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('tipo').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('numero').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('status').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('dataEmissao').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('cnpjPrestador').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('cnpjTomador').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('valor').alignment = { horizontal: 'right', vertical: 'middle' };
-      row.getCell('codigoTributacao').alignment = { horizontal: 'center', vertical: 'middle' };
+      const zebra = dataRow % 2 === 0;
+      const fillArgb = isCancelled
+        ? 'FFFEE2E2' // vermelho bem claro
+        : (zebra ? 'FFF8FAFC' : 'FFFFFFFF');
+      const fontColor = isCancelled ? 'FF991B1B' : 'FF0F172A';
 
-      // Estilo de fonte e bordas inferiores de grade para todas as células (com riscado se cancelada)
-      const isCancelled = String(metadata.status || '').toLowerCase().includes('cancel');
-      row.eachCell((cell) => {
-        cell.font = { 
-          name: 'Segoe UI', 
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        cell.font = {
+          name: 'Segoe UI',
           size: 10,
           strikethrough: isCancelled,
-          color: isCancelled ? { argb: 'FF8C8C8C' } : undefined
+          color: { argb: fontColor }
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: fillArgb }
         };
         cell.border = {
-          bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: [1, 2, 4, 5, 6, 7, 9, 14].includes(colNumber) ? 'center' : 'left',
+          wrapText: colNumber === 12
         };
       });
 
-      // Zebra striping
-      if (rowIdx % 2 === 0) {
-        row.eachCell((cell) => {
-          cell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFF9FAFB' } // Cinza/azul claro e moderno
-          };
-        });
+      const valorCell = row.getCell('valor');
+      valorCell.numFmt = 'R$ #,##0.00';
+      valorCell.alignment = { horizontal: 'right', vertical: 'middle' };
+
+      // Status em destaque
+      const statusCell = row.getCell('status');
+      if (isCancelled) {
+        statusCell.font = {
+          name: 'Segoe UI',
+          size: 10,
+          bold: true,
+          strikethrough: true,
+          color: { argb: 'FFB91C1C' }
+        };
+      } else {
+        statusCell.font = {
+          name: 'Segoe UI',
+          size: 10,
+          bold: true,
+          color: { argb: 'FF047857' }
+        };
       }
 
       row.commit();
-      rowIdx++;
     }
 
     await workbook.commit();

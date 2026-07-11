@@ -1,6 +1,10 @@
 /* XML list, pagination and document badges - Minimalist SaaS Clean */
 .data-grid-card {
-  padding: 20px;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
 }
 
 .results-header {
@@ -8,15 +12,16 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--card-border);
   padding-bottom: 12px;
 }
 
 .results-header h2 {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 .results-subtitle {

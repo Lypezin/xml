@@ -183,10 +183,10 @@ window.AppApi = {
       const res = await fetch('/api/certificate-status');
       return this._jsonOrThrow(res, 'Falha ao carregar certificado.');
     }
-    return cache.getOrFetch('cert-status', 30000, async () => {
+    return cache.getOrFetch('cert-status', 45000, async () => {
       const res = await fetch('/api/certificate-status');
       return this._jsonOrThrow(res, 'Falha ao carregar certificado.');
-    });
+    }, { softMs: 300000 });
   },
 
   async fetchDashboardSummary() {
@@ -195,10 +195,10 @@ window.AppApi = {
       const res = await fetch('/api/dashboard-summary');
       return this._jsonOrThrow(res, 'Falha ao carregar dashboard.');
     }
-    return cache.getOrFetch('dashboard-summary', 45000, async () => {
+    return cache.getOrFetch('dashboard-summary', 60000, async () => {
       const res = await fetch('/api/dashboard-summary');
       return this._jsonOrThrow(res, 'Falha ao carregar dashboard.');
-    });
+    }, { softMs: 600000 });
   },
 
   async uploadCertificate(formData) {
@@ -292,10 +292,10 @@ window.AppApi = {
     if (!cache) {
       return (await fetch(`/api/sync-state?${params.toString()}`)).json();
     }
-    return cache.getOrFetch(key, 20000, async () => {
+    return cache.getOrFetch(key, 40000, async () => {
       const res = await fetch(`/api/sync-state?${params.toString()}`);
       return res.json();
-    });
+    }, { softMs: 240000 });
   },
 
   async clearDownloads() {
@@ -357,10 +357,10 @@ window.AppApi = {
       const res = await fetch(`/api/list-documents?${qs}`);
       return this._jsonOrThrow(res, 'Falha ao listar documentos.');
     }
-    return cache.getOrFetch(key, 25000, async () => {
+    return cache.getOrFetch(key, 45000, async () => {
       const res = await fetch(`/api/list-documents?${qs}`);
       return this._jsonOrThrow(res, 'Falha ao listar documentos.');
-    });
+    }, { softMs: 300000 });
   },
 
   async scanCancellations(body) {

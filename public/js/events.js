@@ -521,12 +521,14 @@ window.AppEvents = {
         e.preventDefault();
         window.AppUi.switchTab(navDashboard, viewDashboardContent, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
       });
+      navDashboard.addEventListener('mouseenter', () => window.AppUi.prefetchTab?.('view-dashboard-content'), { passive: true });
     }
     if (navDownload) {
       navDownload.addEventListener('click', (e) => {
         e.preventDefault();
         window.AppUi.switchTab(navDownload, viewDownloadContent, 'XMLs por Unidade', 'XMLs NFS-e persistidos por certificado e unidade');
       });
+      navDownload.addEventListener('mouseenter', () => window.AppUi.prefetchTab?.('view-download-content'), { passive: true });
     }
     if (navCertificado) {
       navCertificado.addEventListener('click', (e) => {

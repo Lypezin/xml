@@ -125,9 +125,11 @@ window.AppSyncController = {
 
     const requestId = (window._historyRequestId = (window._historyRequestId || 0) + 1);
     const quiet = Boolean(options.quiet);
+    const keepVisible = Boolean(options.keepVisible);
+    const hasRows = Boolean(window.AppUiTable.documents?.length);
 
-    // So mostra skeleton se a tabela estiver vazia (evita flash em troca rapida de aba)
-    if (window.AppUiTable.showLoading && (!window.AppUiTable.documents || window.AppUiTable.documents.length === 0)) {
+    // So skeleton se nao ha nada na tela (evita flash ao trocar de aba)
+    if (!keepVisible && !hasRows && window.AppUiTable.showLoading) {
       window.AppUiTable.showLoading();
     }
 
@@ -500,7 +502,10 @@ window.AppSyncController = {
   async loadDashboard(retryCount = 0) {
     if (!dashboardCitiesGrid) return;
 
-    if (retryCount === 0) {
+    const hasCards = Boolean(dashboardCitiesGrid.querySelector('.city-card:not(.skeleton-row)'));
+
+    // Skeleton so no primeiro load (sem cards reais) — troca de aba fica instantanea
+    if (retryCount === 0 && !hasCards) {
       if (window.dashStatCities) window.dashStatCities.innerHTML = `<div class="skeleton-shimmer" style="width: 40px; height: 26px; vertical-align: middle;"></div>`;
       if (window.dashStatActive) window.dashStatActive.innerHTML = `<div class="skeleton-shimmer" style="width: 40px; height: 26px; vertical-align: middle;"></div>`;
       if (window.dashStatXmls) window.dashStatXmls.innerHTML = `<div class="skeleton-shimmer" style="width: 80px; height: 26px; vertical-align: middle;"></div>`;
