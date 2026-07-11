@@ -85,11 +85,13 @@ if (btnDownloadPeriod) {
     const endDate = downloadEndDate?.value;
     if (!startDate || !endDate) {
       window.AppUi.log('Informe data inicial e data final para baixar o periodo.', 'warning');
+      window.AppToast?.warning('Informe início e fim do período');
       return;
     }
 
     btnDownloadPeriod.disabled = true;
     window.AppUi.log(`Gerando ZIP do periodo ${startDate} a ${endDate}...`);
+    window.AppToast?.info('Gerando ZIP…');
     try {
       const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
       await window.AppApi.downloadPeriodZip({
@@ -104,8 +106,10 @@ if (btnDownloadPeriod) {
         includeCancelled: window.AppUtils.getIncludeCancelledParam()
       });
       window.AppUi.log('ZIP do periodo baixado com sucesso.', 'success');
+      window.AppToast?.success('ZIP do período baixado');
     } catch (err) {
       window.AppUi.log(`Erro ao baixar periodo: ${err.message}`, 'error');
+      window.AppToast?.error(err.message || 'Falha no ZIP do período');
     } finally {
       btnDownloadPeriod.disabled = false;
     }

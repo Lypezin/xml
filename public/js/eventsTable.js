@@ -11,6 +11,7 @@ if (tableBody) {
       if (xmlButton) {
         await window.AppApi.downloadFromApi(`/api/download-xml/${xmlButton.dataset.token}`, 'nfse.xml');
         window.AppUi.log('XML baixado com sucesso.', 'success');
+        window.AppToast?.success('XML baixado');
         return;
       }
 
@@ -20,8 +21,10 @@ if (tableBody) {
       });
       await window.AppApi.downloadFromApi(`/api/download-pdf/${encodeURIComponent(pdfButton.dataset.chave)}?${params.toString()}`, 'danfse.pdf');
       window.AppUi.log('PDF baixado com sucesso.', 'success');
+      window.AppToast?.success('PDF baixado');
     } catch (err) {
       window.AppUi.log(`Erro ao baixar documento: ${err.message}`, 'error');
+      window.AppToast?.error(err.message || 'Falha no download');
     }
   });
 }
@@ -69,12 +72,14 @@ if (btnExportExcel) {
         onlyCancelled: window.AppUtils.getOnlyCancelledParam()
       });
       window.AppUi.log('Excel da tabela baixado com sucesso.', 'success');
+      window.AppToast?.success('Excel exportado');
     } catch (err) {
       window.AppUi.log(`Erro ao baixar Excel: ${err.message}`, 'error');
+      window.AppToast?.error(err.message || 'Falha no Excel');
     } finally {
-      const hasDocs = !window.AppUiTable?.documents?.length;
-      btnExportExcel.disabled = hasDocs;
-      if (btnDownloadZip) btnDownloadZip.disabled = hasDocs;
+      const empty = !window.AppUiTable?.documents?.length;
+      btnExportExcel.disabled = empty;
+      if (btnDownloadZip) btnDownloadZip.disabled = empty;
     }
   });
 }
@@ -100,12 +105,14 @@ if (btnDownloadZip) {
         onlyCancelled: window.AppUtils.getOnlyCancelledParam()
       });
       window.AppUi.log('ZIP da tabela baixado com sucesso.', 'success');
+      window.AppToast?.success('ZIP baixado');
     } catch (err) {
       window.AppUi.log(`Erro ao baixar ZIP: ${err.message}`, 'error');
+      window.AppToast?.error(err.message || 'Falha no ZIP');
     } finally {
-      const hasDocs = !window.AppUiTable?.documents?.length;
-      btnDownloadZip.disabled = hasDocs;
-      if (btnExportExcel) btnExportExcel.disabled = hasDocs;
+      const empty = !window.AppUiTable?.documents?.length;
+      btnDownloadZip.disabled = empty;
+      if (btnExportExcel) btnExportExcel.disabled = empty;
     }
   });
 }

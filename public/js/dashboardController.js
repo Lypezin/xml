@@ -93,6 +93,10 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
       if (dashStatActive) dashStatActive.innerText = window.AppUtils.formatInteger(activeCities);
       if (dashStatXmls) dashStatXmls.innerText = window.AppUtils.formatInteger(totalXmls);
 
+      if (retryCount === 0 && window.AppToast && hasCards) {
+        window.AppToast.success('Painel atualizado');
+      }
+
       dashboardCitiesGrid.innerHTML = '';
       const esc = window.AppUtils.escapeHtml;
       const frag = document.createDocumentFragment();
@@ -119,6 +123,9 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
               <span class="city-card-stat-value success">${safeXmls}</span>
             </div>
             <span class="city-card-date" title="Última nota emitida em ${safeLast}">Última: ${safeLast}</span>
+          </div>
+          <div class="city-card-footer">
+            <span>${city.active ? 'Abrir unidade' : 'Selecionar certificado'} →</span>
           </div>
         `;
 

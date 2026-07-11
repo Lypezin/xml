@@ -84,6 +84,26 @@
   color: var(--text-secondary);
 }
 
+/* Premium polish */
+.certificates-list-card,
+.active-cert-card,
+.upload-cert-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.cert-list-item.active {
+  border-color: color-mix(in srgb, var(--brand) 40%, var(--card-border));
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: 0 0 0 3px var(--brand-glow);
+}
+
 body.light-mode .drop-zone:hover .drop-zone-icon-svg,
 body.light-mode .drop-zone.dragover .drop-zone-icon-svg {
   color: var(--text-secondary);
