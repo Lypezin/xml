@@ -77,13 +77,22 @@
       <div class="alert-box success" id="alert-sync-success" style="display: none;"><strong>Concluído:</strong> todas as notas foram sincronizadas.</div>
       <div class="alert-box danger" id="alert-rate-limit" style="display: none;"><strong>Consumo indevido:</strong> API bloqueou temporariamente este CNPJ.</div>
       <div class="crawler-status" id="crawler-status-container" style="display: none;"><span id="crawler-current-cnpj">-</span><span id="crawler-visited-count">0</span><span id="crawler-queue-count">0</span></div>
-      <details class="console-log-drawer" id="console-log-drawer">
-        <summary class="console-log-summary">
-          <span>Log da varredura</span>
-          <span class="console-log-hint" id="console-log-hint">0 linhas · clique para expandir</span>
-        </summary>
-        <div id="console-log" class="console-log"></div>
-      </details>
+      <div class="console-log-panel" id="console-log-drawer">
+        <div class="console-log-header">
+          <div class="console-log-title">
+            <span class="console-log-live-dot" aria-hidden="true"></span>
+            <span>Log da varredura</span>
+          </div>
+          <span class="console-log-hint" id="console-log-hint">Aguardando eventos…</span>
+        </div>
+        <div id="console-log" class="console-log" role="log" aria-live="polite" aria-relevant="additions">
+          <div class="log-line system log-placeholder">
+            <span class="log-time">[--:--:--]</span>
+            <span class="log-badge system">●</span>
+            <span class="log-text">Pronto. Inicie a varredura para acompanhar o progresso aqui.</span>
+          </div>
+        </div>
+      </div>
     </article>
   </section>
 

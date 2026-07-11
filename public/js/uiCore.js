@@ -31,31 +31,37 @@ initElements() {
     line.classList.add('is-new');
 
     if (window.consoleLog) {
+      // Remove placeholder de idle na primeira mensagem real
+      const placeholder = consoleLog.querySelector('.log-placeholder');
+      if (placeholder) placeholder.remove();
+
       consoleLog.appendChild(line);
-      // Limita linhas antigas para não explodir a DOM
       while (consoleLog.children.length > 400) {
         consoleLog.removeChild(consoleLog.firstChild);
       }
       consoleLog.scrollTop = consoleLog.scrollHeight;
-      this._updateLogHint();
-      // Auto-abre em erro/warning relevante
-      if ((type === 'error' || type === 'warning') && window.consoleLogDrawer && !consoleLogDrawer.open) {
-        consoleLogDrawer.open = true;
-      }
+      this._updateLogHint(type);
       window.setTimeout(() => line.classList.remove('is-new'), 400);
     }
   },
 
-  _updateLogHint() {
+  _updateLogHint(lastType = 'system') {
     const hint = window.consoleLogHint || document.getElementById('console-log-hint');
     const log = window.consoleLog || document.getElementById('console-log');
+    const panel = window.consoleLogDrawer || document.getElementById('console-log-drawer');
     if (!hint || !log) return;
-    const n = log.children.length;
-    const drawer = window.consoleLogDrawer || document.getElementById('console-log-drawer');
-    const open = drawer && drawer.open;
-    hint.textContent = open
-      ? `${n} linha${n === 1 ? '' : 's'}`
-      : `${n} linha${n === 1 ? '' : 's'} · clique para expandir`;
+
+    const realLines = log.querySelectorAll('.log-line:not(.log-placeholder)');
+    const n = realLines.length;
+    hint.textContent = n === 0
+      ? 'Aguardando eventos…'
+      : `${n} linha${n === 1 ? '' : 's'}`;
+
+    if (panel) {
+      panel.classList.toggle('is-idle', n === 0);
+      if (lastType === 'error') panel.classList.add('has-error');
+      if (lastType === 'success' && n > 0) panel.classList.remove('has-error');
+    }
   },
 
   logNationalApiContext(nationalApi) {

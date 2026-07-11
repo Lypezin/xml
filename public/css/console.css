@@ -1,107 +1,218 @@
-.console-log-drawer {
-  margin-top: 14px;
+/* Log da varredura — sempre aberto, estilo terminal */
+
+.console-log-panel {
+  margin-top: 16px;
   border: 1px solid var(--card-border);
-  border-radius: 10px;
-  background: var(--surface-muted, rgba(0, 0, 0, 0.03));
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.console-log-summary {
+.console-log-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  cursor: pointer;
-  list-style: none;
+  border-bottom: 1px solid var(--card-border);
+  background:
+    linear-gradient(180deg, rgba(13, 148, 136, 0.06) 0%, transparent 100%),
+    var(--surface-muted);
+}
+
+.console-log-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  user-select: none;
+  letter-spacing: -0.01em;
 }
 
-.console-log-summary::-webkit-details-marker {
-  display: none;
+.console-log-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--success);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
+  animation: console-pulse 2s ease-out infinite;
+  flex-shrink: 0;
 }
 
-.console-log-summary::before {
-  content: '▸';
-  display: inline-block;
-  margin-right: 8px;
-  color: var(--text-muted);
-  transition: transform 0.15s ease;
+.console-log-panel.is-idle .console-log-live-dot {
+  background: var(--text-muted);
+  box-shadow: none;
+  animation: none;
 }
 
-.console-log-drawer[open] > .console-log-summary::before {
-  transform: rotate(90deg);
+.console-log-panel.has-error .console-log-live-dot {
+  background: var(--danger);
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+}
+
+@keyframes console-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
 .console-log-hint {
   font-size: 11px;
   font-weight: 500;
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .console-log {
-  background: #09090b;
+  position: relative;
+  background:
+    radial-gradient(ellipse at top, rgba(13, 148, 136, 0.05) 0%, transparent 55%),
+    #0b0f14;
   border: none;
-  border-top: 1px solid #27272a;
   border-radius: 0;
-  padding: 16px;
-  font-family: 'JetBrains Mono', monospace;
+  padding: 12px 14px 14px;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11.5px;
-  color: #e4e4e7;
+  color: #e2e8f0;
   overflow-y: auto;
-  height: 220px;
-  min-height: 160px;
-  margin-top: 0;
-  flex-grow: 1;
+  height: 240px;
+  min-height: 200px;
+  max-height: 320px;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  gap: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
 }
 
 body.light-mode .console-log {
-  background: #18181b;
-  color: #f4f4f5;
-  border-color: #27272a;
+  background:
+    radial-gradient(ellipse at top, rgba(13, 148, 136, 0.04) 0%, transparent 50%),
+    #0f172a;
+  color: #e2e8f0;
+}
+
+.console-log::-webkit-scrollbar {
+  width: 8px;
+}
+
+.console-log::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.console-log::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+  background-clip: padding-box;
 }
 
 .log-line {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 78px 16px minmax(0, 1fr);
+  align-items: start;
   gap: 8px;
-  line-height: 1.45;
-  font-size: 11px;
+  line-height: 1.5;
+  font-size: 11.5px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border-left: 2px solid transparent;
+}
+
+.log-line:hover {
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.log-line.log-placeholder {
+  opacity: 0.75;
+}
+
+.log-line.log-placeholder:hover {
+  background: transparent;
 }
 
 .log-time {
-  color: var(--text-muted);
-  opacity: 0.65;
+  color: #64748b;
+  font-size: 10.5px;
   flex-shrink: 0;
   user-select: none;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
 }
 
 .log-badge {
   font-weight: 700;
   flex-shrink: 0;
   user-select: none;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
-.log-badge.success { color: #10b981; }
-.log-badge.warning { color: #f59e0b; }
-.log-badge.error { color: #ef4444; }
-.log-badge.system { color: #3b82f6; }
+.log-badge.success { color: #34d399; }
+.log-badge.warning { color: #fbbf24; }
+.log-badge.error { color: #f87171; }
+.log-badge.system { color: #60a5fa; }
 
 .log-text {
-  color: #e4e4e7;
-  word-break: break-all;
+  color: #e2e8f0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.log-line.system .log-text { color: #a1a1aa; }
-.log-line.success .log-text { color: #34d399; }
-.log-line.warning .log-text { color: #fbbf24; }
-.log-line.error .log-text { color: #f87171; }
+.log-line.system {
+  border-left-color: rgba(96, 165, 250, 0.35);
+}
 
-/* Dashboard de Cidades/Certificados */
+.log-line.success {
+  border-left-color: rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.log-line.warning {
+  border-left-color: rgba(251, 191, 36, 0.5);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.log-line.error {
+  border-left-color: rgba(248, 113, 113, 0.55);
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.log-line.system .log-text { color: #94a3b8; }
+.log-line.success .log-text { color: #6ee7b7; }
+.log-line.warning .log-text { color: #fcd34d; }
+.log-line.error .log-text { color: #fca5a5; }
+
+/* Compat: classes antigas do drawer */
+.console-log-drawer {
+  /* alias se algum CSS legado ainda referenciar */
+}
+
+@media (max-width: 640px) {
+  .console-log {
+    height: 200px;
+    min-height: 160px;
+    padding: 10px;
+  }
+
+  .log-line {
+    grid-template-columns: 64px 14px minmax(0, 1fr);
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .console-log-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}

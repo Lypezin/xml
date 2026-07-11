@@ -58,10 +58,9 @@ window.AppUiElements = {
     window.consoleLogDrawer = document.getElementById('console-log-drawer');
     window.consoleLogHint = document.getElementById('console-log-hint');
     if (window.consoleLogDrawer) {
-      consoleLogDrawer.addEventListener('toggle', () => {
-        if (window.AppUi?._updateLogHint) window.AppUi._updateLogHint();
-      });
+      consoleLogDrawer.classList.add('is-idle');
     }
+    if (window.AppUi?._updateLogHint) window.AppUi._updateLogHint();
 
     window.btnClearDownloads = document.getElementById('btn-clear-downloads');
     window.btnExportExcel = document.getElementById('btn-export-excel');
