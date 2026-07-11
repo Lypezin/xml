@@ -6,10 +6,21 @@
   <title>Gestão NFS-e Nacional</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <meta name="theme-color" content="#0b0f19">
+  <meta name="theme-color" content="#f8fafc">
+  <meta name="description" content="Gestão de XMLs NFS-e Nacional por unidade com varredura ADN e cancelamentos.">
+  <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <!-- display=swap evita FOIT; pesos reduzidos -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Tema antes do paint para evitar flash -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark') document.documentElement.classList.add('theme-dark-boot');
+      } catch (e) {}
+    })();
+  </script>
+  <!-- display=swap evita FOIT; pesos essenciais -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <!-- CSS em paralelo (sem @import em cascata) -->
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/buttons.css">
@@ -61,7 +72,7 @@
 
       <!-- Footer -->
       <footer class="app-footer">
-        <p>v1.4.1 - NFS-e Nacional com cancelamentos e carregamento otimizado.</p>
+        <p>v1.5.0 — NFS-e Nacional · cancelamentos · performance · segurança</p>
       </footer>
     </main>
   </div>

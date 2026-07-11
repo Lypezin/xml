@@ -17,7 +17,10 @@ window.AppUiTable = {
       nsu: doc.nsu,
       tipo: doc.tipo || metadata.tipo || 'NFSE',
       chave: doc.chave || metadata.chave || 'N/A',
-      status: metadata.status || doc.status || 'Autorizada',
+      status: (doc.is_cancelled || metadata.isCancellation)
+        ? 'Cancelada'
+        : (metadata.status || doc.status || 'Autorizada'),
+      isCancellation: Boolean(doc.is_cancelled || metadata.isCancellation),
       numeroNfse: doc.numeroNfse || doc.numero_nfse || metadata.numeroNfse || 'N/A',
       numeroDps: doc.numeroDps || metadata.numeroDps || 'N/A',
       serieDps: doc.serieDps || metadata.serieDps || 'N/A',
@@ -72,6 +75,7 @@ window.AppUiTable = {
   },
 
   showLoading() {
+    const tableBody = window.tableBody || document.getElementById('table-body');
     if (!tableBody) return;
     
     let skeletonHtml = '';
@@ -146,10 +150,11 @@ window.AppUiTable = {
   },
 
   renderCurrentPage() {
+    const tableBody = window.tableBody || document.getElementById('table-body');
     if (!tableBody) return;
     tableBody.innerHTML = '';
 
-    const mode = selectSearchMode ? selectSearchMode.value : 'asc';
+    const mode = window.selectSearchMode ? window.selectSearchMode.value : 'asc';
     const orderedDocs = this.remoteMode ? [...this.documents] : [...this.documents].sort((a, b) => {
       const aNsu = Number(a.nsu || 0);
       const bNsu = Number(b.nsu || 0);
@@ -174,9 +179,10 @@ window.AppUiTable = {
     if (window.btnExportExcel) window.btnExportExcel.disabled = false;
 
     const esc = window.AppUtils.escapeHtml;
+    const frag = document.createDocumentFragment();
     pageDocs.forEach(doc => {
       const item = document.createElement('article');
-      const isCancelled = String(doc.status || '').toLowerCase().includes('cancel');
+      const isCancelled = Boolean(doc.isCancellation) || String(doc.status || '').toLowerCase().includes('cancel');
       item.className = isCancelled ? 'xml-item cancelled-row' : 'xml-item';
       const valorFormatado = window.AppUtils.formatCurrency(doc.valorServico);
       const isEvento = String(doc.tipo || '').toUpperCase() === 'EVENTO' || doc.status === 'Evento';
@@ -234,8 +240,9 @@ window.AppUiTable = {
           </button>
         </div>
       `;
-      tableBody.appendChild(item);
+      frag.appendChild(item);
     });
+    tableBody.appendChild(frag);
 
     this.updatePagination(totalItems, start + 1, start + pageDocs.length);
   },

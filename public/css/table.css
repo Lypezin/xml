@@ -79,6 +79,44 @@
   cursor: pointer;
 }
 
+/* Linha cancelada — destaque sutil e legivel */
+.xml-item.cancelled-row {
+  background: linear-gradient(90deg, var(--danger-bg) 0%, transparent 48%);
+  border-color: var(--danger-border);
+}
+
+.xml-item.cancelled-row:hover {
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.status-badge.cancelled {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+  font-weight: 600;
+}
+
+.status-badge.ok {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.status-badge.event {
+  background: var(--warning-bg);
+  color: var(--warning-hover);
+  border: 1px solid var(--warning-border);
+}
+
+.xml-item {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.xml-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
 .xml-list-wrapper {
   overflow-x: auto;
   border-radius: var(--border-radius);

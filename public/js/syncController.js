@@ -155,7 +155,8 @@ window.AppSyncController = {
         return;
       }
 
-      window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage, data.summary?.totalValue || 0);
+      const totalValue = data.summary?.totalValue ?? data.totalValue ?? 0;
+      window.AppUiTable.setDocuments(data.documents || [], data.total || 0, safePage, totalValue);
       if (window.btnDownloadZip) btnDownloadZip.disabled = !(data.documents && data.documents.length > 0);
       if (!quiet) {
         const unitLabel = unitFilterParams.partyCnpj ? ` para ${unitFilter?.selectedOptions?.[0]?.dataset?.name || unitFilterParams.partyCnpj}` : '';
@@ -575,31 +576,42 @@ window.AppSyncController = {
       if (dashStatXmls) dashStatXmls.innerText = window.AppUtils.formatInteger(totalXmls);
 
       dashboardCitiesGrid.innerHTML = '';
+      const esc = window.AppUtils.escapeHtml;
+      const frag = document.createDocumentFragment();
       citiesList.forEach(city => {
         const card = document.createElement('div');
         card.className = `city-card ${city.active ? 'active' : ''}`;
         const cityName = this.cleanFilenameToCityName(city.filename);
+        const safeName = esc(cityName);
+        const safeCnpj = esc(window.AppUtils.formatCnpj(city.cnpj));
+        const safeLast = esc(city.lastUpdate || 'N/A');
+        const safeXmls = esc(window.AppUtils.formatInteger(city.totalXmls));
 
         card.innerHTML = `
           <div class="city-card-header">
             <div>
-              <h3 class="city-card-title">${cityName}</h3>
-              <span class="city-card-cnpj">${window.AppUtils.formatCnpj(city.cnpj)}</span>
+              <h3 class="city-card-title">${safeName}</h3>
+              <span class="city-card-cnpj">${safeCnpj}</span>
             </div>
             ${city.active ? '<span class="city-card-active-badge">Ativo</span>' : ''}
           </div>
           <div class="city-card-stats">
             <div class="city-card-stat-item">
               <span class="city-card-stat-label">Total XMLs</span>
-              <span class="city-card-stat-value success">${window.AppUtils.formatInteger(city.totalXmls)}</span>
+              <span class="city-card-stat-value success">${safeXmls}</span>
             </div>
-            <span class="city-card-date" title="Última nota emitida em ${city.lastUpdate}">Última: ${city.lastUpdate}</span>
+            <span class="city-card-date" title="Última nota emitida em ${safeLast}">Última: ${safeLast}</span>
           </div>
         `;
 
         card.addEventListener('click', async () => {
           if (city.active) {
-            window.AppUi.switchTab(navDownload, viewDownloadContent, 'XMLs por Unidade', 'XMLs NFS-e persistidos por certificado e unidade');
+            window.AppUi.switchTab(
+              window.navDownload || document.getElementById('nav-download'),
+              window.viewDownloadContent || document.getElementById('view-download-content'),
+              'XMLs por Unidade',
+              'XMLs NFS-e persistidos por certificado e unidade'
+            );
             return;
           }
 
@@ -608,7 +620,12 @@ window.AppSyncController = {
             const res = await window.AppApi.selectCertificate(city.certificateId);
             if (res.success) {
               await window.AppSyncController.checkCertStatus();
-              window.AppUi.switchTab(navDownload, viewDownloadContent, 'XMLs por Unidade', 'XMLs NFS-e persistidos por certificado e unidade');
+              window.AppUi.switchTab(
+                window.navDownload || document.getElementById('nav-download'),
+                window.viewDownloadContent || document.getElementById('view-download-content'),
+                'XMLs por Unidade',
+                'XMLs NFS-e persistidos por certificado e unidade'
+              );
             } else {
               window.AppUi.log('Erro ao selecionar o certificado.', 'error');
             }
@@ -617,8 +634,9 @@ window.AppSyncController = {
           }
         });
 
-        dashboardCitiesGrid.appendChild(card);
+        frag.appendChild(card);
       });
+      dashboardCitiesGrid.appendChild(frag);
 
       if (dashboardLoader) dashboardLoader.style.display = 'none';
       dashboardCitiesGrid.style.display = 'grid';
@@ -631,15 +649,19 @@ window.AppSyncController = {
         }, 800);
       } else {
         dashboardCitiesGrid.innerHTML = `
-          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-top: 20px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 48px; height: 48px; color: var(--danger); margin-bottom: 16px;">
+          <div class="empty-state-card">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="empty-state-icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
-            <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Conexão com o Banco de Dados Indisponível</h3>
-            <p style="font-size: 13px; color: var(--text-secondary); max-width: 400px; margin-bottom: 20px;">O banco de dados do Supabase pode estar hibernando ou iniciando. Por favor, aguarde um momento ou clique abaixo.</p>
-            <button class="btn btn-primary" onclick="window.AppSyncController.loadDashboard(0)">Tentar Novamente</button>
+            <h3 class="empty-state-title">Conexão com o banco indisponível</h3>
+            <p class="empty-state-text">O Supabase pode estar hibernando ou iniciando. Aguarde um momento e tente de novo.</p>
+            <button type="button" class="btn btn-primary" id="btn-retry-dashboard">Tentar novamente</button>
           </div>
         `;
+        const retryBtn = document.getElementById('btn-retry-dashboard');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', () => window.AppSyncController.loadDashboard(0));
+        }
         if (window.dashStatCities) window.dashStatCities.innerText = '0';
         if (window.dashStatActive) window.dashStatActive.innerText = '0';
         if (window.dashStatXmls) window.dashStatXmls.innerText = '0';

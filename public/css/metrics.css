@@ -17,18 +17,33 @@
 .metric-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: var(--border-radius);
-  padding: 16px;
+  border-radius: 12px;
+  padding: 16px 18px;
   display: flex;
   align-items: center;
   gap: 14px;
-  transition: var(--transition);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   box-shadow: var(--shadow-sm);
   min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--secondary), transparent);
+  opacity: 0.55;
 }
 
 .metric-card:hover {
   border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .metric-card.click-card {

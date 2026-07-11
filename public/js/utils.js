@@ -67,11 +67,30 @@ window.AppUtils = {
   },
 
   applyTheme(theme) {
-    if (theme === 'dark') {
-      document.body.classList.remove('light-mode');
-    } else {
-      document.body.classList.add('light-mode');
+    const isDark = theme === 'dark';
+    document.body.classList.toggle('light-mode', !isDark);
+    document.documentElement.classList.toggle('theme-dark-boot', isDark);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', isDark ? '#09090b' : '#f8fafc');
+
+    const themeText = document.getElementById('theme-text') || window.themeText;
+    const sun = document.querySelector('.sun-icon') || window.sunIcon;
+    const moon = document.querySelector('.moon-icon') || window.moonIcon;
+    if (themeText) themeText.textContent = isDark ? 'Modo claro' : 'Modo escuro';
+    // No escuro mostra sol (ir para claro); no claro mostra lua (ir para escuro)
+    if (sun) sun.style.display = isDark ? '' : 'none';
+    if (moon) moon.style.display = isDark ? 'none' : '';
+  },
+
+  restoreTheme() {
+    let theme = 'light';
+    try {
+      theme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+    } catch (e) {
+      theme = 'light';
     }
+    this.applyTheme(theme);
+    return theme;
   },
 
   escapeHtml(value) {

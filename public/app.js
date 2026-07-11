@@ -76,13 +76,27 @@ async function loadAllComponents() {
 function showBootError(message) {
   const existing = document.getElementById('boot-error');
   if (existing) {
-    existing.textContent = message;
+    const p = existing.querySelector('p');
+    if (p) p.textContent = String(message || 'Erro desconhecido');
     return;
   }
   const box = document.createElement('div');
   box.id = 'boot-error';
-  box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0f19;color:#fff;font-family:system-ui,sans-serif;padding:24px;z-index:9999;text-align:center;';
-  box.innerHTML = `<div><h2 style="margin:0 0 12px;">Falha ao iniciar</h2><p style="opacity:.85;max-width:420px;">${String(message || 'Erro desconhecido')}</p><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:0;border-radius:8px;background:#3b82f6;color:#fff;cursor:pointer;">Recarregar</button></div>`;
+  box.className = 'boot-error-overlay';
+  const panel = document.createElement('div');
+  const h2 = document.createElement('h2');
+  h2.textContent = 'Falha ao iniciar';
+  const p = document.createElement('p');
+  p.textContent = String(message || 'Erro desconhecido');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-primary';
+  btn.textContent = 'Recarregar';
+  btn.addEventListener('click', () => location.reload());
+  panel.appendChild(h2);
+  panel.appendChild(p);
+  panel.appendChild(btn);
+  box.appendChild(panel);
   document.body.appendChild(box);
 }
 
@@ -215,9 +229,13 @@ async function initializeAuthenticatedApp() {
 async function bootstrap() {
   const t0 = performance.now();
   try {
+    // Tema antes dos paineis (evita flash)
+    if (window.AppUtils?.restoreTheme) window.AppUtils.restoreTheme();
+
     // 1) Painels do bundle (sincrono, instantaneo)
     await loadAllComponents();
     window.AppUi.initElements();
+    if (window.AppUtils?.restoreTheme) window.AppUtils.restoreTheme();
 
     try {
       window.AppEvents.bindEvents();

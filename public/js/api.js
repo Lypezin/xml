@@ -164,25 +164,40 @@ window.AppApi = {
     return data.user;
   },
 
+  async _jsonOrThrow(res, fallbackError) {
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (e) {
+      data = {};
+    }
+    if (!res.ok) {
+      throw new Error(data.error || fallbackError || `HTTP ${res.status}`);
+    }
+    return data;
+  },
+
   async fetchCertStatus() {
     const cache = window.AppDataCache;
     if (!cache) {
-      return (await fetch('/api/certificate-status')).json();
+      const res = await fetch('/api/certificate-status');
+      return this._jsonOrThrow(res, 'Falha ao carregar certificado.');
     }
     return cache.getOrFetch('cert-status', 30000, async () => {
       const res = await fetch('/api/certificate-status');
-      return res.json();
+      return this._jsonOrThrow(res, 'Falha ao carregar certificado.');
     });
   },
 
   async fetchDashboardSummary() {
     const cache = window.AppDataCache;
     if (!cache) {
-      return (await fetch('/api/dashboard-summary')).json();
+      const res = await fetch('/api/dashboard-summary');
+      return this._jsonOrThrow(res, 'Falha ao carregar dashboard.');
     }
     return cache.getOrFetch('dashboard-summary', 45000, async () => {
       const res = await fetch('/api/dashboard-summary');
-      return res.json();
+      return this._jsonOrThrow(res, 'Falha ao carregar dashboard.');
     });
   },
 

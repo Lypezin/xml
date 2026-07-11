@@ -25,3 +25,7 @@ npm-debug.log*
 *.log
 .vercel
 .env*
+
+# PDFs DANFSe locais
+DANFSe_*.pdf
+

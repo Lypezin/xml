@@ -212,6 +212,8 @@ window.AppUi = {
     if (activeNav) activeNav.classList.add('active');
     if (activeContent) {
       activeContent.style.display = 'block';
+      // Forca reflow para animacao de entrada
+      void activeContent.offsetWidth;
       activeContent.classList.add('active-tab', 'active');
     }
     const titleEl = window.pageTitle || document.getElementById('page-title');

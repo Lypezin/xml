@@ -26,7 +26,21 @@ if (!IS_VERCEL) {
 }
 
 // Middlewares
-app.use(express.json());
+app.disable('x-powered-by');
+app.use(express.json({ limit: '2mb' }));
+
+// Headers de segurança basicos (sem CSP estrito para nao quebrar assets/inline legados)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  if (IS_VERCEL || req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
+  next();
+});
 
 // Rota de configuração pública do Supabase
 app.get('/api/auth-config', (req, res) => {
