@@ -1,5 +1,5 @@
 /* Service Worker — cache apenas CSS/JS estáticos (sem API/HTML) */
-const CACHE = 'nfse-static-v6';
+const CACHE = 'nfse-static-v7';
 const PRECACHE = [
   '/css/variables.css',
   '/css/buttons.css',
@@ -20,6 +20,8 @@ const PRECACHE = [
   '/css/ops-screen.css',
   '/css/dashboard-premium.css',
   '/css/toast.css',
+  '/css/rules-screen.css',
+  '/css/mobile-shell.css',
   '/js/toast.js',
   '/css/responsive-a.css',
   '/css/responsive-b.css',

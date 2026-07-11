@@ -1,68 +1,121 @@
-<div id="view-regras-content" class="tab-content" style="display: none;">
-  <section class="rules-hero card">
-    <div>
-      <span class="eyebrow">NFS-e Nacional</span>
-      <h2>Regras operacionais para distribuição de XMLs</h2>
+<div id="view-regras-content" class="tab-content rules-screen" style="display: none;">
+  <section class="rules-hero">
+    <div class="rules-hero-copy">
+      <span class="eyebrow">Sistema</span>
+      <h2>Regras operacionais ADN</h2>
+      <p>Boas práticas para distribuição de NFS-e, consumo da API e operação segura no dia a dia.</p>
     </div>
     <div class="rules-source">
-      <strong>Fontes consultadas</strong>
-      <span>Portal Gov.br NFS-e - Documentação Atual</span>
-      <span>Manual de API ADN para Contribuintes</span>
-      <span>Manual de API ADN para Municípios</span>
+      <div class="rules-source-label">Fontes oficiais</div>
+      <ul>
+        <li>Portal Gov.br NFS-e — documentação atual</li>
+        <li>Manual de API ADN para Contribuintes</li>
+        <li>Manual de API ADN para Municípios</li>
+      </ul>
     </div>
   </section>
 
-  <section class="rules-grid rules-dashboard-grid">
-    <article class="rule-card">
-      <span class="rule-index">01</span>
+  <div class="rules-section-label">Princípios da distribuição</div>
+  <section class="rules-bento">
+    <article class="rule-card rule-card--wide">
+      <div class="rule-card-top">
+        <span class="rule-index">01</span>
+        <span class="rule-tag">Core</span>
+      </div>
       <h3>Consulta por NSU</h3>
-      <p>A distribuição é feita a partir de um Número Sequencial Unico. O sistema deve guardar o último NSU recebido e continuar do próximo ponto, sem recomeçar toda a varredura sem necessidade.</p>
+      <p>A distribuição usa Número Sequencial Único. Guarde o último NSU recebido e continue do próximo ponto — não recomece a varredura sem necessidade.</p>
     </article>
     <article class="rule-card">
-      <span class="rule-index">02</span>
+      <div class="rule-card-top">
+        <span class="rule-index">02</span>
+      </div>
       <h3>Lote máximo</h3>
-      <p>A documentação do ADN descreve retorno em lotes de até 50 documentos fiscais por chamada. A tela usa paginação menor para visualização, mas a varredura respeita a dinâmica de lotes da API.</p>
+      <p>Até 50 documentos por chamada na ADN. A UI pagina 10 itens; a varredura respeita os lotes da API.</p>
     </article>
     <article class="rule-card">
-      <span class="rule-index">03</span>
+      <div class="rule-card-top">
+        <span class="rule-index">03</span>
+      </div>
       <h3>Ordem dos documentos</h3>
-      <p>O NSU segue a disponibilização no ambiente nacional. Ele não deve ser tratado como ordenação perfeita por data de emissao; eventos e notas podem aparecer conforme recepção pelo ADN.</p>
+      <p>NSU segue a disponibilização nacional — não é ordenação perfeita por data de emissão.</p>
     </article>
     <article class="rule-card">
-      <span class="rule-index">04</span>
+      <div class="rule-card-top">
+        <span class="rule-index">04</span>
+      </div>
       <h3>Atores autorizados</h3>
-      <p>As APIs de contribuinte permitem consulta de documentos em que o CNPJ figure como emitente/prestador, tomador ou intermediario, conforme autorizacao do certificado usado na conexao.</p>
+      <p>Prestador, tomador ou intermediário conforme o certificado mTLS da conexão.</p>
     </article>
     <article class="rule-card">
-      <span class="rule-index">05</span>
+      <div class="rule-card-top">
+        <span class="rule-index">05</span>
+      </div>
       <h3>NFS-e e eventos</h3>
-      <p>Eventos vinculados, como cancelamento, fazem parte do ciclo de vida da NFS-e e podem aparecer na distribuição. A lista consolida a nota principal quando há documento e evento relacionados.</p>
+      <p>Cancelamentos e eventos fazem parte do ciclo. A lista consolida a nota principal quando há vínculo.</p>
     </article>
     <article class="rule-card">
-      <span class="rule-index">06</span>
+      <div class="rule-card-top">
+        <span class="rule-index">06</span>
+        <span class="rule-tag rule-tag--warn">Segurança</span>
+      </div>
       <h3>Certificado digital</h3>
-      <p>A chamada usa mTLS com certificado ICP-Brasil A1 em arquivo PFX/P12. O certificado define a identidade fiscal e limita quais documentos podem ser acessados pela conexão.</p>
+      <p>mTLS com A1 (PFX/P12) ICP-Brasil. O certificado define identidade e o recorte acessível.</p>
     </article>
     <article class="rule-card">
-      <span class="rule-index">07</span>
+      <div class="rule-card-top">
+        <span class="rule-index">07</span>
+        <span class="rule-tag rule-tag--danger">Risco</span>
+      </div>
       <h3>Consumo indevido</h3>
-      <p>Consultas repetidas, muito rápidas ou insistentes após fim de fila podem gerar rejeição/bloqueio temporário. Use a pausa por lote e evite reiniciar varreduras completas sem necessidade.</p>
+      <p>Consultas rápidas demais ou após fim de fila podem bloquear o CNPJ. Use pausa de 2s entre lotes.</p>
     </article>
     <article class="rule-card">
-      <span class="rule-index">08</span>
-      <h3>Persistência local</h3>
-      <p>A visualização de XMLs é feita a partir do banco de dados, com limit/offset. Isso permite navegar milhares de registros por unidade sem carregar todo o histórico no navegador.</p>
+      <div class="rule-card-top">
+        <span class="rule-index">08</span>
+      </div>
+      <h3>Persistência</h3>
+      <p>A tabela lê o banco com limit/offset — milhares de XMLs sem carregar tudo no browser.</p>
     </article>
   </section>
 
-  <section class="card rules-flow-card">
-    <div class="card-header"><h2>Fluxo recomendado de operação</h2></div>
-    <div class="rules-flow">
-      <div><strong>1. Cadastre o certificado</strong><span>Valide senha, CNPJ e validade antes de iniciar.</span></div>
-      <div><strong>2. Selecione a unidade</strong><span>Use o CNPJ da unidade desejada para filtrar a base persistida.</span></div>
-      <div><strong>3. Use último recebido</strong><span>Retome do NSU salvo para evitar chamadas redundantes.</span></div>
-      <div><strong>4. Execute com pausa fixa</strong><span>O sistema aguarda 2 segundos entre lotes para reduzir pressão na API.</span></div>
-      <div><strong>5. Navegue pela lista</strong><span>A tabela carrega 10 XMLs por páginas diretamente do banco de dados.</span></div>
-    </div>
+  <div class="rules-section-label">Fluxo recomendado</div>
+  <section class="rules-flow-card">
+    <ol class="rules-flow-steps">
+      <li>
+        <span class="rules-step-num">1</span>
+        <div>
+          <strong>Cadastre o certificado</strong>
+          <span>Valide senha, CNPJ e validade antes de iniciar.</span>
+        </div>
+      </li>
+      <li>
+        <span class="rules-step-num">2</span>
+        <div>
+          <strong>Selecione a unidade</strong>
+          <span>Filtre a base pelo CNPJ da unidade desejada.</span>
+        </div>
+      </li>
+      <li>
+        <span class="rules-step-num">3</span>
+        <div>
+          <strong>Use o último NSU</strong>
+          <span>Retome do NSU salvo para evitar chamadas redundantes.</span>
+        </div>
+      </li>
+      <li>
+        <span class="rules-step-num">4</span>
+        <div>
+          <strong>Execute com pausa</strong>
+          <span>2 segundos entre lotes reduz pressão na API nacional.</span>
+        </div>
+      </li>
+      <li>
+        <span class="rules-step-num">5</span>
+        <div>
+          <strong>Navegue a lista</strong>
+          <span>10 XMLs por página, direto do banco de dados.</span>
+        </div>
+      </li>
+    </ol>
   </section>
 </div>

@@ -1,0 +1,150 @@
+/* Mobile shell — drawer sidebar + hamburger */
+
+.btn-sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-sidebar-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(2px);
+}
+
+.navbar-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  .btn-sidebar-toggle {
+    display: inline-flex;
+    margin-top: 2px;
+  }
+
+  .app-layout {
+    position: relative;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(300px, 86vw);
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-105%);
+    transition: transform 0.22s var(--ease-out);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-layout.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    pointer-events: none;
+  }
+
+  .app-layout.sidebar-open .sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  body.sidebar-open-lock {
+    overflow: hidden;
+  }
+
+  .main-content {
+    padding: 10px 14px 24px;
+    width: 100%;
+  }
+
+  .navbar {
+    padding-top: 8px;
+    gap: 10px;
+  }
+
+  .navbar-actions {
+    gap: 8px;
+  }
+
+  .user-menu-meta {
+    display: none;
+  }
+
+  .cert-chip {
+    max-width: min(180px, 40vw);
+    padding: 7px 10px;
+  }
+
+  .navbar-title h1 {
+    font-size: 1.15rem;
+  }
+
+  .navbar-title p:not(.navbar-eyebrow) {
+    font-size: 12px;
+  }
+
+  /* Tabela em stack já existe; reforça ações */
+  .data-table-card .xml-action-cell {
+    flex-direction: row;
+    justify-content: stretch;
+  }
+
+  .data-table-card .xml-action-cell .btn {
+    flex: 1;
+    width: auto;
+  }
+
+  .ops-strip-actions .btn {
+    min-width: 0;
+  }
+
+  .app-footer {
+    font-size: 11px;
+    padding-bottom: 8px;
+  }
+}
+
+@media (max-width: 520px) {
+  .cert-chip-text {
+    max-width: 110px;
+  }
+
+  .user-menu {
+    padding: 4px;
+  }
+
+  .user-menu .btn {
+    min-height: 34px;
+    padding: 6px 10px;
+  }
+}

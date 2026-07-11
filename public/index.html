@@ -39,6 +39,8 @@
   <link rel="stylesheet" href="css/ops-screen.css">
   <link rel="stylesheet" href="css/dashboard-premium.css">
   <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="css/rules-screen.css">
+  <link rel="stylesheet" href="css/mobile-shell.css">
   <link rel="stylesheet" href="css/responsive-a.css">
   <link rel="stylesheet" href="css/responsive-b.css">
   <link rel="stylesheet" href="css/motion.css">
@@ -49,14 +51,24 @@
   <div id="auth-screen-container"></div>
 
   <div class="app-layout" id="app-layout" style="display: none;">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
     <div id="sidebar-container"></div>
 
     <main class="main-content">
       <header class="navbar">
-        <div class="navbar-title">
-          <p class="navbar-eyebrow" id="page-breadcrumb">NFS-e Ops</p>
-          <h1 id="page-title"></h1>
-          <p id="page-subtitle">Gestão de XMLs NFS-e Nacional por unidade</p>
+        <div class="navbar-left">
+          <button type="button" class="btn-sidebar-toggle" id="btn-sidebar-toggle" aria-label="Abrir menu" aria-controls="sidebar-container" aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="4" y1="7" x2="20" y2="7"></line>
+              <line x1="4" y1="12" x2="20" y2="12"></line>
+              <line x1="4" y1="17" x2="20" y2="17"></line>
+            </svg>
+          </button>
+          <div class="navbar-title">
+            <p class="navbar-eyebrow" id="page-breadcrumb">NFS-e Ops</p>
+            <h1 id="page-title"></h1>
+            <p id="page-subtitle">Gestão de XMLs NFS-e Nacional por unidade</p>
+          </div>
         </div>
 
         <div class="navbar-actions">

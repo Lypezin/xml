@@ -4,6 +4,8 @@ window.AppUiElements = {
   initElements() {
     window.authScreen = document.getElementById('auth-screen');
     window.appLayout = document.getElementById('app-layout');
+    window.btnSidebarToggle = document.getElementById('btn-sidebar-toggle');
+    window.sidebarBackdrop = document.getElementById('sidebar-backdrop');
     window.authForm = document.getElementById('auth-form');
     window.authEmail = document.getElementById('auth-email');
     window.authPassword = document.getElementById('auth-password');
