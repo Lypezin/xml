@@ -57,14 +57,20 @@ window.AppUi = {
   },
 
   showAuthenticatedApp(user) {
-    if (authScreen) authScreen.style.display = 'none';
-    if (appLayout) appLayout.style.display = 'flex';
-    if (authUserEmail) authUserEmail.textContent = user?.email || 'Sessão ativa';
+    const screen = window.authScreen || document.getElementById('auth-screen');
+    const layout = window.appLayout || document.getElementById('app-layout');
+    const emailEl = window.authUserEmail || document.getElementById('auth-user-email');
+    if (screen) screen.style.display = 'none';
+    if (layout) layout.style.display = 'flex';
+    if (emailEl) emailEl.textContent = user?.email || 'Sessão ativa';
   },
 
   showLogin() {
-    if (appLayout) appLayout.style.display = 'none';
-    if (authScreen) authScreen.style.display = 'grid';
+    const screen = window.authScreen || document.getElementById('auth-screen');
+    const layout = window.appLayout || document.getElementById('app-layout');
+    if (layout) layout.style.display = 'none';
+    // auth-screen.html vem com display:none inline — forca grid
+    if (screen) screen.style.setProperty('display', 'grid', 'important');
   },
 
   renderCertificateSelector() {
@@ -179,12 +185,26 @@ window.AppUi = {
     // Cache agressivo: 2 min para dados de aba
     const cacheTtlMs = 120000;
 
-    [navDashboard, navDownload, navCertificado, navRegras].forEach(nav => {
+    // Re-resolve referencias (pos-injecao de HTML)
+    const navs = [
+      window.navDashboard || document.getElementById('nav-dashboard'),
+      window.navDownload || document.getElementById('nav-download'),
+      window.navCertificado || document.getElementById('nav-certificado'),
+      window.navRegras || document.getElementById('nav-regras')
+    ];
+    const contents = [
+      window.viewDashboardContent || document.getElementById('view-dashboard-content'),
+      window.viewDownloadContent || document.getElementById('view-download-content'),
+      window.viewCertificadoContent || document.getElementById('view-certificado-content'),
+      window.viewRegrasContent || document.getElementById('view-regras-content')
+    ];
+
+    navs.forEach(nav => {
       if (nav) nav.classList.remove('active');
     });
-    [viewDashboardContent, viewDownloadContent, viewCertificadoContent, viewRegrasContent].forEach(content => {
+    contents.forEach(content => {
       if (content) {
-        content.classList.remove('active-tab');
+        content.classList.remove('active-tab', 'active');
         content.style.display = 'none';
       }
     });
@@ -192,15 +212,17 @@ window.AppUi = {
     if (activeNav) activeNav.classList.add('active');
     if (activeContent) {
       activeContent.style.display = 'block';
-      void activeContent.offsetHeight;
-      activeContent.classList.add('active-tab');
+      activeContent.classList.add('active-tab', 'active');
     }
-    if (pageTitle) pageTitle.innerText = title;
-    if (pageSubtitle) pageSubtitle.innerText = subtitle;
+    const titleEl = window.pageTitle || document.getElementById('page-title');
+    const subtitleEl = window.pageSubtitle || document.getElementById('page-subtitle');
+    if (titleEl) titleEl.innerText = title;
+    if (subtitleEl) subtitleEl.innerText = subtitle;
 
     window._tabCache = window._tabCache || {};
+    const activeId = activeContent?.id || '';
 
-    if (activeContent === viewDashboardContent && window.AppSyncController?.loadDashboard) {
+    if (activeId === 'view-dashboard-content' && window.AppSyncController?.loadDashboard) {
       const lastDash = window._tabCache.dashboardAt || 0;
       if (forceRefresh || !lastDash || now - lastDash > cacheTtlMs) {
         window._tabCache.dashboardAt = now;
@@ -208,7 +230,7 @@ window.AppUi = {
       }
     }
 
-    if (activeContent === viewDownloadContent && window.AppSyncController) {
+    if (activeId === 'view-download-content' && window.AppSyncController) {
       const lastSync = window._tabCache.syncAt || 0;
       const lastNsu = window._tabCache.nsuAt || 0;
       const lastStorage = window._tabCache.storageAt || 0;

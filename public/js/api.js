@@ -93,9 +93,18 @@ window.AppApi = {
   },
 
   async loadAuthConfig() {
-    const res = await originalFetch('/api/auth-config');
-    window.authConfig = await res.json();
-    return window.authConfig;
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 10000) : null;
+    try {
+      const res = await originalFetch('/api/auth-config', {
+        signal: controller ? controller.signal : undefined,
+        cache: 'no-cache'
+      });
+      window.authConfig = await res.json();
+      return window.authConfig;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   },
 
   async validateAuthSession(session) {
@@ -104,22 +113,36 @@ window.AppApi = {
     }
 
     window.authSession = session;
-    const fetchUser = accessToken => originalFetch(`${window.authConfig.supabaseUrl}/auth/v1/user`, {
-      headers: {
-        apikey: window.authConfig.publishableKey,
-        Authorization: `Bearer ${accessToken}`
+    const fetchUser = async (accessToken) => {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
+      try {
+        return await originalFetch(`${window.authConfig.supabaseUrl}/auth/v1/user`, {
+          headers: {
+            apikey: window.authConfig.publishableKey,
+            Authorization: `Bearer ${accessToken}`
+          },
+          signal: controller ? controller.signal : undefined
+        });
+      } finally {
+        if (timer) clearTimeout(timer);
       }
-    });
+    };
 
-    let res = await fetchUser(session.access_token);
-    if (!res.ok) {
-      const refreshedSession = await this.refreshAuthSession(session);
-      if (!refreshedSession?.access_token) return null;
-      res = await fetchUser(refreshedSession.access_token);
+    try {
+      let res = await fetchUser(session.access_token);
+      if (!res.ok) {
+        const refreshedSession = await this.refreshAuthSession(session);
+        if (!refreshedSession?.access_token) return null;
+        res = await fetchUser(refreshedSession.access_token);
+      }
+
+      if (!res.ok) return null;
+      return res.json();
+    } catch (err) {
+      console.warn('validateAuthSession falhou:', err.message);
+      return null;
     }
-
-    if (!res.ok) return null;
-    return res.json();
   },
 
   async loginWithPassword(email, password) {

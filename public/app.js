@@ -21,6 +21,29 @@ window.crawlerVisited = new Set();
 window.isCrawlerActive = false;
 window.currentCrawlerCnpj = '';
 
+function withTimeout(promise, ms, label = 'operacao') {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Timeout em ${label} (${ms}ms)`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function fetchText(path, timeoutMs = 12000) {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const res = await fetch(path, {
+      cache: 'no-cache',
+      signal: controller ? controller.signal : undefined
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} em ${path}`);
+    return await res.text();
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function loadAllComponents() {
   const components = [
     { id: 'auth-screen-container', path: 'components/auth-screen.html' },
@@ -31,16 +54,15 @@ async function loadAllComponents() {
     { id: 'view-regras-container', path: 'components/rules-panel.html' }
   ];
 
-  // Todos em paralelo (mais rapido que cascata), mas so binda DEPOIS
   const results = await Promise.all(components.map(async (component) => {
     const el = document.getElementById(component.id);
     if (!el) return null;
     try {
-      const res = await fetch(component.path, { cache: 'force-cache' });
-      if (!res.ok) throw new Error(`HTTP ${res.status} em ${component.path}`);
-      return { el, html: await res.text() };
+      const html = await fetchText(component.path);
+      return { el, html };
     } catch (err) {
       console.error('Falha ao carregar componente:', component.path, err);
+      el.innerHTML = `<div style="padding:16px;color:#b91c1c;">Falha ao carregar ${component.path}</div>`;
       return null;
     }
   }));
@@ -50,8 +72,27 @@ async function loadAllComponents() {
   });
 }
 
+function showBootError(message) {
+  const existing = document.getElementById('boot-error');
+  if (existing) {
+    existing.textContent = message;
+    return;
+  }
+  const box = document.createElement('div');
+  box.id = 'boot-error';
+  box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0f19;color:#fff;font-family:system-ui,sans-serif;padding:24px;z-index:9999;text-align:center;';
+  box.innerHTML = `<div><h2 style="margin:0 0 12px;">Falha ao iniciar</h2><p style="opacity:.85;max-width:420px;">${String(message || 'Erro desconhecido')}</p><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:0;border-radius:8px;background:#3b82f6;color:#fff;cursor:pointer;">Recarregar</button></div>`;
+  document.body.appendChild(box);
+}
+
 async function initializeAuthenticatedApp() {
-  await window.AppApi.loadAuthConfig();
+  try {
+    await withTimeout(window.AppApi.loadAuthConfig(), 10000, 'auth-config');
+  } catch (err) {
+    console.error(err);
+    // Sem config de auth: tenta abrir app local
+    window.authConfig = window.authConfig || { authRequired: false };
+  }
 
   const updateEnvBadge = () => {
     const selectEnv = window.selectEnvironment;
@@ -67,17 +108,30 @@ async function initializeAuthenticatedApp() {
   };
 
   const bootData = () => {
-    window.AppSyncController.checkCertStatus();
-    if (window.loadSchedulerSettings) window.loadSchedulerSettings();
-    window.AppUi.updateProgress(0, 0);
-    updateEnvBadge();
-    if (window.navDashboard && window.viewDashboardContent) {
-      window.AppUi.switchTab(
-        window.navDashboard,
-        window.viewDashboardContent,
-        'Dashboard',
-        'Resumo de cidades e total de XMLs persistidos'
-      );
+    try {
+      if (window.AppSyncController?.checkCertStatus) {
+        window.AppSyncController.checkCertStatus().catch(err => console.warn('checkCertStatus:', err));
+      }
+      if (window.loadSchedulerSettings) {
+        Promise.resolve(window.loadSchedulerSettings()).catch(err => console.warn('scheduler:', err));
+      }
+      if (window.AppUi?.updateProgress) window.AppUi.updateProgress(0, 0);
+      updateEnvBadge();
+
+      // Garante dashboard visivel
+      const dash = window.viewDashboardContent || document.getElementById('view-dashboard-content');
+      const nav = window.navDashboard || document.getElementById('nav-dashboard');
+      if (dash) {
+        dash.style.display = 'block';
+        dash.classList.add('active-tab', 'active');
+      }
+      if (nav && dash && window.AppUi?.switchTab) {
+        window.AppUi.switchTab(nav, dash, 'Dashboard', 'Resumo de cidades e total de XMLs persistidos');
+      } else if (window.AppSyncController?.loadDashboard) {
+        window.AppSyncController.loadDashboard();
+      }
+    } catch (err) {
+      console.error('bootData:', err);
     }
   };
 
@@ -88,26 +142,72 @@ async function initializeAuthenticatedApp() {
     return;
   }
 
+  // Auth obrigatoria: valida sessao com timeout para nao travar a tela em branco
   const storedSession = window.AppUtils.loadStoredAuthSession();
-  const user = await window.AppApi.validateAuthSession(storedSession);
+  let user = null;
+  try {
+    user = await withTimeout(
+      window.AppApi.validateAuthSession(storedSession),
+      8000,
+      'validate-session'
+    );
+  } catch (err) {
+    console.warn('Sessao nao validada a tempo:', err.message);
+    user = null;
+  }
+
   if (!user) {
     window.AppUtils.clearAuthSession();
-    window.AppUi.showLogin();
+    if (window.AppUi?.showLogin) {
+      window.AppUi.showLogin();
+    } else {
+      if (window.appLayout) window.appLayout.style.display = 'none';
+      if (window.authScreen) window.authScreen.style.display = 'grid';
+    }
     return;
   }
 
-  window.AppUi.showAuthenticatedApp(user);
+  if (window.AppUi?.showAuthenticatedApp) {
+    window.AppUi.showAuthenticatedApp(user);
+  } else {
+    if (window.authScreen) window.authScreen.style.display = 'none';
+    if (window.appLayout) window.appLayout.style.display = 'flex';
+  }
   bootData();
 }
 
 async function bootstrap() {
-  // 1) Carrega TODOS os HTMLs em paralelo
-  await loadAllComponents();
-  // 2) So entao mapeia DOM e binda eventos (elementos ja existem)
-  window.AppUi.initElements();
-  window.AppEvents.bindEvents();
-  // 3) Auth + dados
-  await initializeAuthenticatedApp();
+  try {
+    await loadAllComponents();
+    window.AppUi.initElements();
+
+    try {
+      window.AppEvents.bindEvents();
+    } catch (err) {
+      console.error('bindEvents falhou (continuando boot):', err);
+    }
+
+    await initializeAuthenticatedApp();
+
+    // Safety: se apos boot nada ficou visivel, mostra login ou app
+    const authVisible = window.authScreen && window.authScreen.style.display !== 'none' && window.authScreen.offsetParent !== null;
+    const appVisible = window.appLayout && window.appLayout.style.display !== 'none';
+    if (!authVisible && !appVisible) {
+      if (window.authConfig?.authRequired) {
+        window.AppUi.showLogin();
+      } else if (window.appLayout) {
+        window.appLayout.style.display = 'flex';
+      }
+    }
+  } catch (err) {
+    console.error('bootstrap fatal:', err);
+    showBootError(err.message || String(err));
+  }
 }
 
-window.addEventListener('DOMContentLoaded', bootstrap);
+// defer scripts: se DOM ja estiver pronto, inicia na hora
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', bootstrap);
+} else {
+  bootstrap();
+}

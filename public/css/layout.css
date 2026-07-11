@@ -423,14 +423,13 @@ h1, h2, h3, h4, h5, h6,
   margin-bottom: 12px;
 }
 
-/* Tab fade-in & slide-up animations */
+/* Tab fade-in: so anima quando ativa — nunca deixa tela invisivel no boot */
 #view-dashboard-content,
 #view-download-content,
 #view-certificado-content,
 #view-regras-content {
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: none;
 }
 
 #view-dashboard-content.active-tab,
@@ -438,5 +437,17 @@ h1, h2, h3, h4, h5, h6,
 #view-certificado-content.active-tab,
 #view-regras-content.active-tab {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
+  animation: tab-in 0.18s ease-out;
+}
+
+@keyframes tab-in {
+  from {
+    opacity: 0.6;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
