@@ -40,7 +40,9 @@ create index if not exists api_health_samples_created_idx
 
 alter table xml_nfse.api_health_samples enable row level security;
 
--- Upsert certificado com valid_until (mantém assinatura antiga + overload)
+-- Upsert certificado com valid_until (única assinatura — evita PGRST203)
+drop function if exists public.xml_nfse_upsert_certificate(text, text, text, text, boolean);
+
 create or replace function public.xml_nfse_upsert_certificate(
   p_secret text,
   p_certificate_id text,

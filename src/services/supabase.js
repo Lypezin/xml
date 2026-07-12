@@ -26,22 +26,15 @@ function useRemoteCertificateStorage() {
 
 async function syncSupabaseCertificate(cert, active = true) {
   if (!cert) return null;
-  const payload = {
+  // Sempre envia p_valid_until (null se desconhecido) — evita PGRST203
+  // com overloads da função no PostgREST.
+  return supabaseRpc('xml_nfse_upsert_certificate', {
     p_certificate_id: cert.id,
     p_filename: cert.originalName || cert.filename || 'certificado.pfx',
     p_cnpj: cert.cnpj || '',
-    p_active: Boolean(active)
-  };
-  if (cert.validUntil) {
-    payload.p_valid_until = cert.validUntil;
-  }
-  try {
-    return await supabaseRpc('xml_nfse_upsert_certificate', payload);
-  } catch (err) {
-    // Compat com assinatura antiga (sem valid_until)
-    delete payload.p_valid_until;
-    return supabaseRpc('xml_nfse_upsert_certificate', payload);
-  }
+    p_active: Boolean(active),
+    p_valid_until: cert.validUntil || null
+  });
 }
 
 async function syncSupabaseState({ certificateId, environment, cnpjConsulta, lastNsu, maxNsuSeen, status, nextAllowedAt = null, lastError = null }) {

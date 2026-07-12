@@ -434,7 +434,8 @@ create or replace function public.xml_nfse_upsert_certificate(
   p_certificate_id text,
   p_filename text,
   p_cnpj text,
-  p_active boolean default true
+  p_active boolean default true,
+  p_valid_until timestamptz default null
 )
 returns jsonb
 language plpgsql
@@ -448,12 +449,19 @@ begin
     update xml_nfse.certificates set active = false where active = true;
   end if;
 
-  insert into xml_nfse.certificates (id, filename, cnpj, active)
-  values (p_certificate_id, p_filename, nullif(p_cnpj, ''), coalesce(p_active, false))
+  insert into xml_nfse.certificates (id, filename, cnpj, active, valid_until)
+  values (
+    p_certificate_id,
+    p_filename,
+    nullif(p_cnpj, ''),
+    coalesce(p_active, false),
+    p_valid_until
+  )
   on conflict (id) do update
   set filename = excluded.filename,
       cnpj = excluded.cnpj,
       active = excluded.active,
+      valid_until = coalesce(excluded.valid_until, xml_nfse.certificates.valid_until),
       updated_at = now();
 
   return jsonb_build_object('success', true, 'certificate_id', p_certificate_id);
@@ -1324,7 +1332,7 @@ begin
 end;
 $$;
 
-grant execute on function public.xml_nfse_upsert_certificate(text, text, text, text, boolean) to anon, authenticated;
+grant execute on function public.xml_nfse_upsert_certificate(text, text, text, text, boolean, timestamptz) to anon, authenticated;
 grant execute on function public.xml_nfse_get_setting(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_set_setting(text, text, jsonb) to anon, authenticated;
 grant execute on function public.xml_nfse_upsert_certificate_secret(text, text, text, text, boolean, text, text, text, text, text, text) to anon, authenticated;
