@@ -61,10 +61,13 @@ const HEAVY_RPCS = new Set([
   'xml_nfse_storage_summary',
   'xml_nfse_get_xml_payloads_by_tokens',
   'xml_nfse_list_xml_payloads',
-  'xml_nfse_list_sync_runs'
+  'xml_nfse_list_sync_runs',
+  'xml_nfse_list_audit_events'
 ]);
 
 function getRpcTimeout(functionName) {
+  // Analytics em bases grandes (300k+) precisa de mais fôlego
+  if (functionName === 'xml_nfse_get_dashboard_analytics') return 90000;
   if (HEAVY_RPCS.has(functionName)) return 30000;
   return 12000;
 }

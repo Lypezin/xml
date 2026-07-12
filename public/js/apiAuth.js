@@ -172,7 +172,7 @@ window.AppApi = Object.assign(window.AppApi || {}, {
       data = {};
     }
     if (!res.ok) {
-      throw new Error(data.error || fallbackError || `HTTP ${res.status}`);
+      throw new Error(data.error || data.warning || fallbackError || `HTTP ${res.status}`);
     }
     return data;
   },

@@ -115,17 +115,31 @@ window.AppInsights = {
     }
   },
 
+  setAnalyticsStatus(message, isError = false) {
+    const el = document.getElementById('analytics-status');
+    if (!el) return;
+    el.textContent = message || '';
+    el.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+    el.style.display = message ? 'block' : 'none';
+  },
+
   async loadAnalytics() {
     const chart = document.getElementById('analytics-monthly-chart');
     const rankP = document.getElementById('ranking-prestador');
     const rankT = document.getElementById('ranking-tomador');
     if (chart) chart.innerHTML = '<div class="helper-text">Carregando indicadores…</div>';
+    this.setAnalyticsStatus('Carregando indicadores…');
 
     try {
       const data = await window.AppApi.fetchDashboardAnalytics({ months: 12 });
-      if (data.warning) {
-        console.warn('[analytics]', data.warning);
+      if (!data.success && data.error) {
+        this.setAnalyticsStatus(data.warning || data.error, true);
+      } else if (data.warning) {
+        this.setAnalyticsStatus(data.warning, true);
+      } else {
+        this.setAnalyticsStatus('');
       }
+
       const a = data.analytics || {};
       const mom = a.comparisons?.monthOverMonth || {};
       const yoy = a.comparisons?.yearOverYear || {};
@@ -138,9 +152,11 @@ window.AppInsights = {
 
       if (momEl) momEl.textContent = this.formatMoney(mom.current);
       if (yoyEl) yoyEl.textContent = this.formatMoney(yoy.current);
-      if (canc) canc.textContent = window.AppUtils?.formatInteger
-        ? window.AppUtils.formatInteger(a.totals?.cancelled || 0)
-        : String(a.totals?.cancelled || 0);
+      if (canc) {
+        canc.textContent = window.AppUtils?.formatInteger
+          ? window.AppUtils.formatInteger(a.totals?.cancelled || 0)
+          : String(a.totals?.cancelled || 0);
+      }
 
       const dMom = this.formatDelta(mom.deltaPct);
       const dYoy = this.formatDelta(yoy.deltaPct);
@@ -158,7 +174,10 @@ window.AppInsights = {
       this.renderRanking('ranking-tomador', a.rankingTomador || []);
     } catch (err) {
       console.error('[analytics]', err);
-      if (chart) chart.innerHTML = `<div class="helper-text">Não foi possível carregar os gráficos${err.message ? ': ' + window.AppUtils.escapeHtml(err.message) : ''}.</div>`;
+      this.setAnalyticsStatus(err.message || 'Falha ao carregar indicadores', true);
+      if (chart) {
+        chart.innerHTML = `<div class="helper-text">Não foi possível carregar os gráficos${err.message ? ': ' + window.AppUtils.escapeHtml(err.message) : ''}.</div>`;
+      }
       if (rankP) rankP.innerHTML = '<div class="helper-text">—</div>';
       if (rankT) rankT.innerHTML = '<div class="helper-text">—</div>';
     }
@@ -207,11 +226,12 @@ window.AppInsights = {
   async loadAuditLog() {
     const list = document.getElementById('audit-list');
     if (!list) return;
+    list.innerHTML = '<div class="helper-text">Carregando auditoria…</div>';
     try {
       const data = await window.AppApi.fetchAuditLog({ limit: 40 });
       const events = data.events || [];
       if (!events.length) {
-        list.innerHTML = `<div class="helper-text">${data.warning || 'Nenhum download/export registrado ainda.'}</div>`;
+        list.innerHTML = `<div class="helper-text">${window.AppUtils.escapeHtml(data.warning || 'Nenhum download/export registrado ainda. Baixe um XML/Excel/ZIP para gerar eventos.')}</div>`;
         return;
       }
       const esc = window.AppUtils.escapeHtml;
@@ -233,7 +253,7 @@ window.AppInsights = {
         `;
       }).join('');
     } catch (err) {
-      list.innerHTML = '<div class="helper-text">Auditoria indisponível.</div>';
+      list.innerHTML = `<div class="helper-text">Auditoria indisponível${err.message ? ': ' + window.AppUtils.escapeHtml(err.message) : ''}.</div>`;
     }
   },
 
