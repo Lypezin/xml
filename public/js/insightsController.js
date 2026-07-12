@@ -212,20 +212,61 @@ window.AppInsights = {
       el.innerHTML = '<div class="helper-text">Sem dados mensais ainda. Aplique a migração SQL e sincronize notas.</div>';
       return;
     }
-    const max = Math.max(...monthly.map(m => Number(m.count || 0)), 1);
-    el.innerHTML = monthly.map(m => {
-      const count = Number(m.count || 0);
-      const cancelled = Number(m.cancelled || 0);
-      const h = Math.max(6, Math.round((count / max) * 140));
-      const label = String(m.month || '').slice(5) || m.month;
-      const title = `${m.month}: ${count} notas (${cancelled} canceladas) · ${this.formatMoney(m.value)}`;
+    const esc = window.AppUtils.escapeHtml;
+    const values = monthly.map(m => Math.max(0, Number(m.value || 0)));
+    const maxCount = Math.max(...monthly.map(m => Number(m.count || 0)), 1);
+    const maxValue = Math.max(...values, 1);
+    const monthFmt = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
+    const compactFmt = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
+    const points = monthly.map((m, i) => {
+      const x = monthly.length === 1 ? 50 : (i / (monthly.length - 1)) * 100;
+      const y = 94 - (Math.max(0, Number(m.value || 0)) / maxValue) * 80;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    }).join(' ');
+
+    const columns = monthly.map(m => {
+      const count = Math.max(0, Number(m.count || 0));
+      const cancelled = Math.min(count, Math.max(0, Number(m.cancelled || 0)));
+      const active = Math.max(0, count - cancelled);
+      const h = Math.max(4, Math.round((count / maxCount) * 148));
+      const cancelledH = count ? Math.round((cancelled / count) * h) : 0;
+      const activeH = Math.max(0, h - cancelledH);
+      const rawMonth = String(m.month || '');
+      const parsed = /^\d{4}-\d{2}$/.test(rawMonth) ? new Date(`${rawMonth}-01T12:00:00`) : null;
+      const label = parsed && !Number.isNaN(parsed.getTime())
+        ? monthFmt.format(parsed).replace('.', '')
+        : rawMonth.slice(5) || rawMonth;
+      const title = `${rawMonth}: ${count} notas (${cancelled} canceladas) | ${this.formatMoney(m.value)}`;
       return `
-        <div class="chart-bar-col" title="${window.AppUtils.escapeHtml(title)}">
-          <div class="chart-bar ${cancelled > 0 ? 'cancelled-part' : ''}" style="height:${h}px"></div>
-          <span class="chart-bar-label">${window.AppUtils.escapeHtml(label)}</span>
+        <div class="chart-bar-col" title="${esc(title)}" tabindex="0" aria-label="${esc(title)}">
+          <span class="chart-bar-value">${esc(compactFmt.format(count))}</span>
+          <div class="chart-bar-stack" style="height:${h}px">
+            <div class="chart-bar active-part" style="height:${activeH}px"></div>
+            ${cancelledH ? `<div class="chart-bar cancelled-part" style="height:${Math.max(3, cancelledH)}px"></div>` : ''}
+          </div>
+          <span class="chart-bar-label">${esc(label)}</span>
         </div>
       `;
     }).join('');
+
+    el.innerHTML = `
+      <div class="chart-summary">
+        <span>Pico de volume <strong>${esc(compactFmt.format(maxCount))} notas</strong></span>
+        <span>Pico financeiro <strong>${esc(this.formatMoney(maxValue))}</strong></span>
+      </div>
+      <div class="chart-plot">
+        <div class="chart-grid-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <svg class="chart-value-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <polyline points="${points}" vector-effect="non-scaling-stroke"></polyline>
+          ${monthly.map((m, i) => {
+            const x = monthly.length === 1 ? 50 : (i / (monthly.length - 1)) * 100;
+            const y = 94 - (Math.max(0, Number(m.value || 0)) / maxValue) * 80;
+            return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="1.3" vector-effect="non-scaling-stroke"></circle>`;
+          }).join('')}
+        </svg>
+        <div class="chart-columns">${columns}</div>
+      </div>
+    `;
   },
 
   renderRanking(elementId, rows) {
@@ -236,13 +277,27 @@ window.AppInsights = {
       return;
     }
     const esc = window.AppUtils.escapeHtml;
-    el.innerHTML = rows.slice(0, 8).map((r, i) => `
-      <div class="ranking-item">
-        <span class="rank-num">${i + 1}</span>
-        <span class="rank-name" title="${esc(r.name || '')}">${esc(r.name || '—')}</span>
-        <span class="rank-value">${esc(this.formatMoney(r.value))}</span>
-      </div>
-    `).join('');
+    const visible = rows.slice(0, 8);
+    const maxValue = Math.max(...visible.map(r => Number(r.value || 0)), 1);
+    const totalValue = visible.reduce((sum, r) => sum + Math.max(0, Number(r.value || 0)), 0);
+    el.innerHTML = visible.map((r, i) => {
+      const value = Math.max(0, Number(r.value || 0));
+      const width = Math.max(3, (value / maxValue) * 100);
+      const share = totalValue ? (value / totalValue) * 100 : 0;
+      return `
+        <div class="ranking-item">
+          <span class="rank-num">${i + 1}</span>
+          <div class="rank-content">
+            <div class="rank-row">
+              <span class="rank-name" title="${esc(r.name || '')}">${esc(r.name || '—')}</span>
+              <span class="rank-value">${esc(this.formatMoney(value))}</span>
+            </div>
+            <div class="rank-track" aria-hidden="true"><span style="width:${width.toFixed(1)}%"></span></div>
+          </div>
+          <span class="rank-share">${share.toFixed(1)}%</span>
+        </div>
+      `;
+    }).join('');
   },
 
   async loadAuditLog() {

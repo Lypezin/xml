@@ -53,8 +53,11 @@
 
   <!-- Indicadores por último (após as unidades) -->
   <div class="dashboard-analytics" id="dashboard-analytics">
-    <div class="dashboard-section-label" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <span>Indicadores</span>
+    <div class="dashboard-section-label analytics-section-heading">
+      <div>
+        <span>Indicadores</span>
+        <small>Desempenho financeiro e volume dos últimos 12 meses</small>
+      </div>
       <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-analytics">Atualizar indicadores</button>
     </div>
     <p class="helper-text analytics-status" id="analytics-status" style="display:none;margin:0 0 8px;"></p>
@@ -83,6 +86,11 @@
             <span class="eyebrow">Volume</span>
             <h2>Notas e valor por mês</h2>
           </div>
+        </div>
+        <div class="chart-legend" aria-label="Legenda do gráfico">
+          <span><i class="legend-dot notes"></i>Notas</span>
+          <span><i class="legend-dot cancelled"></i>Canceladas</span>
+          <span><i class="legend-line"></i>Valor</span>
         </div>
         <div class="chart-bars" id="analytics-monthly-chart"></div>
       </div>

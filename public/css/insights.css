@@ -171,6 +171,26 @@
   margin: 8px 0 4px;
 }
 
+.analytics-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.analytics-section-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.analytics-section-heading small {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+}
+
 .analytics-compare-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -187,6 +207,17 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.compare-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--brand);
+  opacity: 0.75;
 }
 
 .compare-card strong {
@@ -207,7 +238,7 @@
 
 .analytics-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.85fr) minmax(0, 0.85fr);
+  grid-template-columns: minmax(420px, 1.45fr) minmax(260px, 0.8fr) minmax(260px, 0.8fr);
   gap: 12px;
 }
 
@@ -221,11 +252,109 @@
 }
 
 .chart-bars {
+  min-height: 220px;
+  margin-top: 8px;
+}
+
+.chart-summary {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+
+.chart-summary strong {
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+.chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--brand);
+}
+
+.legend-dot.cancelled { background: var(--danger); }
+
+.legend-line {
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--warning-hover);
+}
+
+.chart-plot {
+  position: relative;
+  height: 190px;
+  padding-top: 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.chart-grid-lines {
+  position: absolute;
+  inset: 12px 0 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.chart-grid-lines i {
+  width: 100%;
+  border-top: 1px dashed color-mix(in srgb, var(--card-border) 75%, transparent);
+}
+
+.chart-columns {
+  position: absolute;
+  inset: 12px 0 0;
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  min-height: 160px;
-  padding-top: 8px;
+  gap: 5px;
+  z-index: 2;
+}
+
+.chart-value-line {
+  position: absolute;
+  inset: 12px 2.1% 20px;
+  width: 95.8%;
+  height: calc(100% - 32px);
+  overflow: visible;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.chart-value-line polyline {
+  fill: none;
+  stroke: var(--warning-hover);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-value-line circle {
+  fill: var(--card-bg);
+  stroke: var(--warning-hover);
+  stroke-width: 1.5;
 }
 
 .chart-bar-col {
@@ -234,20 +363,45 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  height: 100%;
+  justify-content: flex-end;
+  outline: none;
+}
+
+.chart-bar-col:focus .chart-bar-stack,
+.chart-bar-col:hover .chart-bar-stack {
+  filter: brightness(1.14);
+  transform: translateY(-2px);
+}
+
+.chart-bar-value {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-bar-stack {
+  width: min(26px, 72%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 4px 4px 2px 2px;
+  overflow: hidden;
+  transition: transform 0.18s ease, filter 0.18s ease;
 }
 
 .chart-bar {
   width: 100%;
-  max-width: 28px;
-  border-radius: 6px 6px 2px 2px;
-  background: linear-gradient(180deg, var(--brand), color-mix(in srgb, var(--brand) 55%, transparent));
-  min-height: 4px;
-  transition: height 0.2s ease;
+  background: var(--brand);
 }
 
 .chart-bar.cancelled-part {
-  background: color-mix(in srgb, var(--danger) 70%, var(--brand));
+  background: var(--danger);
+}
+
+.chart-bar.active-part {
+  border-radius: 4px 4px 0 0;
 }
 
 .chart-bar-label {
@@ -267,16 +421,27 @@
 
 .ranking-item {
   display: grid;
-  grid-template-columns: 22px 1fr auto;
+  grid-template-columns: 22px minmax(0, 1fr) 38px;
   gap: 8px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11.5px;
+  padding: 2px 0;
 }
 
 .ranking-item .rank-num {
   font-weight: 700;
   color: var(--brand);
   font-variant-numeric: tabular-nums;
+}
+
+.rank-content { min-width: 0; }
+
+.rank-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
 }
 
 .ranking-item .rank-name {
@@ -290,6 +455,28 @@
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  font-size: 10.5px;
+}
+
+.rank-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.rank-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+.rank-share {
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .audit-list {
@@ -443,6 +630,16 @@
   }
 }
 
+@media (max-width: 1280px) and (min-width: 1101px) {
+  .analytics-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+  }
+
+  .analytics-grid .analytics-card:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 720px) {
   .api-health-metrics {
     grid-template-columns: 1fr 1fr;
@@ -451,4 +648,15 @@
   .doc-field-grid {
     grid-template-columns: 1fr;
   }
+
+  .analytics-section-heading,
+  .analytics-card .panel-heading,
+  .chart-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chart-legend { justify-content: flex-start; }
+
+  .chart-bar-value { display: none; }
 }
