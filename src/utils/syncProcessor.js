@@ -16,6 +16,7 @@ const { getCertificateBuffer } = require('./cert');
 const {
   syncSupabaseState,
   finishSupabaseRun,
+  updateSupabaseRun,
   syncSupabaseDocument
 } = require('../services/supabase');
 const { processBatchDocuments } = require('../services/documentProcessor');
@@ -40,7 +41,15 @@ function dedupeProcessedDocuments(docs) {
   return Array.from(byNsu.values());
 }
 
-async function executeSyncBatch({ selectedCertificate, requestEnvironment, requestStartNsu, requestCnpjConsulta, sortOrder, supabaseRunId }) {
+async function executeSyncBatch({
+  selectedCertificate,
+  requestEnvironment,
+  requestStartNsu,
+  requestCnpjConsulta,
+  sortOrder,
+  supabaseRunId,
+  closeRun = true
+}) {
   const pfxBuffer = getCertificateBuffer(selectedCertificate);
   if (!pfxBuffer) {
     throw new Error('Arquivo ou variável do certificado não encontrada.');
@@ -241,13 +250,28 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     status: ultNSU >= maxNSU ? 'completed' : 'running'
   });
 
-  await finishSupabaseRun({
-    runId: supabaseRunId,
-    status: 'completed',
-    endNsu: ultNSU,
-    maxNsuSeen: maxNSU,
-    documentsFound: processedDocs.length
-  });
+  // Sessão de varredura (UI): atualiza a run aberta sem fechar.
+  // Lote isolado (scheduler/legado): fecha a run ao fim do batch.
+  if (supabaseRunId) {
+    if (closeRun) {
+      await finishSupabaseRun({
+        runId: supabaseRunId,
+        status: 'completed',
+        endNsu: ultNSU,
+        maxNsuSeen: maxNSU,
+        documentsFound: processedDocs.length
+      });
+    } else {
+      await updateSupabaseRun({
+        runId: supabaseRunId,
+        endNsu: ultNSU,
+        maxNsuSeen: maxNSU,
+        documentsDelta: newDocuments,
+        status: 'running',
+        errorMessage: null
+      });
+    }
+  }
 
   return {
     ultNSU,
@@ -260,7 +284,8 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
     canceladasNovas: cancelStats.canceladasNovas || 0,
     eventosCancelamento: cancelStats.eventosCancelamento || 0,
     documentos: processedDocs,
-    insertedKeys
+    insertedKeys,
+    runId: supabaseRunId || null
   };
 }
 

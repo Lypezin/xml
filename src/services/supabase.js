@@ -66,6 +66,31 @@ async function startSupabaseRun({ certificateId, environment, cnpjConsulta, star
   });
 }
 
+async function updateSupabaseRun({
+  runId,
+  endNsu = null,
+  maxNsuSeen = null,
+  documentsDelta = 0,
+  status = 'running',
+  errorMessage = null
+}) {
+  if (!runId) return null;
+  try {
+    return await supabaseRpc('xml_nfse_update_run', {
+      p_run_id: runId,
+      p_end_nsu: endNsu === null ? null : Number(endNsu),
+      p_max_nsu_seen: maxNsuSeen === null ? null : Number(maxNsuSeen),
+      p_documents_delta: Number(documentsDelta || 0),
+      p_status: status || 'running',
+      p_error_message: errorMessage
+    });
+  } catch (err) {
+    // Compat se a RPC nova ainda não existir
+    console.warn('[updateSupabaseRun]', err.message);
+    return null;
+  }
+}
+
 async function finishSupabaseRun({ runId, status, endNsu = null, maxNsuSeen = null, documentsFound = 0, errorMessage = null }) {
   if (!runId) return null;
   return supabaseRpc('xml_nfse_finish_run', {
@@ -191,6 +216,7 @@ module.exports = {
   syncSupabaseCertificate,
   syncSupabaseState,
   startSupabaseRun,
+  updateSupabaseRun,
   finishSupabaseRun,
   syncSupabaseDocument,
   markSupabaseDocumentCancelledByChave,

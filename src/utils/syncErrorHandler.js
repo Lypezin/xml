@@ -1,7 +1,16 @@
 const { formatNationalApiRejection } = require('../services/nfse');
-const { syncSupabaseState, finishSupabaseRun } = require('../services/supabase');
+const { syncSupabaseState, finishSupabaseRun, updateSupabaseRun } = require('../services/supabase');
 
-async function handleSyncError({ e, res, selectedCertificate, requestEnvironment, requestStartNsu, requestCnpjConsulta, supabaseRunId }) {
+async function handleSyncError({
+  e,
+  res,
+  selectedCertificate,
+  requestEnvironment,
+  requestStartNsu,
+  requestCnpjConsulta,
+  supabaseRunId,
+  closeRun = true
+}) {
   if (e.response && e.response.status === 404) {
     const data = e.response.data;
     if (data && (data.StatusProcessamento === 'NENHUM_DOCUMENTO_LOCALIZADO' || 
@@ -56,15 +65,27 @@ async function handleSyncError({ e, res, selectedCertificate, requestEnvironment
 
   if (selectedCertificate) {
     if (isTransientError) {
-      // Finaliza a run para nao ficar "running" eternamente; nao regride last_nsu
-      await finishSupabaseRun({
-        runId: supabaseRunId,
-        status: 'error',
-        endNsu: requestStartNsu,
-        maxNsuSeen: requestStartNsu,
-        documentsFound: 0,
-        errorMessage: errorMsg
-      });
+      // Em sessão de UI (closeRun=false) mantém a run aberta para retomada automática.
+      // Em lote isolado, fecha a run com erro.
+      if (closeRun) {
+        await finishSupabaseRun({
+          runId: supabaseRunId,
+          status: 'error',
+          endNsu: requestStartNsu,
+          maxNsuSeen: requestStartNsu,
+          documentsFound: 0,
+          errorMessage: errorMsg
+        });
+      } else {
+        await updateSupabaseRun({
+          runId: supabaseRunId,
+          endNsu: requestStartNsu,
+          maxNsuSeen: requestStartNsu,
+          documentsDelta: 0,
+          status: 'running',
+          errorMessage: errorMsg
+        });
+      }
     } else {
       const nextAllowedAt = /429|656|Consumo Indevido/i.test(errorMsg)
         ? new Date(Date.now() + 60 * 60 * 1000).toISOString()

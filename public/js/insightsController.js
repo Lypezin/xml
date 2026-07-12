@@ -61,25 +61,52 @@ window.AppInsights = {
       });
       const runs = data.runs || [];
       if (!runs.length) {
-        list.innerHTML = `<div class="helper-text">${data.warning || 'Nenhuma varredura registrada ainda.'}</div>`;
+        list.innerHTML = `<div class="helper-text">${data.warning || 'Nenhuma varredura registrada ainda. Inicie uma sincronização para ver o histórico.'}</div>`;
         return;
       }
       const esc = window.AppUtils.escapeHtml;
+      const statusLabel = {
+        completed: 'Concluída',
+        running: 'Em andamento',
+        paused: 'Pausada',
+        error: 'Erro',
+        success: 'Concluída'
+      };
+      const formatDur = (secs) => {
+        const s = Number(secs || 0);
+        if (!Number.isFinite(s) || s < 0) return '—';
+        if (s < 60) return `${s}s`;
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        if (m < 60) return `${m}m ${r}s`;
+        const h = Math.floor(m / 60);
+        return `${h}h ${m % 60}m`;
+      };
       list.innerHTML = runs.map(run => {
         const status = String(run.status || 'running');
         const start = run.started_at || run.startedAt;
-        const when = start ? new Date(start).toLocaleString('pt-BR') : '—';
-        const dur = run.duration_seconds != null
-          ? `${run.duration_seconds}s`
-          : '—';
-        const nsuRange = `NSU ${run.start_nsu ?? 0} → ${run.end_nsu ?? run.max_nsu_seen ?? '…'}`;
-        const docs = run.documents_found != null ? `${run.documents_found} doc(s)` : '';
-        const err = run.error_message ? ` · ${run.error_message}` : '';
+        const end = run.finished_at || run.finishedAt;
+        const startTxt = start ? new Date(start).toLocaleString('pt-BR') : '—';
+        const endTxt = end
+          ? new Date(end).toLocaleString('pt-BR')
+          : (status === 'running' ? 'em andamento…' : '—');
+        const dur = formatDur(run.duration_seconds);
+        const nsuStart = run.start_nsu ?? 0;
+        const nsuEnd = run.end_nsu ?? run.max_nsu_seen ?? '…';
+        const docs = run.documents_found != null ? Number(run.documents_found) : 0;
+        const err = run.error_message
+          ? `<div class="run-meta run-error">Erro: ${esc(run.error_message)}</div>`
+          : '';
         return `
           <article class="sync-run-item">
-            <strong>${esc(when)}</strong>
-            <span class="sync-run-status ${esc(status)}">${esc(status)}</span>
-            <div class="run-meta">${esc(nsuRange)} · ${esc(docs)} · duração ${esc(dur)}${esc(err)}</div>
+            <strong>Sessão de varredura</strong>
+            <span class="sync-run-status ${esc(status)}">${esc(statusLabel[status] || status)}</span>
+            <div class="run-meta">
+              <div><strong>Início:</strong> ${esc(startTxt)}</div>
+              <div><strong>Fim:</strong> ${esc(endTxt)}</div>
+              <div><strong>Duração:</strong> ${esc(dur)} · <strong>NSU:</strong> ${esc(String(nsuStart))} → ${esc(String(nsuEnd))} · <strong>Novos:</strong> ${esc(String(docs))}</div>
+            </div>
+            ${err}
           </article>
         `;
       }).join('');
@@ -89,8 +116,16 @@ window.AppInsights = {
   },
 
   async loadAnalytics() {
+    const chart = document.getElementById('analytics-monthly-chart');
+    const rankP = document.getElementById('ranking-prestador');
+    const rankT = document.getElementById('ranking-tomador');
+    if (chart) chart.innerHTML = '<div class="helper-text">Carregando indicadores…</div>';
+
     try {
       const data = await window.AppApi.fetchDashboardAnalytics({ months: 12 });
+      if (data.warning) {
+        console.warn('[analytics]', data.warning);
+      }
       const a = data.analytics || {};
       const mom = a.comparisons?.monthOverMonth || {};
       const yoy = a.comparisons?.yearOverYear || {};
@@ -103,7 +138,9 @@ window.AppInsights = {
 
       if (momEl) momEl.textContent = this.formatMoney(mom.current);
       if (yoyEl) yoyEl.textContent = this.formatMoney(yoy.current);
-      if (canc) canc.textContent = String(a.totals?.cancelled || 0);
+      if (canc) canc.textContent = window.AppUtils?.formatInteger
+        ? window.AppUtils.formatInteger(a.totals?.cancelled || 0)
+        : String(a.totals?.cancelled || 0);
 
       const dMom = this.formatDelta(mom.deltaPct);
       const dYoy = this.formatDelta(yoy.deltaPct);
@@ -120,7 +157,10 @@ window.AppInsights = {
       this.renderRanking('ranking-prestador', a.rankingPrestador || []);
       this.renderRanking('ranking-tomador', a.rankingTomador || []);
     } catch (err) {
-      // silencioso
+      console.error('[analytics]', err);
+      if (chart) chart.innerHTML = `<div class="helper-text">Não foi possível carregar os gráficos${err.message ? ': ' + window.AppUtils.escapeHtml(err.message) : ''}.</div>`;
+      if (rankP) rankP.innerHTML = '<div class="helper-text">—</div>';
+      if (rankT) rankT.innerHTML = '<div class="helper-text">—</div>';
     }
   },
 

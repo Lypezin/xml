@@ -9,7 +9,7 @@ async runQueryLoop(runId = window.activeQueryRunId) {
 
     if (!certId) {
       window.AppUi.log('Selecione um certificado.', 'error');
-      this.stopQuerying();
+      this.stopQuerying({ finishStatus: 'error', errorMessage: 'Sem certificado' });
       return;
     }
 
@@ -21,7 +21,9 @@ async runQueryLoop(runId = window.activeQueryRunId) {
         environment: env,
         cnpjConsulta: cnpj,
         certificateId: certId,
-        sortOrder: selectSearchMode ? selectSearchMode.value : 'asc'
+        sortOrder: selectSearchMode ? selectSearchMode.value : 'asc',
+        sessionRunId: window.sessionRunId || null,
+        closeRun: false
       });
 
       if (!this.isActiveQueryRun(runId)) return;
@@ -38,10 +40,12 @@ async runQueryLoop(runId = window.activeQueryRunId) {
         } else {
           window.AppUi.log('Consulta interrompida: ' + data.error, 'error');
         }
-        this.stopQuerying();
+        this.stopQuerying({ finishStatus: 'error', errorMessage: data.error });
         return;
       }
 
+      if (data.runId && !window.sessionRunId) window.sessionRunId = data.runId;
+      window.sessionRunDocs = Number(window.sessionRunDocs || 0) + Number(data.novos || 0);
       window.transientRetryCount = 0;
 
       const {
@@ -137,7 +141,7 @@ async runQueryLoop(runId = window.activeQueryRunId) {
           await this.loadPersistedHistory(1);
         }
         this.loadStorageSummary();
-        this.stopQuerying();
+        this.stopQuerying({ finishStatus: 'completed' });
         window.AppInsights?.refreshOpsInsights?.();
         return;
       }
@@ -165,7 +169,7 @@ async runQueryLoop(runId = window.activeQueryRunId) {
         return;
       }
       window.AppUi.log(`Erro crítico: ${err.message}`, 'error');
-      this.stopQuerying();
+      this.stopQuerying({ finishStatus: 'error', errorMessage: err.message });
     }
   }
 });

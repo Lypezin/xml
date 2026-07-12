@@ -1,7 +1,7 @@
 // Sync, docs, units API
 Object.assign(window.AppApi = window.AppApi || {}, {
 }, {
-async fetchBatch({ startNsu, environment, cnpjConsulta, certificateId, sortOrder }) {
+async fetchBatch({ startNsu, environment, cnpjConsulta, certificateId, sortOrder, sessionRunId = null, closeRun = false }) {
     const res = await fetch('/api/fetch-batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -10,8 +10,28 @@ async fetchBatch({ startNsu, environment, cnpjConsulta, certificateId, sortOrder
         environment,
         cnpjConsulta,
         certificateId,
-        sortOrder
+        sortOrder,
+        sessionRunId,
+        closeRun
       })
+    });
+    return res.json();
+  },
+
+  async startSyncRun(payload) {
+    const res = await fetch('/api/sync-run/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {})
+    });
+    return res.json();
+  },
+
+  async finishSyncRun(payload) {
+    const res = await fetch('/api/sync-run/finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {})
     });
     return res.json();
   },

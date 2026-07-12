@@ -99,7 +99,21 @@
 .sync-run-item .run-meta {
   color: var(--text-secondary);
   grid-column: 1 / -1;
-  line-height: 1.4;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sync-run-item .run-meta strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sync-run-item .run-error {
+  color: var(--danger);
+  margin-top: 2px;
 }
 
 .sync-run-status {

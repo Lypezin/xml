@@ -484,3 +484,36 @@ end;
 $$;
 
 grant execute on function public.xml_nfse_get_dashboard_analytics(text, text, integer) to anon, authenticated;
+
+-- Atualiza run aberta (sessão de varredura) sem fechar
+create or replace function public.xml_nfse_update_run(
+  p_secret text,
+  p_run_id uuid,
+  p_end_nsu bigint default null,
+  p_max_nsu_seen bigint default null,
+  p_documents_delta integer default 0,
+  p_status text default 'running',
+  p_error_message text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = xml_nfse, public, extensions
+as $$
+begin
+  perform xml_nfse.assert_app_secret(p_secret);
+
+  update xml_nfse.sync_runs
+  set end_nsu = coalesce(p_end_nsu, end_nsu),
+      max_nsu_seen = greatest(coalesce(max_nsu_seen, 0), coalesce(p_max_nsu_seen, 0)),
+      documents_found = documents_found + coalesce(p_documents_delta, 0),
+      status = coalesce(p_status, status),
+      error_message = p_error_message
+  where id = p_run_id
+    and finished_at is null;
+
+  return jsonb_build_object('success', found);
+end;
+$$;
+
+grant execute on function public.xml_nfse_update_run(text, uuid, bigint, bigint, integer, text, text) to anon, authenticated;

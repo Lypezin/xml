@@ -11,6 +11,52 @@ window.AppSyncController = Object.assign(window.AppSyncController || {}, {
     return window.activeQueryRunId;
   },
 
+  async openSessionRun(startNsu) {
+    try {
+      const unitFilterParams = this.getSelectedUnitFilter?.() || {};
+      const data = await window.AppApi.startSyncRun({
+        certificateId: window.selectCertificate?.value || window.activeCertificateId,
+        environment: window.selectEnvironment?.value || 'producao',
+        cnpjConsulta: unitFilterParams.partyCnpj || window.inputCnpjConsulta?.value || '',
+        startNsu: Number(startNsu || 0)
+      });
+      if (data.success && data.runId) {
+        window.sessionRunId = data.runId;
+        window.sessionRunStartNsu = Number(startNsu || 0);
+        window.sessionRunDocs = 0;
+        window.sessionRunStartedAt = Date.now();
+        return data.runId;
+      }
+    } catch (err) {
+      window.AppUi?.log?.(`Não foi possível abrir a run de sessão: ${err.message}`, 'warning');
+    }
+    window.sessionRunId = null;
+    return null;
+  },
+
+  async closeSessionRun({ status = 'completed', errorMessage = null } = {}) {
+    const runId = window.sessionRunId;
+    if (!runId) return;
+    try {
+      await window.AppApi.finishSyncRun({
+        runId,
+        status,
+        endNsu: Number(window.currentNsu || window.sessionRunStartNsu || 0),
+        maxNsuSeen: Number(window.maxNsu || window.currentNsu || 0),
+        documentsFound: Number(window.sessionRunDocs || 0),
+        errorMessage
+      });
+    } catch (err) {
+      console.warn('[closeSessionRun]', err);
+    } finally {
+      window.sessionRunId = null;
+      window.sessionRunDocs = 0;
+      window.sessionRunStartNsu = null;
+      window.sessionRunStartedAt = null;
+      window.AppInsights?.loadSyncRuns?.();
+    }
+  },
+
   isActiveQueryRun(runId) {
     return window.isQuerying && !window.isPaused && runId === window.activeQueryRunId;
   },
@@ -28,8 +74,7 @@ window.AppSyncController = Object.assign(window.AppSyncController || {}, {
     if (retryCount > maxRetries) {
       window.AppUi.log('Limite de tentativas temporárias atingido. Consulta pausada para evitar insistir na API.', 'error');
       window.AppToast?.error?.('Varredura pausada após falhas de rede');
-      this.stopQuerying();
-      this.loadSyncRuns?.();
+      this.stopQuerying({ finishStatus: 'error', errorMessage: errorMessage || 'Limite de retries' });
       return;
     }
 
@@ -114,7 +159,12 @@ async discoverAndStart(runId = window.activeQueryRunId) {
     }
   },
 
-  stopQuerying() {
+  stopQuerying(options = {}) {
+    const {
+      finishStatus = 'paused',
+      errorMessage = null,
+      skipFinish = false
+    } = options;
     window.activeQueryRunId = (window.activeQueryRunId || 0) + 1;
     if (window.queryLoopTimer) {
       clearTimeout(window.queryLoopTimer);
@@ -122,8 +172,15 @@ async discoverAndStart(runId = window.activeQueryRunId) {
     }
     window.isQuerying = false;
     window.isPaused = false;
+    window._retryMeta = null;
+    this.renderRetryStatus?.();
     window.AppUi.setBtnStartActive(false, false);
-    btnPause.disabled = true;
+    if (typeof btnPause !== 'undefined' && btnPause) btnPause.disabled = true;
     if (window.btnResetNsu) window.btnResetNsu.disabled = false;
+
+    // Fecha a run de ponta a ponta (se ainda aberta)
+    if (!skipFinish && window.sessionRunId) {
+      this.closeSessionRun({ status: finishStatus, errorMessage });
+    }
   }
 });

@@ -15,6 +15,8 @@ if (btnStart) {
       if (window.btnResetNsu) window.btnResetNsu.disabled = false;
       window.AppUi.log('Sincronização pausada pelo usuário.', 'warning');
       window.isQuerying = false;
+      // Fecha a run de ponta a ponta como "pausada"
+      window.AppSyncController.closeSessionRun?.({ status: 'paused' });
     } else {
       const wasPaused = window.isPaused;
       window.isQuerying = true;
@@ -55,12 +57,20 @@ if (btnStart) {
           }
         }
 
+        // Abre UMA run para toda a sessão (início → fim)
+        await window.AppSyncController.openSessionRun(window.currentNsu || 0);
+        window.AppUi.log('Run de varredura aberta. O histórico registrará do início ao fim desta sessão.');
+
         if (mode === 'desc' && window.currentNsu === 0) {
           window.AppUi.log(`Descobrindo NSU mais recente na Receita Federal para busca reversa...`);
           window.AppSyncController.discoverAndStart(runId);
           return;
         }
       } else if (!isOverridden) {
+        // Retomada: reabre run se a anterior foi fechada na pausa
+        if (!window.sessionRunId) {
+          await window.AppSyncController.openSessionRun(window.currentNsu || 0);
+        }
         window.AppUi.log(`Retomando busca a partir do NSU ${window.currentNsu}...`);
       }
 
@@ -82,6 +92,7 @@ if (btnPause) {
     if (window.btnResetNsu) window.btnResetNsu.disabled = false;
     window.AppUi.log('Sincronização pausada pelo usuário.', 'warning');
     window.isQuerying = false;
+    window.AppSyncController.closeSessionRun?.({ status: 'paused' });
   });
 }
 

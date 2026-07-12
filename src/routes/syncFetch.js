@@ -36,14 +36,28 @@ const router = express.Router();
 let fetchBatchInFlight = false;
 
 router.post('/fetch-batch', async (req, res) => {
-  const { startNsu, environment, cnpjConsulta, certificateId, sortOrder = 'asc' } = req.body;
+  const {
+    startNsu,
+    environment,
+    cnpjConsulta,
+    certificateId,
+    sortOrder = 'asc',
+    sessionRunId = null,
+    closeRun
+  } = req.body;
   const requestEnvironment = normalizeEnvironment(environment);
   const parsedStart = startNsu !== undefined ? parseInt(startNsu, 10) : 0;
   const requestStartNsu = Number.isFinite(parsedStart) ? parsedStart : 0;
   let requestCnpjConsulta = cnpjConsulta || '';
 
+  // Sessão de UI: closeRun=false (run aberta do início ao fim).
+  // Scheduler/legado: closeRun=true por padrão.
+  const shouldCloseRun = closeRun === undefined
+    ? !sessionRunId
+    : Boolean(closeRun);
+
   let selectedCertificate = null;
-  let supabaseRunId = null;
+  let supabaseRunId = sessionRunId || null;
 
   if (fetchBatchInFlight) {
     return res.status(409).json({
@@ -88,13 +102,16 @@ router.post('/fetch-batch', async (req, res) => {
 
     await syncSupabaseCertificate(selectedCertificate, true);
 
-    const runResult = await startSupabaseRun({
-      certificateId: selectedCertificate.id,
-      environment: requestEnvironment,
-      cnpjConsulta: requestCnpjConsulta,
-      startNsu: requestStartNsu
-    });
-    supabaseRunId = runResult ? (runResult.run_id || runResult) : null;
+    // Só cria nova run se não houver sessão aberta (scheduler / lote único)
+    if (!supabaseRunId) {
+      const runResult = await startSupabaseRun({
+        certificateId: selectedCertificate.id,
+        environment: requestEnvironment,
+        cnpjConsulta: requestCnpjConsulta,
+        startNsu: requestStartNsu
+      });
+      supabaseRunId = runResult ? (runResult.run_id || runResult) : null;
+    }
 
     const result = await executeSyncBatch({
       selectedCertificate,
@@ -102,10 +119,11 @@ router.post('/fetch-batch', async (req, res) => {
       requestStartNsu,
       requestCnpjConsulta,
       sortOrder,
-      supabaseRunId
+      supabaseRunId,
+      closeRun: shouldCloseRun
     });
 
-    return res.json({ success: true, ...result });
+    return res.json({ success: true, ...result, runId: supabaseRunId });
 
   } catch (e) {
     return handleSyncError({
@@ -115,10 +133,65 @@ router.post('/fetch-batch', async (req, res) => {
       requestEnvironment,
       requestStartNsu,
       requestCnpjConsulta,
-      supabaseRunId
+      supabaseRunId,
+      closeRun: shouldCloseRun
     });
   } finally {
     fetchBatchInFlight = false;
+  }
+});
+
+/** Abre uma run de sessão (início da varredura na UI). */
+router.post('/sync-run/start', async (req, res) => {
+  try {
+    const { certificateId, environment, cnpjConsulta, startNsu } = req.body || {};
+    const cert = await resolveCertificateForRequest(certificateId);
+    if (!cert) {
+      return res.status(400).json({ success: false, error: 'Certificado não encontrado.' });
+    }
+    const requestEnvironment = normalizeEnvironment(environment);
+    const requestCnpj = onlyDigits(cnpjConsulta) || onlyDigits(cert.cnpj) || '';
+    const runResult = await startSupabaseRun({
+      certificateId: cert.id,
+      environment: requestEnvironment,
+      cnpjConsulta: requestCnpj,
+      startNsu: Number(startNsu || 0)
+    });
+    const runId = runResult ? (runResult.run_id || runResult) : null;
+    return res.json({ success: true, runId });
+  } catch (err) {
+    console.error('[sync-run/start]', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/** Fecha a run de sessão (fim, pausa ou falha final). */
+router.post('/sync-run/finish', async (req, res) => {
+  try {
+    const {
+      runId,
+      status = 'completed',
+      endNsu = null,
+      maxNsuSeen = null,
+      documentsFound = 0,
+      errorMessage = null
+    } = req.body || {};
+    if (!runId) {
+      return res.status(400).json({ success: false, error: 'runId obrigatório.' });
+    }
+    const { finishSupabaseRun } = require('../services/supabase');
+    await finishSupabaseRun({
+      runId,
+      status,
+      endNsu,
+      maxNsuSeen,
+      documentsFound,
+      errorMessage
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[sync-run/finish]', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
