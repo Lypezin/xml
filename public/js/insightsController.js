@@ -219,7 +219,7 @@ window.AppInsights = {
     const monthFmt = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
     const compactFmt = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
     const points = monthly.map((m, i) => {
-      const x = monthly.length === 1 ? 50 : (i / (monthly.length - 1)) * 100;
+      const x = ((i + 0.5) / monthly.length) * 100;
       const y = 94 - (Math.max(0, Number(m.value || 0)) / maxValue) * 80;
       return `${x.toFixed(2)},${y.toFixed(2)}`;
     }).join(' ');
@@ -228,7 +228,7 @@ window.AppInsights = {
       const count = Math.max(0, Number(m.count || 0));
       const cancelled = Math.min(count, Math.max(0, Number(m.cancelled || 0)));
       const active = Math.max(0, count - cancelled);
-      const h = Math.max(4, Math.round((count / maxCount) * 148));
+      const h = Math.max(4, Math.round((count / maxCount) * 136));
       const cancelledH = count ? Math.round((cancelled / count) * h) : 0;
       const activeH = Math.max(0, h - cancelledH);
       const rawMonth = String(m.month || '');
@@ -259,7 +259,7 @@ window.AppInsights = {
         <svg class="chart-value-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <polyline points="${points}" vector-effect="non-scaling-stroke"></polyline>
           ${monthly.map((m, i) => {
-            const x = monthly.length === 1 ? 50 : (i / (monthly.length - 1)) * 100;
+            const x = ((i + 0.5) / monthly.length) * 100;
             const y = 94 - (Math.max(0, Number(m.value || 0)) / maxValue) * 80;
             return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="1.3" vector-effect="non-scaling-stroke"></circle>`;
           }).join('')}

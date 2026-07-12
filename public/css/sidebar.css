@@ -1,6 +1,6 @@
 /* Sidebar premium */
 
-/* Container permanece no shell; scroll fica só no .main-content */
+/* Container permanece no shell; scroll fica só no .main-scroll */
 #sidebar-container {
   flex-shrink: 0;
   height: 100%;

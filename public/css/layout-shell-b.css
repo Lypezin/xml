@@ -7,19 +7,20 @@
 
 /* Topbar premium */
 .navbar {
-  position: sticky;
-  top: 0;
+  position: relative;
+  flex: 0 0 auto;
   z-index: 15;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 4px 16px;
-  margin: -4px 0 4px;
-  background: linear-gradient(180deg, var(--topbar-bg) 70%, transparent 100%);
+  min-height: 86px;
+  padding: 14px 28px 15px;
+  margin: 0;
+  background: var(--topbar-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid transparent;
+  border-bottom: 1px solid var(--card-border);
 }
 
 .navbar-title {
@@ -140,11 +141,6 @@
 }
 
 /* Content width */
-.main-content {
-  padding: 12px 28px 28px;
-  gap: 20px;
-}
-
 .app-footer {
   margin-top: auto;
   padding-top: 14px;

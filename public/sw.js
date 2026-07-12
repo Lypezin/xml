@@ -1,5 +1,5 @@
 /* Service Worker — network-first para JS (evita auth/API quebrados por cache velho) */
-const CACHE = 'nfse-static-v14';
+const CACHE = 'nfse-static-v15';
 const PRECACHE = [
   '/css/variables.css',
   '/css/buttons.css',

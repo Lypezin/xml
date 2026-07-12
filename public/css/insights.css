@@ -249,6 +249,7 @@
   background: var(--card-bg);
   box-shadow: var(--shadow-sm);
   min-width: 0;
+  overflow: hidden;
 }
 
 .chart-bars {
@@ -308,6 +309,7 @@
   height: 190px;
   padding-top: 12px;
   border-bottom: 1px solid var(--card-border);
+  overflow: hidden;
 }
 
 .chart-grid-lines {
@@ -335,10 +337,10 @@
 
 .chart-value-line {
   position: absolute;
-  inset: 12px 2.1% 20px;
-  width: 95.8%;
+  inset: 12px 0 20px;
+  width: 100%;
   height: calc(100% - 32px);
-  overflow: visible;
+  overflow: hidden;
   z-index: 3;
   pointer-events: none;
 }
@@ -659,4 +661,25 @@
   .chart-legend { justify-content: flex-start; }
 
   .chart-bar-value { display: none; }
+
+  .chart-plot {
+    height: 170px;
+  }
+
+  .chart-columns {
+    gap: 2px;
+  }
+
+  .chart-bar-stack {
+    width: min(18px, 66%);
+  }
+
+  .chart-bar-label {
+    font-size: 8.5px;
+  }
+
+  .ranking-item {
+    grid-template-columns: 18px minmax(0, 1fr) 34px;
+    gap: 6px;
+  }
 }

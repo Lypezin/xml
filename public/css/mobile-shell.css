@@ -88,14 +88,21 @@
   }
 
   .main-content {
-    padding: 10px 14px 24px;
+    padding: 0;
     width: 100%;
     min-height: 0;
+    overflow: hidden;
+  }
+
+  .main-scroll {
+    padding: 20px 14px 24px;
+    overflow-x: clip;
     overflow-y: auto;
   }
 
   .navbar {
-    padding-top: 8px;
+    min-height: 0;
+    padding: 10px 14px 12px;
     gap: 10px;
   }
 
