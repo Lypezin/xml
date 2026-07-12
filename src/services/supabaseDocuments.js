@@ -22,7 +22,8 @@ function normalizeCurrencyForPersistence(value) {
   }
 
   const numericValue = Number(normalized);
-  if (!Number.isFinite(numericValue) || numericValue < 0 || numericValue >= 1000000000) {
+  // Teto 100M: evita gravar lixo (CNPJ/NSU no campo vServ) que distorce rankings
+  if (!Number.isFinite(numericValue) || numericValue < 0 || numericValue >= 100000000) {
     return 'N/A';
   }
 
