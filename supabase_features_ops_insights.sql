@@ -358,14 +358,14 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = xml_nfse, public, extensions
-set statement_timeout = '20000'
+set statement_timeout = '90000'
 as $$
 declare
   months integer := least(greatest(coalesce(p_months, 12), 3), 24);
   env text := coalesce(nullif(p_environment, ''), 'producao');
-  monthly jsonb;
-  ranking_prestador jsonb;
-  ranking_tomador jsonb;
+  monthly jsonb := '[]'::jsonb;
+  ranking_prestador jsonb := '[]'::jsonb;
+  ranking_tomador jsonb := '[]'::jsonb;
   total_value numeric := 0;
   total_docs integer := 0;
   cancelled_docs integer := 0;
@@ -373,8 +373,20 @@ declare
   prev_month_value numeric := 0;
   current_year_value numeric := 0;
   prev_year_value numeric := 0;
+  month_start date := date_trunc('month', current_date)::date;
+  year_start date := date_trunc('year', current_date)::date;
+  range_start date := (date_trunc('month', current_date) - make_interval(months => months - 1))::date;
 begin
   perform xml_nfse.assert_app_secret(p_secret);
+
+  select
+    count(*)::integer,
+    count(*) filter (where is_cancelled)::integer,
+    coalesce(sum(valor_servico) filter (where not is_cancelled), 0)
+  into total_docs, cancelled_docs, total_value
+  from xml_nfse.documents
+  where environment = env
+    and tipo <> 'EVENTO';
 
   select coalesce(jsonb_agg(to_jsonb(m) order by m.month), '[]'::jsonb)
   into monthly
@@ -383,14 +395,37 @@ begin
       to_char(date_trunc('month', d.data_emissao), 'YYYY-MM') as month,
       count(*)::integer as count,
       count(*) filter (where d.is_cancelled)::integer as cancelled,
-      coalesce(sum(d.valor_servico), 0)::numeric as value
+      coalesce(sum(d.valor_servico) filter (where not d.is_cancelled), 0)::numeric as value
     from xml_nfse.documents d
     where d.environment = env
       and d.tipo <> 'EVENTO'
       and d.data_emissao is not null
-      and d.data_emissao >= (date_trunc('month', current_date) - make_interval(months => months - 1))::date
+      and d.data_emissao >= range_start
     group by 1
   ) m;
+
+  select coalesce(sum(valor_servico), 0) into current_month_value
+  from xml_nfse.documents
+  where environment = env and tipo <> 'EVENTO' and not is_cancelled
+    and data_emissao >= month_start
+    and data_emissao < (month_start + interval '1 month')::date;
+
+  select coalesce(sum(valor_servico), 0) into prev_month_value
+  from xml_nfse.documents
+  where environment = env and tipo <> 'EVENTO' and not is_cancelled
+    and data_emissao >= (month_start - interval '1 month')::date
+    and data_emissao < month_start;
+
+  select coalesce(sum(valor_servico), 0) into current_year_value
+  from xml_nfse.documents
+  where environment = env and tipo <> 'EVENTO' and not is_cancelled
+    and data_emissao >= year_start;
+
+  select coalesce(sum(valor_servico), 0) into prev_year_value
+  from xml_nfse.documents
+  where environment = env and tipo <> 'EVENTO' and not is_cancelled
+    and data_emissao >= (year_start - interval '1 year')::date
+    and data_emissao < year_start;
 
   select coalesce(jsonb_agg(to_jsonb(r) order by r.value desc), '[]'::jsonb)
   into ranking_prestador
@@ -405,7 +440,7 @@ begin
       and d.tipo <> 'EVENTO'
       and not d.is_cancelled
     group by d.prestador_cnpj, d.prestador_nome
-    order by value desc
+    order by value desc nulls last
     limit 10
   ) r;
 
@@ -422,40 +457,9 @@ begin
       and d.tipo <> 'EVENTO'
       and not d.is_cancelled
     group by d.tomador_cnpj, d.tomador_nome
-    order by value desc
+    order by value desc nulls last
     limit 10
   ) r;
-
-  select
-    count(*)::integer,
-    count(*) filter (where is_cancelled)::integer,
-    coalesce(sum(valor_servico), 0)
-  into total_docs, cancelled_docs, total_value
-  from xml_nfse.documents
-  where environment = env and tipo <> 'EVENTO';
-
-  select coalesce(sum(valor_servico), 0) into current_month_value
-  from xml_nfse.documents
-  where environment = env and tipo <> 'EVENTO' and not is_cancelled
-    and data_emissao >= date_trunc('month', current_date)::date
-    and data_emissao < (date_trunc('month', current_date) + interval '1 month')::date;
-
-  select coalesce(sum(valor_servico), 0) into prev_month_value
-  from xml_nfse.documents
-  where environment = env and tipo <> 'EVENTO' and not is_cancelled
-    and data_emissao >= (date_trunc('month', current_date) - interval '1 month')::date
-    and data_emissao < date_trunc('month', current_date)::date;
-
-  select coalesce(sum(valor_servico), 0) into current_year_value
-  from xml_nfse.documents
-  where environment = env and tipo <> 'EVENTO' and not is_cancelled
-    and data_emissao >= date_trunc('year', current_date)::date;
-
-  select coalesce(sum(valor_servico), 0) into prev_year_value
-  from xml_nfse.documents
-  where environment = env and tipo <> 'EVENTO' and not is_cancelled
-    and data_emissao >= (date_trunc('year', current_date) - interval '1 year')::date
-    and data_emissao < date_trunc('year', current_date)::date;
 
   return jsonb_build_object(
     'environment', env,
@@ -485,7 +489,7 @@ begin
 end;
 $$;
 
-grant execute on function public.xml_nfse_get_dashboard_analytics(text, text, integer) to anon, authenticated;
+grant execute on function public.xml_nfse_get_dashboard_analytics(text, text, integer) to anon, authenticated, service_role;
 
 -- Atualiza run aberta (sessão de varredura) sem fechar
 create or replace function public.xml_nfse_update_run(

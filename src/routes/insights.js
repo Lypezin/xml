@@ -113,11 +113,12 @@ router.post('/api-health', async (req, res) => {
 });
 
 router.get('/dashboard-analytics', async (req, res) => {
+  const started = Date.now();
   try {
     if (!getSupabaseConfig()) {
       return res.json({
         success: false,
-        error: 'Supabase não configurado no servidor.',
+        error: 'Supabase não configurado no servidor (SUPABASE_URL / KEY / APP_SECRET).',
         analytics: emptyAnalytics()
       });
     }
@@ -132,16 +133,30 @@ router.get('/dashboard-analytics', async (req, res) => {
     if (!analytics || typeof analytics !== 'object') {
       return res.json({
         success: false,
-        error: 'Resposta vazia da RPC de analytics.',
+        error: 'Resposta vazia da RPC de analytics. Verifique se xml_nfse_get_dashboard_analytics existe e SUPABASE_APP_SECRET.',
         analytics: emptyAnalytics()
       });
     }
 
-    return res.json({ success: true, analytics });
+    // PostgREST às vezes devolve string JSON
+    const payload = typeof analytics === 'string'
+      ? (() => { try { return JSON.parse(analytics); } catch { return null; } })()
+      : analytics;
+
+    if (!payload || typeof payload !== 'object') {
+      return res.json({
+        success: false,
+        error: 'Formato inesperado da RPC de analytics.',
+        analytics: emptyAnalytics()
+      });
+    }
+
+    console.info('[dashboard-analytics] ok', environment, `${Date.now() - started}ms`);
+    return res.json({ success: true, analytics: payload, ms: Date.now() - started });
   } catch (err) {
     const detail = rpcErrorDetail(err);
-    console.warn('[dashboard-analytics]', detail);
-    return res.json({
+    console.warn('[dashboard-analytics]', detail, `${Date.now() - started}ms`);
+    return res.status(200).json({
       success: false,
       error: detail,
       analytics: emptyAnalytics(),

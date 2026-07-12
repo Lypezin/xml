@@ -93,11 +93,11 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
       if (dashStatActive) dashStatActive.innerText = window.AppUtils.formatInteger(activeCities);
       if (dashStatXmls) dashStatXmls.innerText = window.AppUtils.formatInteger(totalXmls);
 
-      // Analytics + auditoria + validade A1 (em paralelo, não bloqueia cards)
+      // Indicadores / auditoria / validade — independente (não espera cert-status)
       if (window.AppInsights) {
-        window.AppApi.fetchCertificateStatus?.()
-          .then(st => window.AppInsights.refreshDashboardExtras(st.certificates || []))
-          .catch(() => window.AppInsights.refreshDashboardExtras(citiesList));
+        window.AppInsights.refreshDashboardExtras(citiesList).catch((err) => {
+          console.warn('[dashboard extras]', err);
+        });
       }
 
       if (retryCount === 0 && window.AppToast && hasCards) {

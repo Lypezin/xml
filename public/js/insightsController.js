@@ -127,20 +127,41 @@ window.AppInsights = {
     const chart = document.getElementById('analytics-monthly-chart');
     const rankP = document.getElementById('ranking-prestador');
     const rankT = document.getElementById('ranking-tomador');
+    if (!chart && !rankP && !document.getElementById('analytics-mom-value')) {
+      // Painel ainda não montado
+      return;
+    }
     if (chart) chart.innerHTML = '<div class="helper-text">Carregando indicadores…</div>';
+    if (rankP) rankP.innerHTML = '<div class="helper-text">Carregando…</div>';
+    if (rankT) rankT.innerHTML = '<div class="helper-text">Carregando…</div>';
     this.setAnalyticsStatus('Carregando indicadores…');
 
     try {
-      const data = await window.AppApi.fetchDashboardAnalytics({ months: 12 });
-      if (!data.success && data.error) {
+      const environment = window.selectEnvironment?.value || 'producao';
+      const data = await window.AppApi.fetchDashboardAnalytics({
+        months: 12,
+        environment
+      });
+
+      const a = data.analytics || {};
+      const monthly = Array.isArray(a.monthly) ? a.monthly : [];
+      const rankPre = Array.isArray(a.rankingPrestador) ? a.rankingPrestador : [];
+      const rankTom = Array.isArray(a.rankingTomador) ? a.rankingTomador : [];
+      const hasData = monthly.length > 0 || rankPre.length > 0 || Number(a.totals?.documents || 0) > 0;
+
+      if (!data.success && (data.error || data.warning)) {
         this.setAnalyticsStatus(data.warning || data.error, true);
       } else if (data.warning) {
         this.setAnalyticsStatus(data.warning, true);
+      } else if (!hasData) {
+        this.setAnalyticsStatus('Sem indicadores para o ambiente selecionado.', true);
       } else {
-        this.setAnalyticsStatus('');
+        const docs = window.AppUtils?.formatInteger
+          ? window.AppUtils.formatInteger(a.totals?.documents || 0)
+          : String(a.totals?.documents || 0);
+        this.setAnalyticsStatus(`${docs} notas no ambiente · valor total ${this.formatMoney(a.totals?.value || 0)}`);
       }
 
-      const a = data.analytics || {};
       const mom = a.comparisons?.monthOverMonth || {};
       const yoy = a.comparisons?.yearOverYear || {};
 
@@ -169,14 +190,15 @@ window.AppInsights = {
         yoyD.className = `compare-delta ${dYoy.cls}`;
       }
 
-      this.renderMonthlyChart(a.monthly || []);
-      this.renderRanking('ranking-prestador', a.rankingPrestador || []);
-      this.renderRanking('ranking-tomador', a.rankingTomador || []);
+      this.renderMonthlyChart(monthly);
+      this.renderRanking('ranking-prestador', rankPre);
+      this.renderRanking('ranking-tomador', rankTom);
     } catch (err) {
       console.error('[analytics]', err);
       this.setAnalyticsStatus(err.message || 'Falha ao carregar indicadores', true);
       if (chart) {
-        chart.innerHTML = `<div class="helper-text">Não foi possível carregar os gráficos${err.message ? ': ' + window.AppUtils.escapeHtml(err.message) : ''}.</div>`;
+        const msg = err.message ? window.AppUtils.escapeHtml(err.message) : '';
+        chart.innerHTML = `<div class="helper-text">Não foi possível carregar os gráficos${msg ? ': ' + msg : ''}.</div>`;
       }
       if (rankP) rankP.innerHTML = '<div class="helper-text">—</div>';
       if (rankT) rankT.innerHTML = '<div class="helper-text">—</div>';
@@ -303,6 +325,7 @@ window.AppInsights = {
     document.getElementById('btn-refresh-api-health')?.addEventListener('click', () => this.loadApiHealth());
     document.getElementById('btn-refresh-sync-runs')?.addEventListener('click', () => this.loadSyncRuns());
     document.getElementById('btn-refresh-audit')?.addEventListener('click', () => this.loadAuditLog());
+    document.getElementById('btn-refresh-analytics')?.addEventListener('click', () => this.loadAnalytics());
 
     // Atualiza contador do retry a cada segundo
     if (!window._retryTicker) {

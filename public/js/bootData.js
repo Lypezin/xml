@@ -34,6 +34,22 @@ async function bootDataParallel() {
     })()
   );
 
+  // Indicadores em paralelo ao dashboard (não depende de cards/cert-status)
+  tasks.push(
+    (async () => {
+      try {
+        if (window.AppInsights?.loadAnalytics) {
+          await window.AppInsights.loadAnalytics();
+        }
+        if (window.AppInsights?.loadAuditLog) {
+          await window.AppInsights.loadAuditLog();
+        }
+      } catch (err) {
+        console.warn('analytics/audit:', err);
+      }
+    })()
+  );
+
   if (window.AppUi?.updateProgress) window.AppUi.updateProgress(0, 0);
 
   const selectEnv = window.selectEnvironment;
