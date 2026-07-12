@@ -164,5 +164,28 @@ async fetchBatch({ startNsu, environment, cnpjConsulta, certificateId, sortOrder
 
   async deleteUnit(id) {
     return (await fetch(`/api/units/${id}`, { method: 'DELETE' })).json();
+  },
+
+  async fetchSyncRuns(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`/api/sync-runs?${qs}`);
+    return this._jsonOrThrow(res, 'Falha ao carregar histórico de varreduras.');
+  },
+
+  async fetchApiHealth(hours = 24) {
+    const res = await fetch(`/api/api-health?hours=${Number(hours) || 24}`);
+    return this._jsonOrThrow(res, 'Falha ao carregar saúde da API.');
+  },
+
+  async fetchAuditLog(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`/api/audit-log?${qs}`);
+    return this._jsonOrThrow(res, 'Falha ao carregar auditoria.');
+  },
+
+  async fetchDashboardAnalytics(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`/api/dashboard-analytics?${qs}`);
+    return this._jsonOrThrow(res, 'Falha ao carregar analytics.');
   }
 });

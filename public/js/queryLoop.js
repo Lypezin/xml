@@ -138,6 +138,7 @@ async runQueryLoop(runId = window.activeQueryRunId) {
         }
         this.loadStorageSummary();
         this.stopQuerying();
+        window.AppInsights?.refreshOpsInsights?.();
         return;
       }
 

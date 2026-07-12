@@ -15,6 +15,7 @@ const {
   resolveCertificateMetadataForList,
   buildListFilterParams
 } = require('../utils/downloadHelpers');
+const { registerAuditEvent, userEmailFromReq } = require('../services/audit');
 
 const router = express.Router();
 
@@ -59,6 +60,20 @@ router.post('/download-period-zip', async (req, res) => {
         error: `O filtro atual encontrou ${totalMatched.toLocaleString('pt-BR')} XMLs. Limite sua busca a no máximo ${limitMax.toLocaleString('pt-BR')} por ZIP.`
       });
     }
+
+    await registerAuditEvent({
+      certificateId: cert.id,
+      environment: filter.environment,
+      nsu: null,
+      fileName: 'NFS-e_Periodo_XMLs.zip',
+      action: 'zip',
+      userEmail: userEmailFromReq(req),
+      details: {
+        count: documents.length,
+        startDate: startDate || null,
+        endDate: endDate || null
+      }
+    });
 
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename=NFS-e_Periodo_XMLs.zip');

@@ -170,6 +170,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+body.drawer-open-lock {
+  overflow: hidden;
+}
+
 ::selection {
   background: var(--brand-glow);
   color: inherit;

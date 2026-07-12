@@ -107,6 +107,15 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
           window._tabCache.storageAt = now;
           window.AppSyncController.loadStorageSummary();
         }
+        window.AppInsights?.refreshOpsInsights?.();
+      });
+    }
+
+    if (activeId === 'view-dashboard-content' && window.AppInsights) {
+      schedule(() => {
+        window.AppApi?.fetchCertificateStatus?.()
+          .then(data => window.AppInsights.refreshDashboardExtras(data.certificates || []))
+          .catch(() => window.AppInsights.refreshDashboardExtras([]));
       });
     }
   },

@@ -47,5 +47,7 @@ window.AppEvents = {
     window.AppEventsNsu?.bind();
     window.AppEventsNav?.bind();
     window.AppEventsScheduler?.bind();
+    window.AppInsights?.bind?.();
+    window.AppDocDrawer?.bind?.();
   }
 };

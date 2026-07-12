@@ -3,15 +3,26 @@ window.AppEventsTable = {
   bind() {
 if (tableBody) {
   tableBody.addEventListener('click', async (e) => {
+    const detailButton = e.target.closest('button[data-action="open-detail"]');
     const xmlButton = e.target.closest('button[data-action="download-xml"]');
     const pdfButton = e.target.closest('button[data-action="download-pdf"]');
-    if (!xmlButton && !pdfButton) return;
+    if (!detailButton && !xmlButton && !pdfButton) return;
 
     try {
+      if (detailButton) {
+        const nsu = detailButton.dataset.nsu;
+        const docs = window.AppUiTable?.documents || [];
+        const doc = docs.find(d => String(d.nsu) === String(nsu))
+          || docs.find(d => String(d.chave) === String(detailButton.closest('.xml-item')?.dataset?.docChave));
+        if (doc && window.AppDocDrawer) window.AppDocDrawer.open(doc);
+        return;
+      }
+
       if (xmlButton) {
         await window.AppApi.downloadFromApi(`/api/download-xml/${xmlButton.dataset.token}`, 'nfse.xml');
         window.AppUi.log('XML baixado com sucesso.', 'success');
         window.AppToast?.success('XML baixado');
+        window.AppInsights?.loadAuditLog?.();
         return;
       }
 
@@ -22,6 +33,7 @@ if (tableBody) {
       await window.AppApi.downloadFromApi(`/api/download-pdf/${encodeURIComponent(pdfButton.dataset.chave)}?${params.toString()}`, 'danfse.pdf');
       window.AppUi.log('PDF baixado com sucesso.', 'success');
       window.AppToast?.success('PDF baixado');
+      window.AppInsights?.loadAuditLog?.();
     } catch (err) {
       window.AppUi.log(`Erro ao baixar documento: ${err.message}`, 'error');
       window.AppToast?.error(err.message || 'Falha no download');

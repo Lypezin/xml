@@ -20,6 +20,8 @@ const {
 } = require('../services/supabase');
 const { processBatchDocuments } = require('../services/documentProcessor');
 const { analyzeBatchCancellations } = require('../services/cancelationAnalyzer');
+const { recordSample } = require('../services/apiHealth');
+const { supabaseRpc } = require('../services/supabaseClient');
 
 /**
  * Dedup apenas duplicatas do mesmo NSU no lote.
@@ -59,17 +61,65 @@ async function executeSyncBatch({ selectedCertificate, requestEnvironment, reque
   const url = buildDfeUrl(baseUrl, requestStartNsu, requestCnpjConsulta);
   console.log(`Fazendo requisição à API Nacional: ${url}`);
 
-  const response = await axios.get(url, {
-    httpsAgent,
-    timeout: 15000,
-    validateStatus: isNationalApiFiscalStatus,
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'NFS-e Batch Downloader Local'
-    }
-  });
+  const startedAt = Date.now();
+  let response;
+  try {
+    response = await axios.get(url, {
+      httpsAgent,
+      timeout: 15000,
+      validateStatus: isNationalApiFiscalStatus,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'NFS-e Batch Downloader Local'
+      }
+    });
+  } catch (networkErr) {
+    const latencyMs = Date.now() - startedAt;
+    const health = {
+      certificateId: selectedCertificate.id,
+      environment: requestEnvironment,
+      endpoint: 'DFe',
+      httpStatus: networkErr.response?.status || null,
+      latencyMs,
+      success: false,
+      errorMessage: networkErr.message
+    };
+    recordSample(health);
+    supabaseRpc('xml_nfse_record_api_health', {
+      p_certificate_id: health.certificateId,
+      p_environment: health.environment,
+      p_endpoint: health.endpoint,
+      p_http_status: health.httpStatus,
+      p_latency_ms: health.latencyMs,
+      p_success: false,
+      p_error_message: health.errorMessage
+    }).catch(() => {});
+    throw networkErr;
+  }
 
+  const latencyMs = Date.now() - startedAt;
   const data = response.data;
+  const healthOk = Boolean(data) && response.status < 500;
+  const health = {
+    certificateId: selectedCertificate.id,
+    environment: requestEnvironment,
+    endpoint: 'DFe',
+    httpStatus: response.status,
+    latencyMs,
+    success: healthOk,
+    errorMessage: healthOk ? null : (formatNationalApiRejection(data) || `HTTP ${response.status}`)
+  };
+  recordSample(health);
+  supabaseRpc('xml_nfse_record_api_health', {
+    p_certificate_id: health.certificateId,
+    p_environment: health.environment,
+    p_endpoint: health.endpoint,
+    p_http_status: health.httpStatus,
+    p_latency_ms: health.latencyMs,
+    p_success: health.success,
+    p_error_message: health.errorMessage
+  }).catch(() => {});
+
   if (!data) {
     const err = new Error('Retorno vazio temporario da API Nacional.');
     err.isTransient = true;

@@ -113,6 +113,7 @@
       </div>
       <div class="alert-box success" id="alert-sync-success" style="display: none;"><strong>Concluído:</strong> todas as notas foram sincronizadas.</div>
       <div class="alert-box danger" id="alert-rate-limit" style="display: none;"><strong>Consumo indevido:</strong> API bloqueou temporariamente este CNPJ.</div>
+      <div class="alert-box warning" id="retry-status-banner" style="display: none;"></div>
       <div class="crawler-status" id="crawler-status-container" style="display: none;"><span id="crawler-current-cnpj">-</span><span id="crawler-visited-count">0</span><span id="crawler-queue-count">0</span></div>
     </div>
 
@@ -130,6 +131,41 @@
           <span class="log-badge system">●</span>
           <span class="log-text">Pronto. Inicie a varredura para acompanhar o progresso aqui.</span>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ops insights: saúde API + histórico de varreduras -->
+  <section class="ops-insights-grid" aria-label="Insights da operação">
+    <div class="card ops-insight-card">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">ADN Nacional</span>
+          <h2>Saúde da API</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-api-health">Atualizar</button>
+      </div>
+      <div class="api-health-body" id="api-health-body">
+        <div class="api-health-status unknown" id="api-health-status">Sem dados</div>
+        <div class="api-health-metrics">
+          <div><span>Taxa de sucesso</span><strong id="api-health-rate">—</strong></div>
+          <div><span>Latência média</span><strong id="api-health-avg">—</strong></div>
+          <div><span>P95</span><strong id="api-health-p95">—</strong></div>
+          <div><span>Chamadas (24h)</span><strong id="api-health-total">—</strong></div>
+        </div>
+        <p class="helper-text" id="api-health-error">As amostras são gravadas a cada consulta DFe.</p>
+      </div>
+    </div>
+    <div class="card ops-insight-card">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Varreduras</span>
+          <h2>Histórico de runs</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-sync-runs">Atualizar</button>
+      </div>
+      <div class="sync-runs-list" id="sync-runs-list">
+        <div class="helper-text">Carregando histórico…</div>
       </div>
     </div>
   </section>

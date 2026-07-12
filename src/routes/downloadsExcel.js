@@ -12,6 +12,7 @@ const {
   buildListFilterParams
 } = require('../utils/downloadHelpers');
 const { styleDataRow } = require('../utils/excelRowStyle');
+const { registerAuditEvent, userEmailFromReq } = require('../services/audit');
 
 const router = express.Router();
 
@@ -77,6 +78,21 @@ router.get('/download-excel', async (req, res) => {
 
     const documents = dedupeXmlItems(fullResult.documents || []);
     const fileName = buildExcelFileName(startDate, endDate);
+
+    await registerAuditEvent({
+      certificateId: cert.id,
+      environment: filter.environment,
+      nsu: null,
+      fileName,
+      action: 'excel',
+      userEmail: userEmailFromReq(req),
+      details: {
+        count: documents.length,
+        startDate: startDate || null,
+        endDate: endDate || null
+      }
+    });
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader(
       'Content-Disposition',

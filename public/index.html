@@ -44,6 +44,7 @@
   <link rel="stylesheet" href="css/responsive-a.css">
   <link rel="stylesheet" href="css/responsive-b.css">
   <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/insights.css">
 </head>
 <body class="light-mode">
   <div class="glass-bg"></div>
@@ -97,6 +98,19 @@
     </main>
   </div>
 
+  <!-- Drawer de detalhe da nota -->
+  <div class="doc-drawer-backdrop" id="doc-drawer-backdrop" hidden></div>
+  <aside class="doc-drawer" id="doc-drawer" aria-hidden="true" aria-label="Detalhe da nota">
+    <div class="doc-drawer-header">
+      <div>
+        <span class="eyebrow">Documento</span>
+        <h2 id="doc-drawer-title">Detalhe da NFS-e</h2>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="doc-drawer-close">Fechar</button>
+    </div>
+    <div class="doc-drawer-body" id="doc-drawer-body"></div>
+  </aside>
+
   <script src="js/utils.js" defer></script>
   <script src="js/toast.js" defer></script>
   <script src="js/dataCache.js" defer></script>
@@ -119,6 +133,8 @@
   <script src="js/syncController.js" defer></script>
   <script src="js/queryLoop.js" defer></script>
   <script src="js/dashboardController.js" defer></script>
+  <script src="js/insightsController.js" defer></script>
+  <script src="js/docDrawer.js" defer></script>
   <script src="js/eventsCert.js" defer></script>
   <script src="js/eventsAuth.js" defer></script>
   <script src="js/eventsSync.js" defer></script>

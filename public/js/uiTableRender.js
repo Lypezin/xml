@@ -166,6 +166,9 @@ Object.assign(window.AppUiTable = window.AppUiTable || {}, {
           <span>Processamento: ${esc(window.AppUtils.formatDate(doc.dataProcessamento))}</span>
         </div>
         <div class="xml-action-cell">
+          <button type="button" class="btn btn-secondary btn-sm" data-action="open-detail" data-nsu="${esc(doc.nsu || '')}" title="Ver detalhes">
+            <span>Detalhe</span>
+          </button>
           <button type="button" class="btn btn-secondary btn-sm" data-action="download-xml" data-token="${safeToken}" ${doc.token ? '' : 'disabled'}>
             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -185,6 +188,8 @@ Object.assign(window.AppUiTable = window.AppUiTable || {}, {
           </button>
         </div>
       `;
+      item.dataset.docNsu = String(doc.nsu || '');
+      item.dataset.docChave = String(doc.chave || '');
       frag.appendChild(item);
     });
     tableBody.appendChild(frag);

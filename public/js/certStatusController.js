@@ -23,6 +23,7 @@ async checkCertStatus(options = {}) {
 
       window.AppUi.renderCertificateSelector();
       window.AppUi.renderCertificateList();
+      window.AppInsights?.renderCertExpiryBanner?.(data.certificates || []);
 
       if (data.active) {
         if (certUploadState) certUploadState.classList.remove('active');

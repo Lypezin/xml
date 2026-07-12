@@ -93,6 +93,13 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
       if (dashStatActive) dashStatActive.innerText = window.AppUtils.formatInteger(activeCities);
       if (dashStatXmls) dashStatXmls.innerText = window.AppUtils.formatInteger(totalXmls);
 
+      // Analytics + auditoria + validade A1 (em paralelo, não bloqueia cards)
+      if (window.AppInsights) {
+        window.AppApi.fetchCertificateStatus?.()
+          .then(st => window.AppInsights.refreshDashboardExtras(st.certificates || []))
+          .catch(() => window.AppInsights.refreshDashboardExtras(citiesList));
+      }
+
       if (retryCount === 0 && window.AppToast && hasCards) {
         window.AppToast.success('Painel atualizado');
       }

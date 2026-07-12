@@ -12,6 +12,8 @@
     </button>
   </div>
 
+  <div id="cert-expiry-banner" class="cert-expiry-banner" style="display: none;" role="status"></div>
+
   <div class="dashboard-metrics-summary" id="dashboard-metrics-summary">
     <div class="mini-metric-card">
       <div class="mini-metric-icon" aria-hidden="true">
@@ -38,6 +40,70 @@
       <div class="metric-info">
         <span class="metric-label">Total XMLs</span>
         <span class="metric-number" id="dash-stat-xmls">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-analytics" id="dashboard-analytics">
+    <div class="dashboard-section-label">Indicadores</div>
+    <div class="analytics-compare-row" id="analytics-compare-row">
+      <div class="compare-card">
+        <span class="metric-label">Mês atual × mês anterior</span>
+        <strong id="analytics-mom-value">R$ 0,00</strong>
+        <span class="compare-delta" id="analytics-mom-delta">—</span>
+      </div>
+      <div class="compare-card">
+        <span class="metric-label">Ano atual × ano anterior</span>
+        <strong id="analytics-yoy-value">R$ 0,00</strong>
+        <span class="compare-delta" id="analytics-yoy-delta">—</span>
+      </div>
+      <div class="compare-card">
+        <span class="metric-label">Canceladas (total)</span>
+        <strong id="analytics-cancelled">0</strong>
+        <span class="helper-text">No ambiente de produção</span>
+      </div>
+    </div>
+
+    <div class="analytics-grid">
+      <div class="card analytics-card">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">Volume</span>
+            <h2>Notas e valor por mês</h2>
+          </div>
+        </div>
+        <div class="chart-bars" id="analytics-monthly-chart"></div>
+      </div>
+      <div class="card analytics-card">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">Ranking</span>
+            <h2>Top prestadores</h2>
+          </div>
+        </div>
+        <div class="ranking-list" id="ranking-prestador"></div>
+      </div>
+      <div class="card analytics-card">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">Ranking</span>
+            <h2>Top tomadores</h2>
+          </div>
+        </div>
+        <div class="ranking-list" id="ranking-tomador"></div>
+      </div>
+    </div>
+
+    <div class="card analytics-card audit-card">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Auditoria</span>
+          <h2>Downloads e exports recentes</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-audit">Atualizar</button>
+      </div>
+      <div class="audit-list" id="audit-list">
+        <div class="helper-text">Carregando auditoria…</div>
       </div>
     </div>
   </div>

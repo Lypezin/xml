@@ -23,23 +23,60 @@ window.AppSyncController = Object.assign(window.AppSyncController || {}, {
     if (!this.isActiveQueryRun(runId)) return;
     window.transientRetryCount = (window.transientRetryCount || 0) + 1;
     const retryCount = window.transientRetryCount;
+    const maxRetries = 8;
 
-    if (retryCount > 6) {
+    if (retryCount > maxRetries) {
       window.AppUi.log('Limite de tentativas temporárias atingido. Consulta pausada para evitar insistir na API.', 'error');
+      window.AppToast?.error?.('Varredura pausada após falhas de rede');
       this.stopQuerying();
+      this.loadSyncRuns?.();
       return;
     }
 
-    const retryDelaySeconds = Math.min(120, 10 * retryCount);
+    // Backoff exponencial com jitter (10s, 20s, 40s… até 3 min)
+    const base = Math.min(180, 10 * (2 ** (retryCount - 1)));
+    const jitter = Math.floor(Math.random() * Math.min(8, base * 0.2));
+    const retryDelaySeconds = base + jitter;
+
     window.currentNsu = requestNsu;
-    inputStartNsu.value = requestNsu;
-    window.AppUi.log(`Erro temporário na API (${errorMessage}). Tentativa ${retryCount}/6 em ${retryDelaySeconds}s no mesmo NSU ${requestNsu}.`, 'warning');
+    if (inputStartNsu) inputStartNsu.value = requestNsu;
+    window._retryMeta = {
+      runId,
+      requestNsu,
+      retryCount,
+      maxRetries,
+      nextAt: Date.now() + retryDelaySeconds * 1000,
+      errorMessage: String(errorMessage || '')
+    };
+
+    window.AppUi.log(
+      `Erro temporário na API (${errorMessage}). Retomada automática ${retryCount}/${maxRetries} em ${retryDelaySeconds}s no NSU ${requestNsu}.`,
+      'warning'
+    );
+    window.AppToast?.warning?.(`Retry ${retryCount}/${maxRetries} em ${retryDelaySeconds}s`);
+    this.renderRetryStatus?.();
 
     if (window.queryLoopTimer) clearTimeout(window.queryLoopTimer);
     window.queryLoopTimer = setTimeout(() => {
       window.queryLoopTimer = null;
+      window._retryMeta = null;
+      this.renderRetryStatus?.();
       this.runQueryLoop(runId);
     }, retryDelaySeconds * 1000);
+  },
+
+  renderRetryStatus() {
+    const el = document.getElementById('retry-status-banner');
+    if (!el) return;
+    const meta = window._retryMeta;
+    if (!meta || !window.isQuerying) {
+      el.style.display = 'none';
+      el.textContent = '';
+      return;
+    }
+    const secs = Math.max(0, Math.ceil((meta.nextAt - Date.now()) / 1000));
+    el.style.display = 'block';
+    el.innerHTML = `<strong>Retomada automática</strong> · tentativa ${meta.retryCount}/${meta.maxRetries} · NSU ${meta.requestNsu} · em ${secs}s`;
   },
 
 async discoverAndStart(runId = window.activeQueryRunId) {

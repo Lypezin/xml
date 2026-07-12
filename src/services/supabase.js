@@ -26,12 +26,22 @@ function useRemoteCertificateStorage() {
 
 async function syncSupabaseCertificate(cert, active = true) {
   if (!cert) return null;
-  return supabaseRpc('xml_nfse_upsert_certificate', {
+  const payload = {
     p_certificate_id: cert.id,
     p_filename: cert.originalName || cert.filename || 'certificado.pfx',
     p_cnpj: cert.cnpj || '',
     p_active: Boolean(active)
-  });
+  };
+  if (cert.validUntil) {
+    payload.p_valid_until = cert.validUntil;
+  }
+  try {
+    return await supabaseRpc('xml_nfse_upsert_certificate', payload);
+  } catch (err) {
+    // Compat com assinatura antiga (sem valid_until)
+    delete payload.p_valid_until;
+    return supabaseRpc('xml_nfse_upsert_certificate', payload);
+  }
 }
 
 async function syncSupabaseState({ certificateId, environment, cnpjConsulta, lastNsu, maxNsuSeen, status, nextAllowedAt = null, lastError = null }) {

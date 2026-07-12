@@ -4,10 +4,10 @@ const axios = require('axios');
 const https = require('https');
 const xmlCache = require('../utils/xmlCache');
 const {
-  supabaseRpc,
   getSupabaseXmlPayload,
   listSupabaseXmlPayloads
 } = require('../services/supabase');
+const { registerAuditEvent, userEmailFromReq } = require('../services/audit');
 const { resolveCertificateForRequest } = require('../services/localCertificates');
 const { getCertificateBuffer, onlyDigits } = require('../utils/cert');
 const {
@@ -38,11 +38,14 @@ router.get('/download-xml/:token', async (req, res) => {
     return res.status(404).json({ error: 'XML não encontrado nesta sessão. Faça a consulta novamente.' });
   }
 
-  await supabaseRpc('xml_nfse_register_download', {
-    p_certificate_id: cached.certificateId || null,
-    p_environment: cached.environment || null,
-    p_nsu: cached.nsu === undefined || cached.nsu === null ? null : Number(cached.nsu),
-    p_file_name: cached.fileName
+  await registerAuditEvent({
+    certificateId: cached.certificateId || null,
+    environment: cached.environment || null,
+    nsu: cached.nsu === undefined || cached.nsu === null ? null : Number(cached.nsu),
+    fileName: cached.fileName,
+    action: 'xml',
+    userEmail: userEmailFromReq(req),
+    details: { source: 'download-xml' }
   });
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
@@ -102,8 +105,19 @@ router.get('/download-pdf/:chave', async (req, res) => {
       });
     }
 
+    const pdfName = getDanfseFileName(chave);
+    await registerAuditEvent({
+      certificateId: cert.id || null,
+      environment,
+      nsu: null,
+      fileName: pdfName,
+      action: 'pdf',
+      userEmail: userEmailFromReq(req),
+      details: { chave }
+    });
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${getDanfseFileName(chave)}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${pdfName}"`);
     return res.send(payload);
   } catch (err) {
     const status = err.response?.status || 500;

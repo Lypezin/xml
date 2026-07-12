@@ -80,6 +80,7 @@ app.use('/api', require('./src/routes/sync'));
 app.use('/api', require('./src/routes/downloads'));
 app.use('/api', require('./src/routes/units'));
 app.use('/api', require('./src/routes/schedulerRoutes'));
+app.use('/api', require('./src/routes/insights'));
 
 // Servir arquivos estáticos com cache longo (acelera recarregar guias/CSS/JS)
 app.use(express.static(path.join(__dirname, 'public'), {

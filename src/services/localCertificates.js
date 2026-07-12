@@ -44,6 +44,7 @@ function sanitizeCertificate(cert) {
     filename: cert.originalName || cert.filename || 'certificado.pfx',
     cnpj: cert.cnpj || '',
     active: Boolean(cert.active),
+    validUntil: cert.validUntil || cert.valid_until || null,
     createdAt: cert.createdAt || cert.created_at || null,
     updatedAt: cert.updatedAt || cert.updated_at || null
   };

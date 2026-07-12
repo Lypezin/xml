@@ -94,13 +94,15 @@ router.post('/upload-certificate', upload.single('pfx'), async (req, res) => {
     if (!validated.ok) {
       return res.status(validated.status).json({ success: false, error: validated.error });
     }
-    const { resolvedCnpj } = validated;
+    const { resolvedCnpj, certificateValidation } = validated;
+    const validUntil = certificateValidation?.validUntil || null;
 
     if (useRemoteCertificateStorage()) {
       const cert = {
         id: crypto.randomUUID(),
         originalName: req.file.originalname || 'certificado.pfx',
         cnpj: resolvedCnpj,
+        validUntil,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -117,6 +119,8 @@ router.post('/upload-certificate', upload.single('pfx'), async (req, res) => {
       if (!saved || !saved.success) {
         return res.status(500).json({ success: false, error: 'Não foi possível salvar o certificado criptografado no Supabase.' });
       }
+
+      await syncSupabaseCertificate(cert, true);
 
       return res.json({
         success: true,
@@ -138,6 +142,7 @@ router.post('/upload-certificate', upload.single('pfx'), async (req, res) => {
       storedName,
       passphrase,
       cnpj: resolvedCnpj,
+      validUntil,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
