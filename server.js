@@ -82,16 +82,17 @@ app.use('/api', require('./src/routes/units'));
 app.use('/api', require('./src/routes/schedulerRoutes'));
 app.use('/api', require('./src/routes/insights'));
 
-// Servir arquivos estáticos com cache longo (acelera recarregar guias/CSS/JS)
+// Estáticos: JS/HTML sem cache longo (auth/boot mudam e cache velho gera 401/403)
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: IS_VERCEL ? '1h' : '15m',
   etag: true,
   lastModified: true,
   setHeaders(res, filePath) {
-    if (/\.(css|js|svg|woff2?)$/i.test(filePath)) {
+    if (/\.js$/i.test(filePath) || /sw\.js$/i.test(filePath)) {
+      // JS de auth/boot: sempre revalidar
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    } else if (/\.(css|svg|woff2?)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
-    }
-    if (/\.html$/i.test(filePath)) {
+    } else if (/\.html$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'no-cache');
     }
   }

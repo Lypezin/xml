@@ -2,9 +2,71 @@
 const AUTH_STORAGE_KEY = 'xml_nfse_auth_session';
 
 window.AppUtils = {
+  /** Decodifica payload do JWT (sem verificar assinatura) */
+  decodeJwtPayload(token) {
+    try {
+      if (!token || typeof token !== 'string') return null;
+      const parts = token.split('.');
+      if (parts.length < 2) return null;
+      const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+      return JSON.parse(atob(padded));
+    } catch (e) {
+      return null;
+    }
+  },
+
+  /**
+   * Normaliza resposta do Supabase Auth (token endpoint) para sessão persistente.
+   * Garante expires_at em epoch seconds (via expires_in ou claim exp do JWT).
+   */
+  normalizeAuthSession(session) {
+    if (!session || typeof session !== 'object') return null;
+    const next = { ...session };
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    if (!next.expires_at) {
+      const expiresIn = Number(next.expires_in);
+      if (Number.isFinite(expiresIn) && expiresIn > 0) {
+        next.expires_at = nowSec + expiresIn;
+      }
+    } else {
+      // aceita ms acidentalmente gravado
+      const exp = Number(next.expires_at);
+      if (Number.isFinite(exp) && exp > 1e12) {
+        next.expires_at = Math.floor(exp / 1000);
+      }
+    }
+
+    // Fallback: exp do próprio JWT (evita chamar /user com token morto → 403)
+    if (!next.expires_at && next.access_token) {
+      const payload = this.decodeJwtPayload(next.access_token);
+      if (payload?.exp) next.expires_at = Number(payload.exp);
+    }
+
+    // merge user se vier aninhado
+    if (!next.user && session.user) next.user = session.user;
+    return next;
+  },
+
+  /** true se o access_token deve ser renovado (faltando < 90s) */
+  isAuthSessionExpiring(session, skewSeconds = 90) {
+    if (!session?.access_token) return true;
+    let exp = Number(session.expires_at);
+    if (!Number.isFinite(exp) || exp <= 0) {
+      const payload = this.decodeJwtPayload(session.access_token);
+      exp = Number(payload?.exp);
+    }
+    if (!Number.isFinite(exp) || exp <= 0) return false; // desconhecido: tenta usar
+    return Math.floor(Date.now() / 1000) >= (exp - skewSeconds);
+  },
+
   saveAuthSession(session) {
-    window.authSession = session;
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    const normalized = this.normalizeAuthSession(session);
+    window.authSession = normalized;
+    if (normalized) {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(normalized));
+    }
   },
 
   clearAuthSession() {
@@ -15,7 +77,8 @@ window.AppUtils = {
   loadStoredAuthSession() {
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
+      if (!stored) return null;
+      return this.normalizeAuthSession(JSON.parse(stored));
     } catch (e) {
       return null;
     }

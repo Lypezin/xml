@@ -44,11 +44,24 @@ async function getSupabaseUserFromToken(token) {
       headers: {
         apikey: config.key,
         Authorization: `Bearer ${token}`
-      }
+      },
+      timeout: 10000,
+      validateStatus: (s) => s < 500
     });
 
-    return res.data;
+    if (res.status >= 200 && res.status < 300 && res.data) {
+      return res.data;
+    }
+
+    // Loga status para diagnosticar 401/403 no servidor
+    console.warn(
+      '[auth] /auth/v1/user',
+      res.status,
+      typeof res.data === 'object' ? (res.data.msg || res.data.error_description || res.data.error || '') : ''
+    );
+    return null;
   } catch (err) {
+    console.warn('[auth] getSupabaseUserFromToken:', err.response?.status || err.message);
     return null;
   }
 }

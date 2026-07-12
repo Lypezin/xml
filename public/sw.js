@@ -1,5 +1,5 @@
-/* Service Worker — cache apenas CSS/JS estáticos (sem API/HTML) */
-const CACHE = 'nfse-static-v11';
+/* Service Worker — network-first para JS (evita auth/API quebrados por cache velho) */
+const CACHE = 'nfse-static-v14';
 const PRECACHE = [
   '/css/variables.css',
   '/css/buttons.css',
@@ -22,54 +22,27 @@ const PRECACHE = [
   '/css/toast.css',
   '/css/rules-screen.css',
   '/css/mobile-shell.css',
-  '/js/toast.js',
   '/css/responsive-a.css',
   '/css/responsive-b.css',
   '/css/motion.css',
-  '/js/utils.js',
-  '/js/dataCache.js',
-  '/js/panels-bundle.js',
-  '/js/apiAuth.js',
-  '/js/apiCerts.js',
-  '/js/apiData.js',
-  '/js/apiDownloads.js',
-  '/js/uiElements.js',
-  '/js/uiTableCore.js',
-  '/js/uiTableLoading.js',
-  '/js/uiTableRender.js',
-  '/js/uiCore.js',
-  '/js/uiCerts.js',
-  '/js/uiProgress.js',
-  '/js/uiTabs.js',
-  '/js/unitsController.js',
-  '/js/historyController.js',
-  '/js/certStatusController.js',
-  '/js/syncController.js',
-  '/js/queryLoop.js',
-  '/js/dashboardController.js',
-  '/js/eventsCert.js',
-  '/js/eventsAuth.js',
-  '/js/eventsSync.js',
-  '/js/eventsTable.js',
-  '/js/eventsFilters.js',
-  '/js/eventsNsu.js',
-  '/js/eventsNav.js',
-  '/js/eventsScheduler.js',
-  '/js/events.js',
-  '/js/bootComponents.js',
-  '/js/bootData.js',
-  '/js/boot.js',
-  '/app.js',
+  '/css/insights.css',
   '/favicon.svg'
 ];
 
 self.addEventListener('install', (event) => {
+  // Ativa imediatamente (não espera abas antigas)
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE)
       .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
-      .catch(() => self.skipWaiting())
+      .catch(() => null)
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {
@@ -108,6 +81,29 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (!isStaticAsset(url)) return;
 
+  // JS: sempre network-first (auth/boot mudam com frequência)
+  const isJs = url.pathname.endsWith('.js') || url.pathname.startsWith('/js/') || url.pathname === '/app.js';
+
+  if (isJs) {
+    event.respondWith(
+      fetch(req, { cache: 'no-store' })
+        .then((res) => {
+          if (res && res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, clone)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(async () => {
+          const cached = await caches.match(req);
+          if (cached) return cached;
+          throw new Error('offline');
+        })
+    );
+    return;
+  }
+
+  // CSS/assets: stale-while-revalidate
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(req);
@@ -120,7 +116,7 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => cached);
 
-      return cached || network;
+      return network.then((res) => res || cached);
     })
   );
 });

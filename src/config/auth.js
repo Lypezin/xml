@@ -60,6 +60,11 @@ function basicAuthMiddleware(req, res, next) {
   }
 
   const header = req.headers.authorization || '';
+  // Não conflitar com JWT do Supabase (Bearer) — o requireSupabaseAuth valida o token
+  if (header.startsWith('Bearer ') && isSupabaseAuthRequired()) {
+    return next();
+  }
+
   const [type, encoded] = header.split(' ');
   if (type === 'Basic' && encoded) {
     const [user, password] = Buffer.from(encoded, 'base64').toString('utf8').split(':');
@@ -94,11 +99,19 @@ async function requireSupabaseAuth(req, res, next) {
   try {
     const user = await getSupabaseUserFromToken(token);
     if (!user) {
-      return res.status(401).json({ success: false, error: 'Sessao invalida ou expirada.' });
+      return res.status(401).json({
+        success: false,
+        error: 'Sessão inválida ou expirada. Faça login novamente.',
+        code: 'SESSION_INVALID'
+      });
     }
 
     if (!isUserAllowed(user.email)) {
-      return res.status(403).json({ success: false, error: 'Usuário não autorizado para este sistema.' });
+      return res.status(403).json({
+        success: false,
+        error: 'Usuário não autorizado para este sistema. Peça inclusão em AUTH_ALLOWED_EMAILS/DOMAINS.',
+        code: 'USER_NOT_ALLOWED'
+      });
     }
 
     req.authUser = {
@@ -107,7 +120,12 @@ async function requireSupabaseAuth(req, res, next) {
     };
     return next();
   } catch (e) {
-    return res.status(401).json({ success: false, error: 'Sessão inválida ou expirada.' });
+    console.warn('[requireSupabaseAuth]', e.message);
+    return res.status(401).json({
+      success: false,
+      error: 'Sessão inválida ou expirada. Faça login novamente.',
+      code: 'SESSION_ERROR'
+    });
   }
 }
 

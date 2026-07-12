@@ -9,14 +9,18 @@ if (authForm) {
 
     try {
       const user = await window.AppApi.loginWithPassword(authEmail.value.trim(), authPassword.value);
+      if (!window.authSession?.access_token) {
+        throw new Error('Login ok, mas a sessão não foi salva. Tente novamente.');
+      }
+      if (window.AppAuthGate) window.AppAuthGate.endBoot();
       window.AppUi.setAuthMessage('Acesso liberado.', 'success');
       window.AppUi.showAuthenticatedApp(user);
       if (window.AppDataCache) window.AppDataCache.invalidateAll();
-      // Paralelo pos-login
-      Promise.allSettled([
+      // Só carrega dados com token válido em memória
+      await Promise.allSettled([
         window.AppSyncController.checkCertStatus({ skipSecondary: true }),
         window.AppSyncController.loadDashboard(),
-        loadSchedulerSettings()
+        typeof loadSchedulerSettings === 'function' ? loadSchedulerSettings() : Promise.resolve()
       ]);
       window.AppUi.updateProgress(0, 0);
       if (selectEnvironment) selectEnvironment.dispatchEvent(new Event('change'));
