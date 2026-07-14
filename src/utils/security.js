@@ -25,7 +25,7 @@ function resolveContainedPath(baseDir, fileName) {
 }
 
 function rejectUnauthorizedForNfse() {
-  return String(process.env.NFSE_TLS_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false';
+  return true;
 }
 
 function createNfseHttpsAgent({ pfx, passphrase }) {

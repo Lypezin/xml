@@ -7,7 +7,7 @@ const {
   rejectUnauthorizedForNfse,
   safeErrorInfo
 } = require('../src/utils/security');
-const { encryptCertificateValue, decryptCertificateValue } = require('../src/utils/crypto');
+const { getCertificateEncryptionKey, encryptCertificateValue, decryptCertificateValue } = require('../src/utils/crypto');
 
 test('sanitizeFileName removes path traversal and invalid characters', () => {
   assert.equal(sanitizeFileName('../../EVENTO:123.xml'), 'EVENTO_123.xml');
@@ -20,14 +20,11 @@ test('resolveContainedPath always remains inside the base directory', () => {
   assert.match(result, /safe[\\/]downloads[\\/]nota\.xml$/i);
 });
 
-test('NFS-e TLS verification is enabled by default and only disabled explicitly', () => {
-  const before = process.env.NFSE_TLS_REJECT_UNAUTHORIZED;
-  delete process.env.NFSE_TLS_REJECT_UNAUTHORIZED;
+test('NFS-e TLS verification is always enabled', () => {
   assert.equal(rejectUnauthorizedForNfse(), true);
   process.env.NFSE_TLS_REJECT_UNAUTHORIZED = 'false';
-  assert.equal(rejectUnauthorizedForNfse(), false);
-  if (before === undefined) delete process.env.NFSE_TLS_REJECT_UNAUTHORIZED;
-  else process.env.NFSE_TLS_REJECT_UNAUTHORIZED = before;
+  assert.equal(rejectUnauthorizedForNfse(), true);
+  delete process.env.NFSE_TLS_REJECT_UNAUTHORIZED;
 });
 
 test('safeErrorInfo does not include Axios config or secrets', () => {
@@ -57,5 +54,23 @@ test('certificate values round-trip with AES-256-GCM', () => {
   } finally {
     if (before === undefined) delete process.env.CERT_ENCRYPTION_KEY;
     else process.env.CERT_ENCRYPTION_KEY = before;
+  }
+});
+
+test('certificate key is derived automatically from the existing app secret', () => {
+  const beforeKey = process.env.CERT_ENCRYPTION_KEY;
+  const beforeSecret = process.env.SUPABASE_APP_SECRET;
+  delete process.env.CERT_ENCRYPTION_KEY;
+  process.env.SUPABASE_APP_SECRET = 'existing-strong-application-secret';
+  try {
+    const first = getCertificateEncryptionKey();
+    const second = getCertificateEncryptionKey();
+    assert.equal(first.length, 32);
+    assert.deepEqual(first, second);
+  } finally {
+    if (beforeKey === undefined) delete process.env.CERT_ENCRYPTION_KEY;
+    else process.env.CERT_ENCRYPTION_KEY = beforeKey;
+    if (beforeSecret === undefined) delete process.env.SUPABASE_APP_SECRET;
+    else process.env.SUPABASE_APP_SECRET = beforeSecret;
   }
 });

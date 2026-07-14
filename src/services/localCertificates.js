@@ -42,8 +42,8 @@ function saveCertificatesIndex(index) {
 
 function writeEncryptedLocalCertificate(id, pfxBuffer, passphrase) {
   if (!getCertificateEncryptionKey()) {
-    const error = new Error('CERT_ENCRYPTION_KEY é obrigatória para armazenar certificados localmente.');
-    error.code = 'CERT_ENCRYPTION_KEY_REQUIRED';
+    const error = new Error('A chave automática de certificados não está disponível.');
+    error.code = 'CERTIFICATE_KEY_UNAVAILABLE';
     throw error;
   }
   const storedName = `${id}.cert.enc`;
@@ -117,7 +117,7 @@ function migrateLegacyCertificateIfNeeded() {
   }
 
   if (!getCertificateEncryptionKey()) {
-    throw new Error('Configure CERT_ENCRYPTION_KEY antes de migrar o certificado local legado.');
+    throw new Error('A chave automática de certificados não está disponível para a migração local.');
   }
   const id = nodeCrypto.randomUUID();
   const storedName = writeEncryptedLocalCertificate(id, fs.readFileSync(CERT_FILE), settings.passphrase);

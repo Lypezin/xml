@@ -50,7 +50,7 @@ e preencha a URL, chave publishable e segredo local da aplicacao.
 
 ## Deploy na Vercel
 
-O projeto suporta deploy na Vercel usando Node Functions. Em producao, os certificados A1 enviados pela interface sao criptografados no backend e salvos no Supabase. A chave de criptografia fica somente nas variaveis da Vercel.
+O projeto suporta deploy na Vercel usando Node Functions. Em producao, os certificados A1 enviados pela interface sao criptografados automaticamente no backend e salvos no Supabase.
 
 Configure estas variaveis na Vercel:
 
@@ -58,29 +58,11 @@ Configure estas variaveis na Vercel:
 SUPABASE_URL
 SUPABASE_PUBLISHABLE_KEY
 SUPABASE_APP_SECRET
-CERT_ENCRYPTION_KEY
-AUTH_ALLOWED_EMAILS
-AUTH_ALLOWED_DOMAINS
-```
-
-Use o valor local salvo em:
-
-```text
-config/cert-encryption-key.txt
 ```
 
 Depois do deploy, o usuario pode enviar varios certificados pela propria interface, selecionar qual certificado usar e remover certificados cadastrados.
 
-O login usa Supabase Auth. Crie os usuarios da empresa no painel do Supabase Auth e limite o acesso com `AUTH_ALLOWED_EMAILS` ou `AUTH_ALLOWED_DOMAINS`.
-
-Exemplos:
-
-```text
-AUTH_ALLOWED_EMAILS=ana@suaempresa.com.br,joao@suaempresa.com.br
-AUTH_ALLOWED_DOMAINS=suaempresa.com.br
-```
-
-Não deixe `AUTH_ALLOWED_EMAILS` e `AUTH_ALLOWED_DOMAINS` vazios em producao se o projeto Supabase tiver usuarios externos.
+O login usa Supabase Auth. Qualquer usuario autenticado nesse projeto Supabase pode acessar e operar o sistema.
 
 Os XMLs consultados sao gravados temporariamente no Supabase por ate 12 horas para permitir download individual ou ZIP em ambiente serverless.
 
@@ -99,9 +81,7 @@ Nao commite certificados, senhas, XMLs baixados ou arquivos locais de configurac
 
 O sistema tambem exporta Excel e um Manifesto de Integridade CSV. O manifesto registra NSU, chave de acesso, status, participantes, valor, SHA-256 do XML e datas de primeiro/ultimo registro para conciliacao e cadeia de custodia.
 
-Em producao, o acesso falha de forma segura quando nao existe allowlist nem a claim `app_metadata.xml_nfse_role`. Em um Supabase compartilhado, mantenha `AUTH_ALLOW_ALL_SUPABASE_USERS=false`. Os perfis suportados sao `admin`, `operator` e `viewer`.
-
-O endpoint de cron aceita `SCHEDULER_SECRET` somente no header `Authorization: Bearer ...`; nunca envie segredos na URL. A verificacao TLS da ADN fica ativa por padrao com `NFSE_TLS_REJECT_UNAUTHORIZED=true`.
+O acesso exige apenas uma sessao valida do Supabase. A verificacao TLS da ADN permanece sempre ativa e a chave dos certificados e gerada ou derivada automaticamente.
 
 Os metadados e payloads XML sao persistidos no schema `xml_nfse`. Defina uma politica fiscal de retencao antes de remover ou arquivar payloads historicos; nao execute limpeza destrutiva apenas para reduzir volume.
 

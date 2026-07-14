@@ -89,17 +89,6 @@ async function initializeAuthenticatedApp() {
       return;
     }
 
-    if (window.authConfig.accessPolicyConfigured === false) {
-      if (window.AppUi?.showLogin) window.AppUi.showLogin();
-      if (window.AppUi?.setAuthMessage) {
-        window.AppUi.setAuthMessage(
-          'Acesso bloqueado com segurança: configure AUTH_ALLOWED_EMAILS/DOMAINS ou o perfil xml_nfse_role.',
-          'error'
-        );
-      }
-      return;
-    }
-
     // Sem config de Supabase no frontend → login impossível
     if (!window.authConfig.supabaseUrl || !window.authConfig.publishableKey) {
       if (window.AppUi?.showLogin) window.AppUi.showLogin();

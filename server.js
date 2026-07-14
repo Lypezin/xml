@@ -11,9 +11,7 @@ const {
 const {
   basicAuthMiddleware,
   requireSupabaseAuth,
-  isSupabaseAuthRequired,
-  isAccessPolicyConfigured,
-  requireXmlRole
+  isSupabaseAuthRequired
 } = require('./src/config/auth');
 const { getSupabaseConfig } = require('./src/services/supabase');
 const { createRateLimiter } = require('./src/middleware/rateLimit');
@@ -57,7 +55,6 @@ app.get('/api/auth-config', (req, res) => {
   const config = getSupabaseConfig();
   return res.json({
     authRequired: isSupabaseAuthRequired(),
-    accessPolicyConfigured: isAccessPolicyConfigured(),
     supabaseUrl: config ? config.url : null,
     publishableKey: config ? config.key : null
   });
@@ -85,29 +82,6 @@ app.use('/api/download-period-zip', rlHeavy);
 app.use('/api/download-excel', rlHeavy);
 app.use('/api/download-integrity-manifest', rlHeavy);
 app.use('/api/upload-certificate', rlUpload);
-
-// RBAC: allowlisted users keep admin access; claims can explicitly restrict roles.
-const operatorOnly = requireXmlRole('admin', 'operator');
-const adminOnly = requireXmlRole('admin');
-[
-  '/api/fetch-batch',
-  '/api/discover-nsu',
-  '/api/scan-cancellations',
-  '/api/sync-run/start',
-  '/api/sync-run/finish',
-  '/api/select-certificate',
-  '/api/rename-certificate',
-  '/api/scheduler-run',
-  '/api/scheduler-settings'
-].forEach(route => app.post(route, operatorOnly));
-[
-  '/api/upload-certificate',
-  '/api/renew-certificate',
-  '/api/remove-certificate',
-  '/api/reset-nsu'
-].forEach(route => app.post(route, adminOnly));
-app.post('/api/units', operatorOnly);
-app.delete('/api/units/:id', adminOnly);
 
 // Importar e associar Rotas do Sistema
 app.use('/api', require('./src/routes/certificatesList'));
