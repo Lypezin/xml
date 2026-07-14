@@ -32,6 +32,7 @@ const {
 } = require('../services/cancellationScanner');
 
 const router = express.Router();
+const { safeErrorInfo } = require('../utils/security');
 
 let fetchBatchInFlight = false;
 
@@ -160,8 +161,8 @@ router.post('/sync-run/start', async (req, res) => {
     const runId = runResult ? (runResult.run_id || runResult) : null;
     return res.json({ success: true, runId });
   } catch (err) {
-    console.error('[sync-run/start]', err);
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('[sync-run/start]', safeErrorInfo(err));
+    return res.status(500).json({ success: false, error: 'Não foi possível iniciar o registro da sincronização.' });
   }
 });
 
@@ -190,8 +191,8 @@ router.post('/sync-run/finish', async (req, res) => {
     });
     return res.json({ success: true });
   } catch (err) {
-    console.error('[sync-run/finish]', err);
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('[sync-run/finish]', safeErrorInfo(err));
+    return res.status(500).json({ success: false, error: 'Não foi possível finalizar o registro da sincronização.' });
   }
 });
 

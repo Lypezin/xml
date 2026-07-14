@@ -26,6 +26,7 @@ const {
 } = require('../services/supabase');
 const { executeSyncBatch } = require('../utils/syncProcessor');
 const { handleSyncError } = require('../utils/syncErrorHandler');
+const { createNfseHttpsAgent, safeErrorInfo } = require('../utils/security');
 const {
   scanCancellationsForPeriod,
   currentMonthRange
@@ -54,7 +55,7 @@ router.post('/discover-nsu', async (req, res) => {
     const certValidation = validateCertificateForNationalApi(pfxBuffer, selectedCertificate.passphrase);
     if (!certValidation.valid) return res.status(400).json({ success: false, error: certValidation.error });
 
-    const httpsAgent = new https.Agent({ pfx: pfxBuffer, passphrase: selectedCertificate.passphrase, rejectUnauthorized: false });
+    const httpsAgent = createNfseHttpsAgent({ pfx: pfxBuffer, passphrase: selectedCertificate.passphrase });
     const baseUrl = getNationalApiBaseUrl(requestEnvironment);
     const url = buildDfeUrl(baseUrl, 0, requestCnpjConsulta);
 
@@ -94,9 +95,9 @@ router.post('/discover-nsu', async (req, res) => {
 
     return res.json({ success: true, maxNSU: maxNSU || 0, reliableMax });
   } catch (e) {
-    console.error('Erro no discover-nsu:', e);
+    console.error('Erro no discover-nsu:', safeErrorInfo(e));
     if (e.response && e.response.status === 404) return res.json({ success: true, maxNSU: 0 });
-    return res.status(500).json({ success: false, error: 'Erro ao descobrir NSU: ' + e.message });
+    return res.status(500).json({ success: false, error: 'Não foi possível consultar o NSU na ADN.' });
   }
 });
 

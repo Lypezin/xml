@@ -20,7 +20,10 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
 
     // Troca visual IMEDIATA (nunca espera rede)
     navs.forEach(nav => {
-      if (nav) nav.classList.remove('active');
+      if (nav) {
+        nav.classList.remove('active');
+        nav.removeAttribute('aria-current');
+      }
     });
     contents.forEach(content => {
       if (content) {
@@ -29,7 +32,10 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
       }
     });
 
-    if (activeNav) activeNav.classList.add('active');
+    if (activeNav) {
+      activeNav.classList.add('active');
+      activeNav.setAttribute('aria-current', 'page');
+    }
     if (activeContent) {
       activeContent.style.display = 'block';
       requestAnimationFrame(() => {
@@ -54,7 +60,11 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
     }
 
     // Dados em background (nao bloqueia pintura da aba)
-    const schedule = (fn) => {
+    const schedule = (fn, urgent = false) => {
+      if (urgent) {
+        requestAnimationFrame(fn);
+        return;
+      }
       if (window.requestIdleCallback) window.requestIdleCallback(fn, { timeout: 400 });
       else setTimeout(fn, 0);
     };
@@ -64,7 +74,10 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
       const hasCards = Boolean(document.querySelector('#dashboard-cities-grid .city-card'));
       if (forceRefresh || !hasCards || !lastDash || now - lastDash > cacheTtlMs) {
         window._tabCache.dashboardAt = now;
-        schedule(() => window.AppSyncController.loadDashboard());
+        schedule(
+          () => window.AppSyncController.loadDashboard(0, { forceRefresh }),
+          forceRefresh || !hasCards
+        );
       }
     }
 
@@ -108,10 +121,10 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
           window.AppSyncController.loadStorageSummary();
         }
         window.AppInsights?.refreshOpsInsights?.();
-      });
+      }, forceRefresh || certChanged || !hasRows);
     }
 
-    if (activeId === 'view-dashboard-content' && window.AppInsights) {
+    if (activeId === 'view-dashboard-content' && window.AppInsights && !window.AppSyncController?.loadDashboard) {
       schedule(() => {
         window.AppInsights.refreshDashboardExtras([]).catch(() => {});
       });

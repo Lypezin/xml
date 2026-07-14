@@ -16,6 +16,7 @@ const {
   buildListFilterParams
 } = require('../utils/downloadHelpers');
 const { registerAuditEvent, userEmailFromReq } = require('../services/audit');
+const { sanitizeFileName, resolveContainedPath, safeErrorInfo } = require('../utils/security');
 
 const router = express.Router();
 
@@ -80,9 +81,9 @@ router.post('/download-period-zip', async (req, res) => {
 
     const archive = archiver('zip', { zlib: { level: 6 } });
     archive.on('error', err => {
-      console.error('Archive stream error:', err);
+      console.error('[period-zip:stream]', safeErrorInfo(err));
       if (!res.headersSent) {
-        res.status(500).json({ error: 'Erro no stream do ZIP: ' + err.message });
+        res.status(500).json({ error: 'Não foi possível gerar o arquivo ZIP.' });
       }
     });
     archive.pipe(res);
@@ -98,8 +99,8 @@ router.post('/download-period-zip', async (req, res) => {
       const payloadByToken = new Map(remotePayloads.map(payload => [payload.token, payload]));
 
       for (const doc of chunk) {
-        const fileName = doc.file_name || doc.arquivo;
-        const localPath = path.join(DOWNLOADS_DIR, fileName);
+        const fileName = sanitizeFileName(doc.file_name || doc.arquivo, `NFSE_${doc.nsu || i}.xml`);
+        const localPath = resolveContainedPath(DOWNLOADS_DIR, fileName);
 
         let xmlContent = null;
         if (!IS_VERCEL && fs.existsSync(localPath)) {
@@ -123,9 +124,9 @@ router.post('/download-period-zip', async (req, res) => {
 
     await archive.finalize();
   } catch (err) {
-    console.error('Erro ao gerar ZIP:', err);
+    console.error('Erro ao gerar ZIP:', safeErrorInfo(err));
     if (!res.headersSent) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: 'Não foi possível gerar o arquivo ZIP.' });
     }
   }
 });

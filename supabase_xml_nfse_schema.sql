@@ -8,7 +8,7 @@ create table if not exists xml_nfse.settings (
 );
 
 insert into xml_nfse.settings (key, value)
-values ('app_secret_sha256', '4a566d34c43e975e16796070f90078b27781e4f60180c0d497b37d169375f1ed')
+values ('app_secret_sha256', 'REPLACE_WITH_SHA256_OF_SUPABASE_APP_SECRET')
 on conflict (key) do update
 set value = excluded.value,
     updated_at = now();
@@ -1196,34 +1196,15 @@ declare
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
+  if cardinality(coalesce(p_tokens, array[]::text[])) > 100 then
+    raise exception 'maximum of 100 XML tokens per request' using errcode = '22023';
+  end if;
+
   select coalesce(jsonb_agg(to_jsonb(p.*) order by p.created_at desc), '[]'::jsonb)
   into rows_data
   from xml_nfse.xml_payloads p
   where p.token = any(coalesce(p_tokens, array[]::text[]))
     and (p.expires_at is null or p.expires_at >= now());
-
-  return rows_data;
-end;
-$$;
-
-create or replace function public.xml_nfse_list_xml_payloads(
-  p_secret text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = xml_nfse, public, extensions
-as $$
-declare
-  rows_data jsonb;
-begin
-  perform xml_nfse.assert_app_secret(p_secret);
-
-  select coalesce(jsonb_agg(to_jsonb(p.*) order by p.created_at desc), '[]'::jsonb)
-  into rows_data
-  from xml_nfse.xml_payloads p
-  where p.expires_at is null or p.expires_at >= now()
-  limit 500;
 
   return rows_data;
 end;
@@ -1351,7 +1332,6 @@ grant execute on function public.xml_nfse_register_download(text, text, text, bi
 grant execute on function public.xml_nfse_upsert_xml_payload(text, text, text, text, bigint, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_xml_payload(text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_get_xml_payloads_by_tokens(text, text[]) to anon, authenticated;
-grant execute on function public.xml_nfse_list_xml_payloads(text) to anon, authenticated;
 grant execute on function public.xml_nfse_storage_summary(text, text, text) to anon, authenticated;
 grant execute on function public.xml_nfse_mark_cancelled_by_chave(text, text, text, text, bigint, jsonb) to anon, authenticated;
 

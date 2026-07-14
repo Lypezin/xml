@@ -96,6 +96,34 @@ if (btnExportExcel) {
   });
 }
 
+if (btnExportIntegrity) {
+  btnExportIntegrity.addEventListener('click', async () => {
+    btnExportIntegrity.disabled = true;
+    try {
+      const unitFilterParams = window.AppSyncController.getSelectedUnitFilter();
+      await window.AppApi.downloadIntegrityManifest({
+        certificateId: selectCertificate ? selectCertificate.value : window.activeCertificateId,
+        environment: selectEnvironment ? selectEnvironment.value : 'producao',
+        startDate: downloadStartDate?.value || '',
+        endDate: downloadEndDate?.value || '',
+        partyCnpj: unitFilterParams.partyCnpj,
+        partyRole: unitFilterParams.partyRole,
+        search: historySearch ? historySearch.value.trim() : '',
+        cancelledMode: window.AppUtils.getCancelledMode(),
+        includeCancelled: window.AppUtils.getIncludeCancelledParam(),
+        onlyCancelled: window.AppUtils.getOnlyCancelledParam()
+      });
+      window.AppUi.log('Manifesto de integridade exportado com SHA-256.', 'success');
+      window.AppToast?.success('Manifesto de integridade exportado');
+    } catch (error) {
+      window.AppUi.log(`Erro no manifesto: ${error.message}`, 'error');
+      window.AppToast?.error(error.message || 'Falha no manifesto');
+    } finally {
+      btnExportIntegrity.disabled = !window.AppUiTable?.documents?.length;
+    }
+  });
+}
+
 if (btnDownloadZip) {
   btnDownloadZip.addEventListener('click', async () => {
     window.AppUi.log('Gerando ZIP com os XMLs persistidos da tabela atual...');

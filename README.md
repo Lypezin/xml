@@ -94,3 +94,25 @@ Nao commite certificados, senhas, XMLs baixados ou arquivos locais de configurac
 - `config/certificates/`
 - `downloads/`
 - `*.pfx`, `*.p12`, `*.pem`, `*.key`
+
+## Operacao empresarial
+
+O sistema tambem exporta Excel e um Manifesto de Integridade CSV. O manifesto registra NSU, chave de acesso, status, participantes, valor, SHA-256 do XML e datas de primeiro/ultimo registro para conciliacao e cadeia de custodia.
+
+Em producao, o acesso falha de forma segura quando nao existe allowlist nem a claim `app_metadata.xml_nfse_role`. Em um Supabase compartilhado, mantenha `AUTH_ALLOW_ALL_SUPABASE_USERS=false`. Os perfis suportados sao `admin`, `operator` e `viewer`.
+
+O endpoint de cron aceita `SCHEDULER_SECRET` somente no header `Authorization: Bearer ...`; nunca envie segredos na URL. A verificacao TLS da ADN fica ativa por padrao com `NFSE_TLS_REJECT_UNAUTHORIZED=true`.
+
+Os metadados e payloads XML sao persistidos no schema `xml_nfse`. Defina uma politica fiscal de retencao antes de remover ou arquivar payloads historicos; nao execute limpeza destrutiva apenas para reduzir volume.
+
+## Banco e migrations
+
+As migrations incrementais ficam em `supabase/migrations/`. A migration `20260714020000_xml_nfse_security_limits.sql` remove RPCs antigas sem limite, restringe a leitura de payloads a 100 tokens por chamada e protege `document_stats` com RLS.
+
+Antes de aplicar `supabase_xml_nfse_schema.sql` em um projeto novo, substitua `REPLACE_WITH_SHA256_OF_SUPABASE_APP_SECRET` pelo SHA-256 de um segredo aleatorio forte. O hash real do ambiente nao deve ser versionado.
+
+## Documentacao oficial
+
+- Portal tecnico: https://www.gov.br/nfse/pt-br/nfs-e-via/documentacao-tecnica
+- Ambientes e Swagger: https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/apis-prod-restrita-e-producao
+- Manual de APIs ADN para contribuintes: https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/manual-contribuintes-apis-adn-sistema-nacional-nfse.pdf

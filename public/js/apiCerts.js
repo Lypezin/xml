@@ -13,16 +13,18 @@ async fetchCertStatus() {
     }, { softMs: 300000 });
   },
 
-  async fetchDashboardSummary() {
+  async fetchDashboardSummary(options = {}) {
     const cache = window.AppDataCache;
+    const forceRefresh = Boolean(options.forceRefresh);
     if (!cache) {
       const res = await fetch('/api/dashboard-summary');
       return this._jsonOrThrow(res, 'Falha ao carregar dashboard.');
     }
+    if (forceRefresh) cache.invalidate('dashboard-summary');
     return cache.getOrFetch('dashboard-summary', 60000, async () => {
       const res = await fetch('/api/dashboard-summary');
       return this._jsonOrThrow(res, 'Falha ao carregar dashboard.');
-    }, { softMs: 600000 });
+    }, { softMs: 600000, allowStale: !forceRefresh });
   },
 
   async uploadCertificate(formData) {

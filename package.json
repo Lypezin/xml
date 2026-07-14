@@ -5,9 +5,12 @@
   "main": "server.js",
   "scripts": {
     "build:panels": "node scripts/build-panels-bundle.js",
-    "prestart": "node scripts/build-panels-bundle.js",
+    "build:assets": "node scripts/build-assets-bundle.js",
+    "build": "npm run build:panels && npm run build:assets",
+    "prestart": "npm run build",
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "node --test"
   },
   "keywords": [
     "nfse",
@@ -24,7 +27,12 @@
     "axios": "^1.6.8",
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.2.0",
     "node-forge": "^1.4.0"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }

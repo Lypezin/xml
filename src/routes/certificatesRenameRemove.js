@@ -25,6 +25,7 @@ const {
   onlyDigits
 } = require('../utils/cert');
 const { validateCertificateForNationalApi } = require('../utils/certValidator');
+const { safeErrorInfo } = require('../utils/security');
 
 const router = express.Router();
 const storage = multer.memoryStorage();
@@ -80,7 +81,8 @@ router.post('/remove-certificate', async (req, res) => {
       certificates: index.certificates.map(sanitizeCertificate)
     });
   } catch (e) {
-    return res.status(500).json({ success: false, error: 'Erro ao remover certificado: ' + e.message });
+    console.error('[remove-certificate]', safeErrorInfo(e));
+    return res.status(500).json({ success: false, error: 'Não foi possível remover o certificado.' });
   }
 });
 
@@ -127,7 +129,8 @@ router.post('/rename-certificate', async (req, res) => {
       certificates: index.certificates.map(sanitizeCertificate)
     });
   } catch (e) {
-    return res.status(500).json({ success: false, error: 'Erro ao renomear certificado: ' + e.message });
+    console.error('[rename-certificate]', safeErrorInfo(e));
+    return res.status(500).json({ success: false, error: 'Não foi possível renomear o certificado.' });
   }
 });
 

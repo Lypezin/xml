@@ -23,6 +23,7 @@ const { processBatchDocuments } = require('../services/documentProcessor');
 const { analyzeBatchCancellations } = require('../services/cancelationAnalyzer');
 const { recordSample } = require('../services/apiHealth');
 const { supabaseRpc } = require('../services/supabaseClient');
+const { createNfseHttpsAgent } = require('./security');
 
 /**
  * Dedup apenas duplicatas do mesmo NSU no lote.
@@ -60,10 +61,9 @@ async function executeSyncBatch({
     throw new Error(certValidation.error);
   }
 
-  const httpsAgent = new https.Agent({
+  const httpsAgent = createNfseHttpsAgent({
     pfx: pfxBuffer,
-    passphrase: selectedCertificate.passphrase,
-    rejectUnauthorized: false
+    passphrase: selectedCertificate.passphrase
   });
 
   const baseUrl = getNationalApiBaseUrl(requestEnvironment);

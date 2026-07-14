@@ -61,7 +61,8 @@ window.AppInsights = {
       });
       const runs = data.runs || [];
       if (!runs.length) {
-        list.innerHTML = `<div class="helper-text">${data.warning || 'Nenhuma varredura registrada ainda. Inicie uma sincronização para ver o histórico.'}</div>`;
+        list.innerHTML = '<div class="helper-text"></div>';
+        list.firstElementChild.textContent = data.warning || 'Nenhuma varredura registrada ainda. Inicie uma sincronização para ver o histórico.';
         return;
       }
       const esc = window.AppUtils.escapeHtml;

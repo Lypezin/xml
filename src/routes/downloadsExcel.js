@@ -13,6 +13,7 @@ const {
 } = require('../utils/downloadHelpers');
 const { styleDataRow } = require('../utils/excelRowStyle');
 const { registerAuditEvent, userEmailFromReq } = require('../services/audit');
+const { safeErrorInfo } = require('../utils/security');
 
 const router = express.Router();
 
@@ -195,9 +196,9 @@ router.get('/download-excel', async (req, res) => {
 
     await workbook.commit();
   } catch (err) {
-    console.error('Erro ao gerar Excel:', err);
+    console.error('[download-excel]', safeErrorInfo(err));
     if (!res.headersSent) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: 'Não foi possível gerar o arquivo Excel.' });
     }
   }
 });

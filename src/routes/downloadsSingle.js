@@ -5,7 +5,6 @@ const https = require('https');
 const xmlCache = require('../utils/xmlCache');
 const {
   getSupabaseXmlPayload,
-  listSupabaseXmlPayloads
 } = require('../services/supabase');
 const { registerAuditEvent, userEmailFromReq } = require('../services/audit');
 const { resolveCertificateForRequest } = require('../services/localCertificates');
@@ -16,6 +15,7 @@ const {
   getDanfseFileName,
   summarizeRemoteError
 } = require('../utils/downloadHelpers');
+const { createNfseHttpsAgent, sanitizeFileName, safeErrorInfo } = require('../utils/security');
 
 const router = express.Router();
 
@@ -49,7 +49,8 @@ router.get('/download-xml/:token', async (req, res) => {
   });
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${cached.fileName}"`);
+  const downloadName = sanitizeFileName(cached.fileName, 'nfse.xml');
+  res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
   return res.send(cached.xmlString);
 });
 
@@ -74,10 +75,9 @@ router.get('/download-pdf/:chave', async (req, res) => {
       });
     }
 
-    const httpsAgent = new https.Agent({
+    const httpsAgent = createNfseHttpsAgent({
       pfx,
-      passphrase: cert.passphrase,
-      rejectUnauthorized: false
+      passphrase: cert.passphrase
     });
     const url = `${getDanfseBaseUrl(environment)}/${encodeURIComponent(chave)}`;
     const response = await axios.get(url, {
@@ -122,10 +122,10 @@ router.get('/download-pdf/:chave', async (req, res) => {
   } catch (err) {
     const status = err.response?.status || 500;
     const detail = summarizeRemoteError(err.response?.data);
-    console.error('Erro ao baixar DANFSe:', detail || err.message);
+    console.error('Erro ao baixar DANFSe:', safeErrorInfo(err));
     return res.status(status).json({
       success: false,
-      error: `Erro ao baixar DANFSe${detail ? `: ${detail}` : `: ${err.message}`}`
+      error: status < 500 && detail ? `A ADN recusou o DANFSe: ${detail}` : 'Não foi possível baixar o DANFSe.'
     });
   }
 });
@@ -138,17 +138,9 @@ router.get('/download-zip', async (req, res) => {
     }));
 
     if (payloads.length === 0) {
-      const persistedPayloads = await listSupabaseXmlPayloads();
-      if (Array.isArray(persistedPayloads)) {
-        payloads = persistedPayloads.map(item => ({
-          fileName: item.file_name,
-          xmlString: item.xml_content
-        }));
-      }
-    }
-
-    if (payloads.length === 0) {
-      return res.status(400).json({ error: 'Nenhum XML consultado nesta sessão para compactar.' });
+      return res.status(400).json({
+        error: 'Nenhum XML disponível nesta sessão. Use o ZIP por período para baixar documentos persistidos.'
+      });
     }
 
     res.setHeader('Content-Type', 'application/zip');
@@ -156,22 +148,24 @@ router.get('/download-zip', async (req, res) => {
 
     const archive = archiver('zip', { zlib: { level: 9 } });
     archive.on('error', err => {
-      console.error('Archive stream error:', err);
+      console.error('[session-zip:stream]', safeErrorInfo(err));
       if (!res.headersSent) {
-        res.status(500).json({ error: 'Erro no stream do ZIP: ' + err.message });
+        res.status(500).json({ error: 'Não foi possível gerar o arquivo ZIP.' });
       }
     });
     archive.pipe(res);
 
     for (const cached of dedupeXmlItems(payloads)) {
-      archive.append(Buffer.from(cached.xmlString, 'utf8'), { name: cached.fileName });
+      archive.append(Buffer.from(cached.xmlString, 'utf8'), {
+        name: sanitizeFileName(cached.fileName, 'nfse.xml')
+      });
     }
 
     await archive.finalize();
   } catch (e) {
-    console.error('Erro ao gerar arquivo ZIP:', e);
+    console.error('Erro ao gerar arquivo ZIP:', safeErrorInfo(e));
     if (!res.headersSent) {
-      return res.status(500).json({ error: 'Erro ao gerar arquivo ZIP: ' + e.message });
+      return res.status(500).json({ error: 'Não foi possível gerar o arquivo ZIP.' });
     }
   }
 });

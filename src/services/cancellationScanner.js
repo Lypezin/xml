@@ -9,6 +9,7 @@ const {
   normalizeEnvironment
 } = require('./supabase');
 const { getCertificateBuffer } = require('../utils/cert');
+const { createNfseHttpsAgent } = require('../utils/security');
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -70,10 +71,9 @@ async function scanCancellationsForPeriod({
     if (offset > 5000) break;
   }
 
-  const httpsAgent = new https.Agent({
+  const httpsAgent = createNfseHttpsAgent({
     pfx,
-    passphrase: certificate.passphrase,
-    rejectUnauthorized: false
+    passphrase: certificate.passphrase
   });
 
   let checked = 0;

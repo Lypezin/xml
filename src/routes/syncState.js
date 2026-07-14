@@ -32,8 +32,10 @@ const {
 } = require('../services/cancellationScanner');
 
 const router = express.Router();
+const { safeErrorInfo } = require('../utils/security');
 
 router.get('/sync-state', async (req, res) => {
+  try {
   const { certificateId, environment = 'producao', cnpjConsulta = '' } = req.query;
 
   // Path leve: nao carrega/descriptografa PFX — so metadados + RPCs de estado
@@ -79,6 +81,10 @@ router.get('/sync-state', async (req, res) => {
     state: state ? { ...state, last_received_nsu: Number(lastReceived || 0) } : state,
     cnpjConsulta: requestCnpjConsulta
   });
+  } catch (error) {
+    console.error('[sync-state]', safeErrorInfo(error));
+    return res.status(500).json({ success: false, error: 'Não foi possível carregar o estado da sincronização.' });
+  }
 });
 
 router.post('/reset-nsu', async (req, res) => {
@@ -108,8 +114,8 @@ router.post('/reset-nsu', async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    console.error('Erro ao zerar NSU no Supabase:', err);
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('[reset-nsu]', safeErrorInfo(err));
+    return res.status(500).json({ success: false, error: 'Não foi possível zerar o NSU.' });
   }
 });
 

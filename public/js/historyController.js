@@ -89,6 +89,9 @@ _historySnapshotKey(certId, page, unitFilterParams) {
 
       if (!data.success) {
         if (!quiet) window.AppUi.log(`Erro ao carregar histórico: ${data.error}`, 'warning');
+        if (!hasRows && window.AppUiTable.showLoadError) {
+          window.AppUiTable.showLoadError(data.error || 'Não foi possível carregar os XMLs desta unidade.');
+        }
         return;
       }
 
@@ -118,6 +121,9 @@ _historySnapshotKey(certId, page, unitFilterParams) {
     } catch (err) {
       if (requestId !== window._historyRequestId) return;
       if (!quiet) window.AppUi.log(`Erro ao carregar histórico: ${err.message}`, 'warning');
+      if (!hasRows && window.AppUiTable.showLoadError) {
+        window.AppUiTable.showLoadError('A conexão falhou. Verifique sua rede e tente novamente.');
+      }
     }
   },
 

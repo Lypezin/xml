@@ -11,13 +11,16 @@ const {
 const {
   basicAuthMiddleware,
   requireSupabaseAuth,
-  isSupabaseAuthRequired
+  isSupabaseAuthRequired,
+  isAccessPolicyConfigured,
+  requireXmlRole
 } = require('./src/config/auth');
 const { getSupabaseConfig } = require('./src/services/supabase');
 const { createRateLimiter } = require('./src/middleware/rateLimit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.set('trust proxy', IS_VERCEL ? 1 : false);
 
 // Garantir que as pastas existem
 if (!IS_VERCEL) {
@@ -37,6 +40,12 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'sha256-QSy0IQ67tfRuz4W3GV+mp77vjHpxOiEIK0gYbBoe9bQ=' 'sha256-+aOg7QgWNONVDWKdrJ/ewqpr/dTh6htbcv+ueYt0NSo=' 'sha256-vz8GkQ62w4p3Baq+opcbiRLKDM1jO82y0SdTdRtDZE4=' 'sha256-YbYXoOm9I/zX+VWjqWPctSMFMsZ3M005KBnTbZxQD+g='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+  );
   if (IS_VERCEL || req.secure || req.headers['x-forwarded-proto'] === 'https') {
     res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
   }
@@ -48,6 +57,7 @@ app.get('/api/auth-config', (req, res) => {
   const config = getSupabaseConfig();
   return res.json({
     authRequired: isSupabaseAuthRequired(),
+    accessPolicyConfigured: isAccessPolicyConfigured(),
     supabaseUrl: config ? config.url : null,
     publishableKey: config ? config.key : null
   });
@@ -55,6 +65,9 @@ app.get('/api/auth-config', (req, res) => {
 
 // Middleware de Autenticação Básica (opcional localmente)
 app.use(basicAuthMiddleware);
+
+// Limite pré-auth: protege a validação remota de JWT e endpoints públicos.
+app.use('/api', createRateLimiter({ windowMs: 60_000, max: 180, keyPrefix: 'preauth' }));
 
 // Middleware de Autenticação do Supabase (para rotas /api)
 app.use('/api', requireSupabaseAuth);
@@ -70,7 +83,31 @@ app.use('/api/discover-nsu', rlHeavy);
 app.use('/api/scan-cancellations', rlHeavy);
 app.use('/api/download-period-zip', rlHeavy);
 app.use('/api/download-excel', rlHeavy);
+app.use('/api/download-integrity-manifest', rlHeavy);
 app.use('/api/upload-certificate', rlUpload);
+
+// RBAC: allowlisted users keep admin access; claims can explicitly restrict roles.
+const operatorOnly = requireXmlRole('admin', 'operator');
+const adminOnly = requireXmlRole('admin');
+[
+  '/api/fetch-batch',
+  '/api/discover-nsu',
+  '/api/scan-cancellations',
+  '/api/sync-run/start',
+  '/api/sync-run/finish',
+  '/api/select-certificate',
+  '/api/rename-certificate',
+  '/api/scheduler-run',
+  '/api/scheduler-settings'
+].forEach(route => app.post(route, operatorOnly));
+[
+  '/api/upload-certificate',
+  '/api/renew-certificate',
+  '/api/remove-certificate',
+  '/api/reset-nsu'
+].forEach(route => app.post(route, adminOnly));
+app.post('/api/units', operatorOnly);
+app.delete('/api/units/:id', adminOnly);
 
 // Importar e associar Rotas do Sistema
 app.use('/api', require('./src/routes/certificatesList'));
@@ -97,10 +134,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
     }
   }
 }));
-if (!IS_VERCEL) {
-  app.use('/downloads', express.static(DOWNLOADS_DIR));
-}
-
 // Iniciar Servidor (somente se executado diretamente, não em serverless Vercel)
 if (require.main === module) {
   app.listen(PORT, async () => {

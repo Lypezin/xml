@@ -5,6 +5,7 @@ const {
   getRemoteDocumentTotals,
   getStorageSummary
 } = require('../services/supabase');
+const { safeErrorInfo } = require('../utils/security');
 const {
   clampListLimit,
   clampListOffset,
@@ -70,12 +71,8 @@ router.get('/list-documents', async (req, res) => {
       }
     });
   } catch (err) {
-    const detail = err.response?.data || err.message;
-    console.error('Erro ao listar documentos:', detail);
-    return res.status(500).json({
-      success: false,
-      error: typeof detail === 'string' ? detail : JSON.stringify(detail)
-    });
+    console.error('[list-documents]', safeErrorInfo(err));
+    return res.status(500).json({ success: false, error: 'Não foi possível listar os documentos.' });
   }
 });
 
@@ -114,12 +111,8 @@ router.get('/document-totals', async (req, res) => {
       summary: { totalValue: result.totalValue }
     });
   } catch (err) {
-    const detail = err.response?.data || err.message;
-    console.error('Erro ao obter totais:', detail);
-    return res.status(500).json({
-      success: false,
-      error: typeof detail === 'string' ? detail : JSON.stringify(detail)
-    });
+    console.error('[document-totals]', safeErrorInfo(err));
+    return res.status(500).json({ success: false, error: 'Não foi possível calcular os totais.' });
   }
 });
 
@@ -132,8 +125,8 @@ router.get('/storage-summary', async (req, res) => {
     });
     return res.json({ success: true, summary: summary || {} });
   } catch (err) {
-    console.error('Erro ao carregar resumo de armazenamento:', err);
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('[storage-summary]', safeErrorInfo(err));
+    return res.status(500).json({ success: false, error: 'Não foi possível carregar o resumo de armazenamento.' });
   }
 });
 

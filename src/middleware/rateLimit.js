@@ -16,11 +16,9 @@ function createRateLimiter({ windowMs = 60000, max = 30, keyPrefix = 'rl' } = {}
     const now = Date.now();
     if (hits.size > 5000) prune(now);
 
-    const ip = String(
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      req.socket?.remoteAddress ||
-      'unknown'
-    );
+    // req.ip honors Express' bounded trust-proxy setting; never trust a raw
+    // X-Forwarded-For supplied directly by the client.
+    const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
     const key = `${keyPrefix}:${ip}:${req.path}`;
     let entry = hits.get(key);
     if (!entry || now - entry.start >= windowMs) {

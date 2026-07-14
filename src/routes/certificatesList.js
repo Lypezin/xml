@@ -14,6 +14,7 @@ const {
   setActiveCertificate
 } = require('../services/localCertificates');
 const { getEnvCertificate } = require('../utils/cert');
+const { safeErrorInfo } = require('../utils/security');
 
 const router = express.Router();
 
@@ -156,15 +157,15 @@ router.get('/dashboard-summary', async (req, res) => {
       throw new Error('Banco de dados não retornou um formato de array.');
     }
   } catch (rpcErr) {
-    console.error('RPC xml_nfse_get_dashboard_summary falhou:', rpcErr);
+    console.error('RPC xml_nfse_get_dashboard_summary falhou:', safeErrorInfo(rpcErr));
     throw rpcErr;
   }
 } catch (err) {
-    console.error('Erro na rota /dashboard-summary:', err);
+    console.error('Erro na rota /dashboard-summary:', safeErrorInfo(err));
     const detail = err.response?.data?.message || err.response?.data?.error || err.message;
     return res.status(500).json({
       success: false,
-      error: detail
+      error: 'Não foi possível carregar o resumo do dashboard.'
     });
   }
 });

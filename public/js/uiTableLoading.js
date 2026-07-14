@@ -48,6 +48,25 @@ showLoading() {
     }
   },
 
+  showLoadError(message = 'Não foi possível carregar os XMLs desta unidade.') {
+    const tableBody = window.tableBody || document.getElementById('table-body');
+    if (!tableBody) return;
+    tableBody.innerHTML = `
+      <div class="xml-empty-state" role="alert">
+        <strong>Falha ao carregar documentos</strong>
+        <span class="helper-text" id="history-load-error-message"></span>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-retry-history">Tentar novamente</button>
+      </div>
+    `;
+    const text = document.getElementById('history-load-error-message');
+    if (text) text.textContent = message;
+    document.getElementById('btn-retry-history')?.addEventListener('click', () => {
+      window.AppSyncController?.loadPersistedHistory?.(1, { quiet: false });
+    });
+    if (window.statTotalNotas) window.statTotalNotas.textContent = '—';
+    if (window.statTotalValue) window.statTotalValue.textContent = '—';
+  },
+
   appendDocumentsToTable(docs) {
     if (window.AppSyncController?.loadPersistedHistory) {
       window.AppSyncController.loadPersistedHistory(1);

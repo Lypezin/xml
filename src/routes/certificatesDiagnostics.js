@@ -13,6 +13,7 @@ const {
 } = require('../utils/cert');
 const { validateCertificateForNationalApi } = require('../utils/certValidator');
 const { normalizeEnvironment, getNationalApiBaseUrl } = require('../services/nfse');
+const { safeErrorInfo } = require('../utils/security');
 
 const router = express.Router();
 
@@ -66,13 +67,14 @@ router.get('/certificate-diagnostics', async (req, res) => {
       }
     });
   } catch (e) {
+    console.error('[certificate-diagnostics]', safeErrorInfo(e));
     return res.status(500).json({
       success: false,
       remoteStorage: useRemoteCertificateStorage(),
       encryptionKey: getCertificateEncryptionKeyDiagnostics(),
       environment,
       nationalApiBaseUrl: getNationalApiBaseUrl(environment),
-      error: 'Falha ao diagnosticar certificado: ' + e.message
+      error: 'Falha interna ao diagnosticar o certificado.'
     });
   }
 });

@@ -101,10 +101,6 @@ async function getSupabaseXmlPayloads(tokens) {
   return Array.isArray(result) ? result : [];
 }
 
-async function listSupabaseXmlPayloads() {
-  return supabaseRpc('xml_nfse_list_xml_payloads', {});
-}
-
 async function getStorageSummary({ certificateId = '', environment = '' } = {}) {
   return supabaseRpc('xml_nfse_storage_summary', {
     p_certificate_id: certificateId || null,
@@ -270,7 +266,6 @@ module.exports = {
   markSupabaseDocumentCancelledByChave,
   getSupabaseXmlPayload,
   getSupabaseXmlPayloads,
-  listSupabaseXmlPayloads,
   getStorageSummary,
   listRemoteDocuments,
   listAllRemoteDocuments,

@@ -32,6 +32,7 @@ const {
 } = require('../services/cancellationScanner');
 
 const router = express.Router();
+const { safeErrorInfo } = require('../utils/security');
 
 let cancelScanInFlight = false;
 
@@ -74,8 +75,8 @@ router.post('/scan-cancellations', async (req, res) => {
 
     return res.json(result);
   } catch (err) {
-    console.error('Erro em scan-cancellations:', err);
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('[scan-cancellations]', safeErrorInfo(err));
+    return res.status(500).json({ success: false, error: 'Não foi possível consultar os cancelamentos.' });
   } finally {
     cancelScanInFlight = false;
   }

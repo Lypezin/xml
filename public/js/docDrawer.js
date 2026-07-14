@@ -1,5 +1,7 @@
 // Drawer de detalhe da nota (item 15)
 window.AppDocDrawer = {
+  previousFocus: null,
+
   open(doc) {
     const drawer = document.getElementById('doc-drawer');
     const backdrop = document.getElementById('doc-drawer-backdrop');
@@ -67,12 +69,16 @@ window.AppDocDrawer = {
       }
     });
 
+    this.previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     drawer.classList.add('open');
     drawer.setAttribute('aria-hidden', 'false');
     if (backdrop) {
       backdrop.hidden = false;
     }
     document.body.classList.add('drawer-open-lock');
+    const app = document.getElementById('app-layout');
+    if (app) app.inert = true;
+    requestAnimationFrame(() => document.getElementById('doc-drawer-close')?.focus());
   },
 
   close() {
@@ -82,13 +88,40 @@ window.AppDocDrawer = {
     drawer?.setAttribute('aria-hidden', 'true');
     if (backdrop) backdrop.hidden = true;
     document.body.classList.remove('drawer-open-lock');
+    const app = document.getElementById('app-layout');
+    if (app) app.inert = false;
+    if (this.previousFocus?.isConnected) this.previousFocus.focus();
+    this.previousFocus = null;
   },
 
   bind() {
     document.getElementById('doc-drawer-close')?.addEventListener('click', () => this.close());
     document.getElementById('doc-drawer-backdrop')?.addEventListener('click', () => this.close());
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.close();
+      const drawer = document.getElementById('doc-drawer');
+      if (!drawer?.classList.contains('open')) return;
+      if (e.key === 'Escape') {
+        this.close();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const focusable = Array.from(drawer.querySelectorAll(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      ));
+      if (!focusable.length) {
+        e.preventDefault();
+        drawer.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     });
   }
 };

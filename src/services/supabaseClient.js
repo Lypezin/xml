@@ -73,7 +73,6 @@ const HEAVY_RPCS = new Set([
   'xml_nfse_get_dashboard_analytics',
   'xml_nfse_storage_summary',
   'xml_nfse_get_xml_payloads_by_tokens',
-  'xml_nfse_list_xml_payloads',
   'xml_nfse_list_sync_runs',
   'xml_nfse_list_audit_events'
 ]);

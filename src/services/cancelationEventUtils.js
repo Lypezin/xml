@@ -1,6 +1,7 @@
 const zlib = require('zlib');
 const { extractDfeDocuments } = require('./nfse');
 const { isCancellationEvent, parseXmlMetadata } = require('../utils/xmlParser');
+const { MAX_XML_BYTES } = require('../utils/security');
 
 function isValidChave(chave) {
   const value = String(chave || '').trim();
@@ -40,7 +41,7 @@ function decodeArquivoXml(b64) {
   try {
     const raw = Buffer.from(b64, 'base64');
     try {
-      return zlib.gunzipSync(raw).toString('utf8');
+      return zlib.gunzipSync(raw, { maxOutputLength: MAX_XML_BYTES }).toString('utf8');
     } catch {
       return raw.toString('utf8');
     }

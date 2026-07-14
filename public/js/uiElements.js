@@ -74,6 +74,7 @@ window.AppUiElements = {
 
     window.btnClearDownloads = document.getElementById('btn-clear-downloads');
     window.btnExportExcel = document.getElementById('btn-export-excel');
+    window.btnExportIntegrity = document.getElementById('btn-export-integrity');
     window.btnDownloadZip = document.getElementById('btn-download-zip');
     window.tableBody = document.getElementById('table-body');
     window.historyCountLabel = document.getElementById('history-count-label');

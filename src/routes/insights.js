@@ -3,6 +3,33 @@ const { supabaseRpc, getSupabaseConfig } = require('../services/supabaseClient')
 const { recordSample, summarize } = require('../services/apiHealth');
 
 const router = express.Router();
+const ANALYTICS_CACHE_TTL_MS = 120000;
+const analyticsCache = new Map();
+const analyticsInflight = new Map();
+
+async function getCachedAnalytics(key, loader) {
+  const now = Date.now();
+  const cached = analyticsCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return { value: cached.value, status: 'hit' };
+  }
+  if (analyticsInflight.has(key)) {
+    return { value: await analyticsInflight.get(key), status: 'shared' };
+  }
+  const pending = Promise.resolve()
+    .then(loader)
+    .then(value => {
+      analyticsCache.set(key, { value, expiresAt: Date.now() + ANALYTICS_CACHE_TTL_MS });
+      analyticsInflight.delete(key);
+      return value;
+    })
+    .catch(error => {
+      analyticsInflight.delete(key);
+      throw error;
+    });
+  analyticsInflight.set(key, pending);
+  return { value: await pending, status: 'miss' };
+}
 
 function rpcErrorDetail(err) {
   const data = err?.response?.data;
@@ -125,10 +152,14 @@ router.get('/dashboard-analytics', async (req, res) => {
 
     const environment = req.query.environment === 'homologacao' ? 'homologacao' : 'producao';
     const months = Math.min(24, Math.max(3, Number(req.query.months) || 12));
-    const analytics = await supabaseRpc('xml_nfse_get_dashboard_analytics', {
-      p_environment: environment,
-      p_months: months
-    });
+    const cacheKey = `${environment}:${months}`;
+    const cached = await getCachedAnalytics(cacheKey, () => (
+      supabaseRpc('xml_nfse_get_dashboard_analytics', {
+        p_environment: environment,
+        p_months: months
+      })
+    ));
+    const analytics = cached.value;
 
     if (!analytics || typeof analytics !== 'object') {
       return res.json({
@@ -151,7 +182,8 @@ router.get('/dashboard-analytics', async (req, res) => {
       });
     }
 
-    console.info('[dashboard-analytics] ok', environment, `${Date.now() - started}ms`);
+    console.info('[dashboard-analytics] ok', environment, cached.status, `${Date.now() - started}ms`);
+    res.setHeader('X-Analytics-Cache', cached.status);
     return res.json({ success: true, analytics: payload, ms: Date.now() - started });
   } catch (err) {
     const detail = rpcErrorDetail(err);

@@ -117,11 +117,13 @@ Object.assign(window.AppUiTable = window.AppUiTable || {}, {
       this.updatePagination(totalItems, 0, 0);
       if (window.btnDownloadZip) window.btnDownloadZip.disabled = true;
       if (window.btnExportExcel) window.btnExportExcel.disabled = true;
+      if (window.btnExportIntegrity) window.btnExportIntegrity.disabled = true;
       return;
     }
 
     if (window.btnDownloadZip) window.btnDownloadZip.disabled = false;
     if (window.btnExportExcel) window.btnExportExcel.disabled = false;
+    if (window.btnExportIntegrity) window.btnExportIntegrity.disabled = false;
 
     const esc = window.AppUtils.escapeHtml;
     const frag = document.createDocumentFragment();

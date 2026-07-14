@@ -82,5 +82,26 @@ async downloadPeriodZip(params) {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(objectUrl);
+  },
+
+  async downloadIntegrityManifest(params) {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`/api/download-integrity-manifest?${query}`);
+    if (!res.ok) {
+      let message = 'Erro ao gerar manifesto de integridade.';
+      try { message = (await res.json()).error || message; } catch (error) {}
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/i);
+    anchor.download = match?.[1] || 'Manifesto_Integridade_NFSe.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
   }
 });

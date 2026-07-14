@@ -1,31 +1,8 @@
-/* Service Worker — network-first para JS (evita auth/API quebrados por cache velho) */
-const CACHE = 'nfse-static-v15';
+/* Service Worker — cache leve para assets; APIs nunca entram no cache. */
+const CACHE = 'nfse-static-v17';
 const PRECACHE = [
-  '/css/variables.css',
-  '/css/buttons.css',
-  '/css/auth.css',
-  '/css/layout-shell-a.css',
-  '/css/layout-shell-b.css',
-  '/css/layout-panels-a.css',
-  '/css/layout-panels-b.css',
-  '/css/sidebar.css',
-  '/css/metrics.css',
-  '/css/components.css',
-  '/css/console.css',
-  '/css/dashboard-cards.css',
-  '/css/dashboard-skeletons.css',
-  '/css/certificates.css',
-  '/css/table-list.css',
-  '/css/table-item.css',
-  '/css/ops-screen.css',
-  '/css/dashboard-premium.css',
-  '/css/toast.css',
-  '/css/rules-screen.css',
-  '/css/mobile-shell.css',
-  '/css/responsive-a.css',
-  '/css/responsive-b.css',
-  '/css/motion.css',
-  '/css/insights.css',
+  '/css/app.bundle.css',
+  '/js/app.bundle.js',
   '/favicon.svg'
 ];
 
@@ -103,7 +80,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // CSS/assets: stale-while-revalidate
+  // CSS/assets: stale-while-revalidate real (cache responde sem esperar a rede).
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(req);
@@ -116,7 +93,11 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => cached);
 
-      return network.then((res) => res || cached);
+      if (cached) {
+        event.waitUntil(network.catch(() => null));
+        return cached;
+      }
+      return network;
     })
   );
 });

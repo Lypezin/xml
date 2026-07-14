@@ -34,22 +34,6 @@ async function bootDataParallel() {
     })()
   );
 
-  // Indicadores em paralelo ao dashboard (não depende de cards/cert-status)
-  tasks.push(
-    (async () => {
-      try {
-        if (window.AppInsights?.loadAnalytics) {
-          await window.AppInsights.loadAnalytics();
-        }
-        if (window.AppInsights?.loadAuditLog) {
-          await window.AppInsights.loadAuditLog();
-        }
-      } catch (err) {
-        console.warn('analytics/audit:', err);
-      }
-    })()
-  );
-
   if (window.AppUi?.updateProgress) window.AppUi.updateProgress(0, 0);
 
   const selectEnv = window.selectEnvironment;
@@ -78,6 +62,13 @@ async function bootDataParallel() {
   if (crumb) crumb.textContent = 'Visão geral / Dashboard';
 
   await Promise.allSettled(tasks);
+
+  // Restaura a guia compartilhável somente depois de autenticação e boot seguro.
+  if (window.location.hash && window.location.hash !== '#dashboard') {
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  } else if (!window.location.hash) {
+    window.history.replaceState({ tab: '#dashboard' }, '', '#dashboard');
+  }
 }
 
 async function initializeAuthenticatedApp() {
@@ -95,6 +86,17 @@ async function initializeAuthenticatedApp() {
       if (typeof showAppShell === 'function') showAppShell();
       if (window.AppAuthGate) window.AppAuthGate.endBoot();
       await bootDataParallel();
+      return;
+    }
+
+    if (window.authConfig.accessPolicyConfigured === false) {
+      if (window.AppUi?.showLogin) window.AppUi.showLogin();
+      if (window.AppUi?.setAuthMessage) {
+        window.AppUi.setAuthMessage(
+          'Acesso bloqueado com segurança: configure AUTH_ALLOWED_EMAILS/DOMAINS ou o perfil xml_nfse_role.',
+          'error'
+        );
+      }
       return;
     }
 

@@ -2,6 +2,7 @@ const zlib = require('zlib');
 const crypto = require('crypto');
 const { parseXmlMetadata, buildStableXmlToken } = require('../utils/xmlParser');
 const { storeSupabaseXmlPayload } = require('./supabase');
+const { MAX_XML_BYTES, sanitizeFileName, resolveContainedPath } = require('../utils/security');
 
 function onlyDigits(value) {
   return String(value || '').replace(/\D/g, '');
@@ -29,7 +30,7 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
       // 2. Descompactar Gzip
       let xmlString;
       try {
-        xmlString = zlib.gunzipSync(gzipBuffer).toString('utf8');
+        xmlString = zlib.gunzipSync(gzipBuffer, { maxOutputLength: MAX_XML_BYTES }).toString('utf8');
       } catch (gzipErr) {
         // Se falhar, talvez esteja em formato texto puro XML codificado em Base64
         xmlString = gzipBuffer.toString('utf8');
@@ -48,7 +49,7 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
       // 4. Usar a chave de acesso que a API já retorna
       const chaveAcesso = docChave || meta.chave;
       const safeChave = chaveAcesso !== 'N/A' ? chaveAcesso : `NSU_${docNsu}`;
-      const fileName = `${docTipo}_NSU_${docNsu}_${safeChave}.xml`;
+      const fileName = sanitizeFileName(`${docTipo}_NSU_${docNsu}_${safeChave}.xml`, `NFSE_NSU_${docNsu}.xml`);
       const xmlSha256 = crypto.createHash('sha256').update(xmlString, 'utf8').digest('hex');
       const token = buildStableXmlToken({
         certificateId: selectedCertificate.id,
@@ -85,7 +86,7 @@ async function processBatchDocuments({ documentsList, selectedCertificate, reque
         if (!fs.existsSync(DOWNLOADS_DIR)) {
           fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
         }
-        fs.writeFileSync(path.join(DOWNLOADS_DIR, fileName), xmlString, 'utf8');
+        fs.writeFileSync(resolveContainedPath(DOWNLOADS_DIR, fileName), xmlString, 'utf8');
       }
 
       console.log(`[OK] NSU ${docNsu} | ${docTipo} | Chave: ${chaveAcesso} | XML pronto para download.`);

@@ -10,7 +10,7 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
     return name;
   },
 
-  async loadDashboard(retryCount = 0) {
+  async loadDashboard(retryCount = 0, options = {}) {
     if (!dashboardCitiesGrid) return;
 
     const hasCards = Boolean(dashboardCitiesGrid.querySelector('.city-card:not(.skeleton-row)'));
@@ -51,12 +51,14 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
       btnRefreshDashboard.classList.add('loading');
       btnRefreshDashboard.onclick = (e) => {
         e.preventDefault();
-        this.loadDashboard(0);
+        this.loadDashboard(0, { forceRefresh: true });
       };
     }
 
     try {
-      const data = await window.AppApi.fetchDashboardSummary();
+      const data = await window.AppApi.fetchDashboardSummary({
+        forceRefresh: Boolean(options.forceRefresh) && retryCount === 0
+      });
       if (!data.success) throw new Error(data.error || 'Erro ao carregar dados do painel.');
 
       // Calcular Métricas Gerais
@@ -115,6 +117,9 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
         const safeCnpj = esc(window.AppUtils.formatCnpj(city.cnpj));
         const safeLast = esc(city.lastUpdate || 'N/A');
         const safeXmls = esc(window.AppUtils.formatInteger(city.totalXmls));
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', `Abrir unidade ${cityName}, ${safeXmls} XMLs`);
 
         card.innerHTML = `
           <div class="city-card-header">
@@ -191,6 +196,12 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
             window.AppUi.log(`Erro ao abrir a cidade ${cityName}: ${err.message}`, 'error');
           }
         });
+        card.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            card.click();
+          }
+        });
 
         frag.appendChild(card);
       });
@@ -203,7 +214,7 @@ Object.assign(window.AppSyncController = window.AppSyncController || {}, {
       // 1 retry rapido (800ms) em vez de 2x3s — evita sensacao de "travado"
       if (retryCount < 1) {
         setTimeout(() => {
-          this.loadDashboard(retryCount + 1);
+          this.loadDashboard(retryCount + 1, options);
         }, 800);
       } else {
         dashboardCitiesGrid.innerHTML = `

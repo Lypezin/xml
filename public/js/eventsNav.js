@@ -24,35 +24,45 @@ window.AppEventsNav = {
   },
 
   bind() {
-    const go = (nav, view, title, subtitle) => {
+    const go = (nav, view, title, subtitle, hash, updateHistory = true) => {
       window.AppUi.switchTab(nav, view, title, subtitle);
+      if (updateHistory && hash && window.location.hash !== hash) {
+        window.history.pushState({ tab: hash }, '', hash);
+      }
       this.closeSidebar();
+    };
+
+    const routes = {
+      '#dashboard': () => go(navDashboard, viewDashboardContent, 'Dashboard', 'Resumo das cidades e total de XMLs persistidos', '#dashboard', false),
+      '#xmls': () => go(navDownload, viewDownloadContent, 'XMLs por unidade', 'XMLs da NFS-e persistidos por certificado e unidade', '#xmls', false),
+      '#certificados': () => go(navCertificado, viewCertificadoContent, 'Certificados', 'Gerencie certificados A1 e nomes internos', '#certificados', false),
+      '#regras': () => go(navRegras, viewRegrasContent, 'Regras ADN', 'Limites de consulta e boas práticas da NFS-e Nacional', '#regras', false)
     };
 
     if (navDashboard) {
       navDashboard.addEventListener('click', (e) => {
         e.preventDefault();
-        go(navDashboard, viewDashboardContent, 'Dashboard', 'Resumo das cidades e total de XMLs persistidos');
+        go(navDashboard, viewDashboardContent, 'Dashboard', 'Resumo das cidades e total de XMLs persistidos', '#dashboard');
       });
       navDashboard.addEventListener('mouseenter', () => window.AppUi.prefetchTab?.('view-dashboard-content'), { passive: true });
     }
     if (navDownload) {
       navDownload.addEventListener('click', (e) => {
         e.preventDefault();
-        go(navDownload, viewDownloadContent, 'XMLs por unidade', 'XMLs da NFS-e persistidos por certificado e unidade');
+        go(navDownload, viewDownloadContent, 'XMLs por unidade', 'XMLs da NFS-e persistidos por certificado e unidade', '#xmls');
       });
       navDownload.addEventListener('mouseenter', () => window.AppUi.prefetchTab?.('view-download-content'), { passive: true });
     }
     if (navCertificado) {
       navCertificado.addEventListener('click', (e) => {
         e.preventDefault();
-        go(navCertificado, viewCertificadoContent, 'Certificados', 'Gerencie certificados A1 e nomes internos');
+        go(navCertificado, viewCertificadoContent, 'Certificados', 'Gerencie certificados A1 e nomes internos', '#certificados');
       });
     }
     if (navRegras) {
       navRegras.addEventListener('click', (e) => {
         e.preventDefault();
-        go(navRegras, viewRegrasContent, 'Regras ADN', 'Limites de consulta e boas práticas da NFS-e Nacional');
+        go(navRegras, viewRegrasContent, 'Regras ADN', 'Limites de consulta e boas práticas da NFS-e Nacional', '#regras');
       });
     }
 
@@ -77,6 +87,9 @@ window.AppEventsNav = {
     }
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.closeSidebar();
+    });
+    window.addEventListener('popstate', () => {
+      (routes[window.location.hash] || routes['#dashboard'])();
     });
   }
 };

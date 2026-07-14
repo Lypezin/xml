@@ -65,18 +65,28 @@ window.AppUtils = {
     const normalized = this.normalizeAuthSession(session);
     window.authSession = normalized;
     if (normalized) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(normalized));
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(normalized));
+      localStorage.removeItem(AUTH_STORAGE_KEY);
     }
   },
 
   clearAuthSession() {
     window.authSession = null;
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
     localStorage.removeItem(AUTH_STORAGE_KEY);
   },
 
   loadStoredAuthSession() {
     try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      let stored = sessionStorage.getItem(AUTH_STORAGE_KEY);
+      if (!stored) {
+        // Migração única: sessões legadas persistentes passam a durar só a aba.
+        stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (stored) {
+          sessionStorage.setItem(AUTH_STORAGE_KEY, stored);
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+        }
+      }
       if (!stored) return null;
       return this.normalizeAuthSession(JSON.parse(stored));
     } catch (e) {
@@ -187,20 +197,7 @@ window.AppUtils = {
     return this.getCancelledMode() === 'cancelled' ? 'true' : 'false';
   },
 
-  /**
-   * Senha operacional no front (apenas UX — não é segurança real).
-   * Usada em ações sensíveis de NSU: zerar e forçar.
-   */
-  OPS_NSU_PASSWORD: '5585',
-
   requireOpsPassword(actionLabel = 'esta ação') {
-    const typed = window.prompt(`Digite a senha para ${actionLabel}:`);
-    if (typed === null) return false; // cancelou
-    if (String(typed).trim() !== this.OPS_NSU_PASSWORD) {
-      window.AppUi?.log?.('Senha incorreta. Ação cancelada.', 'error');
-      window.AppToast?.error?.('Senha incorreta');
-      return false;
-    }
-    return true;
+    return window.confirm(`Confirma ${actionLabel}? Esta ação será executada com o seu usuário autenticado.`);
   }
 };

@@ -20,31 +20,7 @@
     })();
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/variables.css">
-  <link rel="stylesheet" href="css/buttons.css">
-  <link rel="stylesheet" href="css/auth.css">
-  <link rel="stylesheet" href="css/layout-shell-a.css">
-  <link rel="stylesheet" href="css/layout-shell-b.css">
-  <link rel="stylesheet" href="css/layout-panels-a.css">
-  <link rel="stylesheet" href="css/layout-panels-b.css">
-  <link rel="stylesheet" href="css/sidebar.css">
-  <link rel="stylesheet" href="css/metrics.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/console.css">
-  <link rel="stylesheet" href="css/dashboard-cards.css">
-  <link rel="stylesheet" href="css/dashboard-skeletons.css">
-  <link rel="stylesheet" href="css/certificates.css">
-  <link rel="stylesheet" href="css/table-list.css">
-  <link rel="stylesheet" href="css/table-item.css">
-  <link rel="stylesheet" href="css/ops-screen.css">
-  <link rel="stylesheet" href="css/dashboard-premium.css">
-  <link rel="stylesheet" href="css/toast.css">
-  <link rel="stylesheet" href="css/rules-screen.css">
-  <link rel="stylesheet" href="css/mobile-shell.css">
-  <link rel="stylesheet" href="css/responsive-a.css">
-  <link rel="stylesheet" href="css/responsive-b.css">
-  <link rel="stylesheet" href="css/motion.css">
-  <link rel="stylesheet" href="css/insights.css">
+  <link rel="stylesheet" href="css/app.bundle.css">
 </head>
 <body class="light-mode">
   <div class="glass-bg"></div>
@@ -58,7 +34,7 @@
     <main class="main-content">
       <header class="navbar">
         <div class="navbar-left">
-          <button type="button" class="btn-sidebar-toggle" id="btn-sidebar-toggle" aria-label="Abrir menu" aria-controls="sidebar-container" aria-expanded="false">
+          <button type="button" class="btn-sidebar-toggle" id="btn-sidebar-toggle" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="4" y1="7" x2="20" y2="7"></line>
               <line x1="4" y1="12" x2="20" y2="12"></line>
@@ -102,7 +78,7 @@
 
   <!-- Drawer de detalhe da nota -->
   <div class="doc-drawer-backdrop" id="doc-drawer-backdrop" hidden></div>
-  <aside class="doc-drawer" id="doc-drawer" aria-hidden="true" aria-label="Detalhe da nota">
+  <aside class="doc-drawer" id="doc-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="doc-drawer-title" tabindex="-1">
     <div class="doc-drawer-header">
       <div>
         <span class="eyebrow">Documento</span>
@@ -113,46 +89,11 @@
     <div class="doc-drawer-body" id="doc-drawer-body"></div>
   </aside>
 
-  <script src="js/utils.js" defer></script>
-  <script src="js/toast.js" defer></script>
-  <script src="js/dataCache.js" defer></script>
-  <script src="js/panels-bundle.js" defer></script>
-  <script src="js/apiAuth.js" defer></script>
-  <script src="js/apiCerts.js" defer></script>
-  <script src="js/apiData.js" defer></script>
-  <script src="js/apiDownloads.js" defer></script>
-  <script src="js/uiElements.js" defer></script>
-  <script src="js/uiTableCore.js" defer></script>
-  <script src="js/uiTableLoading.js" defer></script>
-  <script src="js/uiTableRender.js" defer></script>
-  <script src="js/uiCore.js" defer></script>
-  <script src="js/uiCerts.js" defer></script>
-  <script src="js/uiProgress.js" defer></script>
-  <script src="js/uiTabs.js" defer></script>
-  <script src="js/unitsController.js" defer></script>
-  <script src="js/historyController.js" defer></script>
-  <script src="js/certStatusController.js" defer></script>
-  <script src="js/syncController.js" defer></script>
-  <script src="js/queryLoop.js" defer></script>
-  <script src="js/dashboardController.js" defer></script>
-  <script src="js/insightsController.js" defer></script>
-  <script src="js/docDrawer.js" defer></script>
-  <script src="js/eventsCert.js" defer></script>
-  <script src="js/eventsAuth.js" defer></script>
-  <script src="js/eventsSync.js" defer></script>
-  <script src="js/eventsTable.js" defer></script>
-  <script src="js/eventsFilters.js" defer></script>
-  <script src="js/eventsNsu.js" defer></script>
-  <script src="js/eventsNav.js" defer></script>
-  <script src="js/eventsScheduler.js" defer></script>
-  <script src="js/events.js" defer></script>
-  <script src="app.js" defer></script>
-  <script src="js/bootComponents.js" defer></script>
-  <script src="js/bootData.js" defer></script>
-  <script src="js/boot.js" defer></script>
+  <script src="js/app.bundle.js" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
+        var hadController = Boolean(navigator.serviceWorker.controller);
         navigator.serviceWorker.register('/sw.js').then(function (reg) {
           // Força checagem de nova versão do SW (auth/boot)
           try { reg.update(); } catch (e) {}
@@ -160,12 +101,11 @@
             reg.waiting.postMessage({ type: 'SKIP_WAITING' });
           }
         }).catch(function () {});
-        // Se o SW mudou, recarrega 1x para pegar JS novo
-        var refreshing = false;
+        // Mantém a operação atual estável; a versão nova entra no próximo reload.
         navigator.serviceWorker.addEventListener('controllerchange', function () {
-          if (refreshing) return;
-          refreshing = true;
-          window.location.reload();
+          if (hadController && window.AppToast) {
+            window.AppToast.info('Nova versão disponível. Recarregue quando finalizar a operação.');
+          }
         });
       });
     }

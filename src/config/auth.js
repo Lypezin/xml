@@ -1,4 +1,5 @@
 const { IS_VERCEL } = require('./constants');
+const crypto = require('crypto');
 const { getSupabaseUserFromToken, getSupabaseConfig } = require('../services/supabase');
 
 function isAccessAuthEnabled() {
@@ -23,15 +24,35 @@ function getAllowedDomains() {
     .filter(Boolean);
 }
 
-function isUserAllowed(email) {
-  const normalizedEmail = String(email || '').toLowerCase();
+function getXmlNfseRole(user) {
+  const role = String(
+    user?.app_metadata?.xml_nfse_role ||
+    user?.user_metadata?.xml_nfse_role ||
+    ''
+  ).trim().toLowerCase();
+  return ['admin', 'operator', 'viewer'].includes(role) ? role : null;
+}
+
+function isAccessPolicyConfigured() {
+  return getAllowedEmails().length > 0 ||
+    getAllowedDomains().length > 0 ||
+    process.env.AUTH_ALLOW_ALL_SUPABASE_USERS === 'true' ||
+    process.env.AUTH_REQUIRE_XML_NFSE_ROLE === 'true';
+}
+
+function isUserAllowed(userOrEmail) {
+  const user = typeof userOrEmail === 'object' && userOrEmail !== null ? userOrEmail : null;
+  const normalizedEmail = String(user?.email || userOrEmail || '').toLowerCase();
   if (!normalizedEmail) return false;
+
+  if (getXmlNfseRole(user)) return true;
 
   const allowedEmails = getAllowedEmails();
   const allowedDomains = getAllowedDomains();
 
   if (allowedEmails.length === 0 && allowedDomains.length === 0) {
-    return true;
+    // Shared Supabase project: never trust every authenticated user by default.
+    return process.env.AUTH_ALLOW_ALL_SUPABASE_USERS === 'true';
   }
 
   if (allowedEmails.includes(normalizedEmail)) {
@@ -49,9 +70,11 @@ function isSchedulerCronRequest(req) {
 
   const header = req.headers.authorization || '';
   const [type, token] = header.split(' ');
-  const querySecret = req.query?.secret;
+  if (type !== 'Bearer' || !token) return false;
 
-  return (type === 'Bearer' && token === secret) || querySecret === secret;
+  const expected = Buffer.from(secret);
+  const received = Buffer.from(token);
+  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
 }
 
 function basicAuthMiddleware(req, res, next) {
@@ -81,7 +104,8 @@ async function requireSupabaseAuth(req, res, next) {
   if (isSchedulerCronRequest(req)) {
     req.authUser = {
       id: 'scheduler-cron',
-      email: 'scheduler-cron'
+      email: 'scheduler-cron',
+      role: 'admin'
     };
     return next();
   }
@@ -106,7 +130,7 @@ async function requireSupabaseAuth(req, res, next) {
       });
     }
 
-    if (!isUserAllowed(user.email)) {
+    if (!isUserAllowed(user)) {
       return res.status(403).json({
         success: false,
         error: 'Usuário não autorizado para este sistema. Peça inclusão em AUTH_ALLOWED_EMAILS/DOMAINS.',
@@ -116,7 +140,9 @@ async function requireSupabaseAuth(req, res, next) {
 
     req.authUser = {
       id: user.id,
-      email: user.email
+      email: user.email,
+      // Explicit claims can restrict access. Existing allowlists retain admin behavior.
+      role: getXmlNfseRole(user) || 'admin'
     };
     return next();
   } catch (e) {
@@ -129,12 +155,30 @@ async function requireSupabaseAuth(req, res, next) {
   }
 }
 
+function requireXmlRole(...allowedRoles) {
+  const allowed = new Set(allowedRoles);
+  return (req, res, next) => {
+    if (!isSupabaseAuthRequired()) return next();
+    const role = req.authUser?.role || 'viewer';
+    if (allowed.has(role)) return next();
+    return res.status(403).json({
+      success: false,
+      error: 'Seu perfil não tem permissão para esta operação.',
+      code: 'ROLE_NOT_ALLOWED'
+    });
+  };
+}
+
 module.exports = {
   isAccessAuthEnabled,
   isSupabaseAuthRequired,
   getAllowedEmails,
   getAllowedDomains,
+  getXmlNfseRole,
+  isAccessPolicyConfigured,
   isUserAllowed,
+  isSchedulerCronRequest,
   basicAuthMiddleware,
-  requireSupabaseAuth
+  requireSupabaseAuth,
+  requireXmlRole
 };

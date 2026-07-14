@@ -18,17 +18,51 @@ const {
 const {
   getCertificatesIndex,
   sanitizeCertificate,
-  saveCertificatesIndex
+  saveCertificatesIndex,
+  writeEncryptedLocalCertificate
 } = require('../services/localCertificates');
 const {
   getCertificateBuffer,
   onlyDigits
 } = require('../utils/cert');
 const { validateCertificateForNationalApi } = require('../utils/certValidator');
+const {
+  MAX_CERTIFICATE_BYTES,
+  sanitizeFileName,
+  safeErrorInfo
+} = require('../utils/security');
 
 const router = express.Router();
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: MAX_CERTIFICATE_BYTES,
+    files: 1,
+    fields: 4,
+    fieldSize: 2048
+  },
+  fileFilter(req, file, callback) {
+    const extension = path.extname(file.originalname || '').toLowerCase();
+    if (extension !== '.pfx' && extension !== '.p12') {
+      return callback(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'pfx'));
+    }
+    return callback(null, true);
+  }
+});
+
+function certificateUpload(req, res, next) {
+  upload.single('pfx')(req, res, (error) => {
+    if (!error) return next();
+    const tooLarge = error.code === 'LIMIT_FILE_SIZE';
+    return res.status(tooLarge ? 413 : 400).json({
+      success: false,
+      error: tooLarge
+        ? 'O certificado excede o limite de 5 MB.'
+        : 'Envie um único certificado válido nos formatos .pfx ou .p12.'
+    });
+  });
+}
 
 function validateUploadedPfx(pfxBuffer, passphrase, cnpjInput) {
   if (!pfxBuffer) {
@@ -84,7 +118,7 @@ function assertCnpjMatchesExisting(existingCnpj, newCnpj) {
   return { ok: true };
 }
 
-router.post('/upload-certificate', upload.single('pfx'), async (req, res) => {
+router.post('/upload-certificate', certificateUpload, async (req, res) => {
   try {
     const pfxBuffer = req.file ? req.file.buffer : null;
     const passphrase = req.body.passphrase;
@@ -100,7 +134,7 @@ router.post('/upload-certificate', upload.single('pfx'), async (req, res) => {
     if (useRemoteCertificateStorage()) {
       const cert = {
         id: crypto.randomUUID(),
-        originalName: req.file.originalname || 'certificado.pfx',
+        originalName: sanitizeFileName(req.file.originalname, 'certificado.pfx'),
         cnpj: resolvedCnpj,
         validUntil,
         createdAt: new Date().toISOString(),
@@ -131,16 +165,15 @@ router.post('/upload-certificate', upload.single('pfx'), async (req, res) => {
     }
 
     const id = crypto.randomUUID();
-    const extension = path.extname(req.file.originalname || '.pfx').toLowerCase();
-    const storedName = `${id}${extension === '.p12' ? '.p12' : '.pfx'}`;
-    fs.writeFileSync(path.join(CERTS_DIR, storedName), pfxBuffer);
+    const safeOriginalName = sanitizeFileName(req.file.originalname, 'certificado.pfx');
+    const storedName = writeEncryptedLocalCertificate(id, pfxBuffer, passphrase);
 
     const index = getCertificatesIndex();
     const cert = {
       id,
-      originalName: req.file.originalname || 'certificado.pfx',
+      originalName: safeOriginalName,
       storedName,
-      passphrase,
+      encrypted: true,
       cnpj: resolvedCnpj,
       validUntil,
       createdAt: new Date().toISOString(),
@@ -163,8 +196,8 @@ router.post('/upload-certificate', upload.single('pfx'), async (req, res) => {
       certificate: sanitizeCertificate(cert)
     });
   } catch (e) {
-    console.error('Erro no upload do certificado:', e);
-    return res.status(500).json({ success: false, error: 'Erro interno no servidor: ' + e.message });
+    console.error('Erro no upload do certificado:', safeErrorInfo(e));
+    return res.status(500).json({ success: false, error: 'Não foi possível salvar o certificado.' });
   }
 });
 
@@ -172,7 +205,7 @@ router.post('/upload-certificate', upload.single('pfx'), async (req, res) => {
  * Renova o PFX mantendo o mesmo certificate_id (XMLs, NSU, stats intactos).
  * Exige que o CNPJ do novo A1 seja o mesmo do cadastro atual.
  */
-router.post('/renew-certificate', upload.single('pfx'), async (req, res) => {
+router.post('/renew-certificate', certificateUpload, async (req, res) => {
   try {
     const certificateId = String(req.body.certificateId || '').trim();
     const pfxBuffer = req.file ? req.file.buffer : null;
@@ -202,7 +235,10 @@ router.post('/renew-certificate', upload.single('pfx'), async (req, res) => {
       }
 
       const keepCnpj = onlyDigits(existing.cnpj || '') || resolvedCnpj;
-      const filename = req.file.originalname || existing.filename || existing.originalName || 'certificado.pfx';
+      const filename = sanitizeFileName(
+        req.file.originalname || existing.filename || existing.originalName,
+        'certificado.pfx'
+      );
 
       const saved = await upsertRemoteCertificateSecret({
         id: certificateId,
@@ -246,20 +282,18 @@ router.post('/renew-certificate', upload.single('pfx'), async (req, res) => {
       return res.status(cnpjCheck.status).json({ success: false, error: cnpjCheck.error });
     }
 
-    const extension = path.extname(req.file.originalname || cert.storedName || '.pfx').toLowerCase();
-    const storedName = cert.storedName || `${certificateId}${extension === '.p12' ? '.p12' : '.pfx'}`;
-    const oldPath = path.join(CERTS_DIR, cert.storedName || storedName);
-    const nextPath = path.join(CERTS_DIR, storedName);
-
-    fs.writeFileSync(nextPath, pfxBuffer);
-    if (cert.storedName && cert.storedName !== storedName && fs.existsSync(oldPath)) {
+    const safeOriginalName = sanitizeFileName(req.file.originalname, cert.originalName || 'certificado.pfx');
+    const oldPath = cert.storedName ? path.join(CERTS_DIR, cert.storedName) : null;
+    const storedName = writeEncryptedLocalCertificate(certificateId, pfxBuffer, passphrase);
+    if (oldPath && cert.storedName !== storedName && fs.existsSync(oldPath)) {
       try { fs.unlinkSync(oldPath); } catch (_) { /* ignore */ }
     }
 
-    cert.originalName = req.file.originalname || cert.originalName || 'certificado.pfx';
+    cert.originalName = safeOriginalName;
     cert.filename = cert.originalName;
     cert.storedName = storedName;
-    cert.passphrase = passphrase;
+    cert.encrypted = true;
+    delete cert.passphrase;
     cert.cnpj = onlyDigits(cert.cnpj || '') || resolvedCnpj;
     cert.updatedAt = new Date().toISOString();
     saveCertificatesIndex(index);
@@ -274,8 +308,8 @@ router.post('/renew-certificate', upload.single('pfx'), async (req, res) => {
       certificate: sanitizeCertificate(cert)
     });
   } catch (e) {
-    console.error('Erro ao renovar certificado:', e);
-    return res.status(500).json({ success: false, error: 'Erro interno ao renovar: ' + e.message });
+    console.error('Erro ao renovar certificado:', safeErrorInfo(e));
+    return res.status(500).json({ success: false, error: 'Não foi possível renovar o certificado.' });
   }
 });
 
