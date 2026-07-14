@@ -139,7 +139,7 @@ async function runCertificateRound({ certificate, environment }) {
 
 async function runDailyAllCertificates({
   shard = 0,
-  totalShards = 9,
+  totalShards = 7,
   environment = 'producao',
   maxDurationMs = 52_000,
   maxBatchesPerCertificate = 3

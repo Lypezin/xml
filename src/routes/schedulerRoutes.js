@@ -47,7 +47,7 @@ router.post('/scheduler-run', async (req, res) => {
 router.get('/scheduler-cron/:shard', async (req, res) => {
   try {
     const shard = Number(req.params.shard);
-    const totalShards = 9;
+    const totalShards = 7;
     if (!Number.isInteger(shard) || shard < 0 || shard >= totalShards) {
       return res.status(400).json({ success: false, error: 'Shard de agendamento inválido.' });
     }
