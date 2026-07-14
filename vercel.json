@@ -10,5 +10,43 @@
     "api/index.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/scheduler-cron/0",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scheduler-cron/1",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scheduler-cron/2",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scheduler-cron/3",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scheduler-cron/4",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scheduler-cron/5",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scheduler-cron/6",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scheduler-cron/7",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/scheduler-cron/8",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }

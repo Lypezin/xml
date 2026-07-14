@@ -66,6 +66,14 @@ O login usa Supabase Auth. Qualquer usuario autenticado nesse projeto Supabase p
 
 Os XMLs consultados sao gravados temporariamente no Supabase por ate 12 horas para permitir download individual ou ZIP em ambiente serverless.
 
+### Varredura diaria
+
+Em producao, a Vercel executa uma varredura de todos os certificados todos os dias com o cron `0 8 * * *` (08:00 UTC, 05:00 no horario de Brasilia). No plano Hobby, a execucao pode ocorrer em qualquer momento dentro da hora das 05:00.
+
+A rotina foi dividida em nove partes para respeitar o limite de duracao das Functions. Cada parte possui uma trava distribuida no Supabase, evitando execucoes duplicadas. Cada certificado usa um cursor independente por certificado, ambiente e CNPJ; a consulta sempre comeca no ultimo NSU confirmado e o banco nunca reduz um NSU ja salvo.
+
+O `CRON_SECRET` esta configurado somente no ambiente de producao da Vercel e autentica essas rotas internas. Ele nao deve ser colocado no codigo nem exposto no navegador.
+
 ## Segurança
 
 Nao commite certificados, senhas, XMLs baixados ou arquivos locais de configuracao. O `.gitignore` ja ignora:
@@ -87,7 +95,7 @@ Os metadados e payloads XML sao persistidos no schema `xml_nfse`. Defina uma pol
 
 ## Banco e migrations
 
-As migrations incrementais ficam em `supabase/migrations/`. A migration `20260714020000_xml_nfse_security_limits.sql` remove RPCs antigas sem limite, restringe a leitura de payloads a 100 tokens por chamada e protege `document_stats` com RLS.
+As migrations incrementais ficam em `supabase/migrations/`. A migration `20260714020000_xml_nfse_security_limits.sql` remove RPCs antigas sem limite, restringe a leitura de payloads a 100 tokens por chamada e protege `document_stats` com RLS. A migration `20260714030000_xml_nfse_scheduler_leases.sql` cria as travas do agendador e encerra apenas registros antigos de telemetria que ficaram presos como `running`, sem alterar os cursores NSU.
 
 Antes de aplicar `supabase_xml_nfse_schema.sql` em um projeto novo, substitua `REPLACE_WITH_SHA256_OF_SUPABASE_APP_SECRET` pelo SHA-256 de um segredo aleatorio forte. O hash real do ambiente nao deve ser versionado.
 

@@ -44,9 +44,20 @@ router.post('/scheduler-run', async (req, res) => {
   }
 });
 
-router.get('/scheduler-cron', async (req, res) => {
+router.get('/scheduler-cron/:shard', async (req, res) => {
   try {
-    const result = await scheduler.checkAndRun({ force: false });
+    const shard = Number(req.params.shard);
+    const totalShards = 9;
+    if (!Number.isInteger(shard) || shard < 0 || shard >= totalShards) {
+      return res.status(400).json({ success: false, error: 'Shard de agendamento inválido.' });
+    }
+    const result = await scheduler.runDailyAllCertificates({
+      shard,
+      totalShards,
+      environment: 'producao',
+      maxDurationMs: 52_000,
+      maxBatchesPerCertificate: 3
+    });
     return res.json({ success: true, result });
   } catch (err) {
     console.error('[scheduler:cron]', safeErrorInfo(err));

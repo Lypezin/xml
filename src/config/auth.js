@@ -1,4 +1,5 @@
 const { IS_VERCEL } = require('./constants');
+const crypto = require('crypto');
 const { getSupabaseUserFromToken } = require('../services/supabase');
 
 function isAccessAuthEnabled() {
@@ -13,6 +14,20 @@ function isUserAllowed(userOrEmail) {
   const user = typeof userOrEmail === 'object' && userOrEmail !== null ? userOrEmail : null;
   const email = user ? user.email : (typeof userOrEmail === 'string' ? userOrEmail : '');
   return Boolean(String(email || '').trim());
+}
+
+function isCronPath(req) {
+  return req.path === '/scheduler-cron' || req.path.startsWith('/scheduler-cron/');
+}
+
+function isSchedulerCronRequest(req) {
+  if (!isCronPath(req)) return false;
+  const secret = String(process.env.CRON_SECRET || '');
+  const header = String(req.headers.authorization || '');
+  if (!secret || !header.startsWith('Bearer ')) return false;
+  const expected = Buffer.from(secret);
+  const received = Buffer.from(header.slice(7));
+  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
 }
 
 function basicAuthMiddleware(req, res, next) {
@@ -34,6 +49,14 @@ function basicAuthMiddleware(req, res, next) {
 }
 
 async function requireSupabaseAuth(req, res, next) {
+  if (isCronPath(req)) {
+    if (!isSchedulerCronRequest(req)) {
+      return res.status(401).json({ success: false, error: 'Cron não autorizado.', code: 'CRON_UNAUTHORIZED' });
+    }
+    req.authUser = { id: 'vercel-cron', email: 'vercel-cron' };
+    return next();
+  }
+
   if (req.path === '/auth-config' || !isSupabaseAuthRequired()) return next();
 
   const header = req.headers.authorization || '';
@@ -68,6 +91,7 @@ module.exports = {
   isAccessAuthEnabled,
   isSupabaseAuthRequired,
   isUserAllowed,
+  isSchedulerCronRequest,
   basicAuthMiddleware,
   requireSupabaseAuth
 };

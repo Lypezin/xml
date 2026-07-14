@@ -106,6 +106,21 @@ async function setSupabaseSetting(key, value) {
   });
 }
 
+async function claimSchedulerLease({ name, leaseSeconds = 70 }) {
+  return supabaseRpc('xml_nfse_claim_scheduler_lease', {
+    p_name: name,
+    p_lease_seconds: Number(leaseSeconds || 70)
+  }, 1);
+}
+
+async function releaseSchedulerLease({ name, leaseId }) {
+  if (!name || !leaseId) return false;
+  return supabaseRpc('xml_nfse_release_scheduler_lease', {
+    p_name: name,
+    p_lease_id: leaseId
+  }, 1);
+}
+
 async function listRemoteCertificates() {
   const result = await supabaseRpc('xml_nfse_list_certificates', {});
   return Array.isArray(result) ? result : [];
@@ -218,6 +233,8 @@ module.exports = {
   getStorageSummary,
   getSupabaseSetting,
   setSupabaseSetting,
+  claimSchedulerLease,
+  releaseSchedulerLease,
   listRemoteCertificates,
   listUnits,
   upsertUnit,
