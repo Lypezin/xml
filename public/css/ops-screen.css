@@ -191,17 +191,21 @@
 
 .ops-strip .console-log-panel {
   margin-top: 0;
-  height: 100%;
-  min-height: 280px;
+  height: 320px;
+  min-height: 0;
+  max-height: 320px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .ops-strip .console-log {
-  flex: 1;
-  height: auto;
-  min-height: 220px;
+  flex: 1 1 auto;
+  height: 0;
+  min-height: 0;
   max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* ---------- Data table card ---------- */
@@ -335,9 +339,14 @@
     grid-template-columns: 1fr;
   }
 
+  .ops-strip .console-log-panel {
+    height: 300px;
+    max-height: 300px;
+  }
+
   .ops-strip .console-log {
-    min-height: 200px;
-    max-height: 260px;
+    min-height: 0;
+    max-height: none;
   }
 
   .command-bar-fields {
