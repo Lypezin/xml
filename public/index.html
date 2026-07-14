@@ -19,11 +19,26 @@
       } catch (e) {}
     })();
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Outfit:wght@500..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.bundle.css">
 </head>
 <body class="light-mode">
+  <a class="skip-link" id="skip-link" href="#main-content" hidden>Pular para o conteúdo</a>
   <div class="glass-bg"></div>
+
+  <div class="boot-splash" id="boot-splash" role="status" aria-live="polite" aria-label="Iniciando NFS-e Ops">
+    <div class="boot-splash-card">
+      <span class="boot-splash-mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </span>
+      <span class="boot-splash-copy">
+        <strong>NFS-e Ops</strong>
+        <span>Preparando sua operação fiscal…</span>
+      </span>
+    </div>
+  </div>
 
   <div id="auth-screen-container"></div>
 
@@ -31,7 +46,7 @@
     <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
     <div id="sidebar-container"></div>
 
-    <main class="main-content">
+    <main class="main-content" id="main-content" tabindex="-1">
       <header class="navbar">
         <div class="navbar-left">
           <button type="button" class="btn-sidebar-toggle" id="btn-sidebar-toggle" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
@@ -43,7 +58,7 @@
           </button>
           <div class="navbar-title">
             <p class="navbar-eyebrow" id="page-breadcrumb">NFS-e Ops</p>
-            <h1 id="page-title"></h1>
+            <h1 id="page-title" tabindex="-1"></h1>
             <p id="page-subtitle">Gestão de XMLs da NFS-e Nacional por unidade</p>
           </div>
         </div>
@@ -78,7 +93,7 @@
 
   <!-- Drawer de detalhe da nota -->
   <div class="doc-drawer-backdrop" id="doc-drawer-backdrop" hidden></div>
-  <aside class="doc-drawer" id="doc-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="doc-drawer-title" tabindex="-1">
+  <aside class="doc-drawer" id="doc-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="doc-drawer-title" tabindex="-1" inert>
     <div class="doc-drawer-header">
       <div>
         <span class="eyebrow">Documento</span>

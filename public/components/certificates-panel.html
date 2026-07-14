@@ -85,7 +85,7 @@
           </p>
           <form id="form-cert-view" enctype="multipart/form-data">
             <input type="hidden" id="renew-certificate-id" value="">
-            <div class="drop-zone" id="drop-zone-view">
+            <div class="drop-zone" id="drop-zone-view" role="button" tabindex="0" aria-controls="file-cert-view" aria-describedby="cert-drop-text" aria-label="Selecionar certificado A1 PFX ou P12">
               <svg class="drop-zone-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
@@ -93,7 +93,7 @@
               </svg>
               <span class="drop-zone-text" id="cert-drop-text">Arraste seu certificado <strong>.pfx</strong> ou <strong>.p12</strong> aqui ou clique para selecionar</span>
               <input type="file" id="file-cert-view" name="pfx" accept=".pfx,.p12" style="display: none;">
-              <div id="file-name-preview-view" class="file-name-preview"></div>
+              <div id="file-name-preview-view" class="file-name-preview" role="status" aria-live="polite"></div>
             </div>
 
             <div class="input-group">

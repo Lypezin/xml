@@ -37,7 +37,8 @@ window.AppEventsCert = {
     if (window.fileNamePreview) window.fileNamePreview.innerText = '';
     if (window.passphraseInput) window.passphraseInput.value = '';
 
-    window.certUploadState?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.certUploadState?.scrollIntoView?.({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
     window.AppUi?.log?.(
       `Modo renovação: vínculo ${cert.cnpj || certificateId}. XMLs e NSU serão preservados.`,
       'warning'
@@ -74,6 +75,12 @@ window.AppEventsCert = {
     }
 
     dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropZone.classList.add('dragover');
@@ -111,7 +118,13 @@ window.AppEventsCert = {
         ? 'Renovando certificado (mesmo vínculo / CNPJ)...'
         : 'Enviando certificado para validação local...');
       const saveBtn = document.getElementById('btn-save-cert-view');
-      if (saveBtn) saveBtn.disabled = true;
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.setAttribute('aria-busy', 'true');
+      }
+      if (window.btnSaveCertLabel) {
+        window.btnSaveCertLabel.textContent = isRenew ? 'Validando renovação…' : 'Validando certificado…';
+      }
 
       try {
         const data = isRenew
@@ -137,7 +150,15 @@ window.AppEventsCert = {
       } catch (err) {
         window.AppUi.log(`Erro de rede ao salvar certificado: ${err.message}`, 'error');
       } finally {
-        if (saveBtn) saveBtn.disabled = false;
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.removeAttribute('aria-busy');
+        }
+        if (window.btnSaveCertLabel) {
+          window.btnSaveCertLabel.textContent = window.renewCertificateId
+            ? 'Renovar e validar (mesmo vínculo)'
+            : 'Salvar e validar certificado';
+        }
       }
     });
 
@@ -235,6 +256,7 @@ window.AppEventsCert = {
         }
 
         btnDiagnoseCert.disabled = true;
+        btnDiagnoseCert.setAttribute('aria-busy', 'true');
         window.AppUi.log('Diagnosticando certificado e ambiente...');
 
         try {
@@ -249,6 +271,7 @@ window.AppEventsCert = {
           window.AppUi.log(`Erro de diagnóstico: ${err.message}`, 'error');
         } finally {
           btnDiagnoseCert.disabled = false;
+          btnDiagnoseCert.removeAttribute('aria-busy');
         }
       });
     }

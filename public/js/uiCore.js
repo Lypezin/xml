@@ -88,7 +88,10 @@ initElements() {
     const layout = window.appLayout || document.getElementById('app-layout');
     const emailEl = window.authUserEmail || document.getElementById('auth-user-email');
     if (screen) screen.style.display = 'none';
+    if (screen) screen.inert = true;
     if (layout) layout.style.display = 'flex';
+    const skipLink = document.getElementById('skip-link');
+    if (skipLink) skipLink.hidden = false;
     if (emailEl) emailEl.textContent = user?.email || 'Sessão ativa';
   },
 
@@ -96,7 +99,12 @@ initElements() {
     const screen = window.authScreen || document.getElementById('auth-screen');
     const layout = window.appLayout || document.getElementById('app-layout');
     if (layout) layout.style.display = 'none';
+    const skipLink = document.getElementById('skip-link');
+    if (skipLink) skipLink.hidden = true;
     // auth-screen.html vem com display:none inline — forca grid
-    if (screen) screen.style.setProperty('display', 'grid', 'important');
+    if (screen) {
+      screen.inert = false;
+      screen.style.setProperty('display', 'grid', 'important');
+    }
   }
 });

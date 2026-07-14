@@ -16,14 +16,9 @@ if (authForm) {
       window.AppUi.setAuthMessage('Acesso liberado.', 'success');
       window.AppUi.showAuthenticatedApp(user);
       if (window.AppDataCache) window.AppDataCache.invalidateAll();
-      // Só carrega dados com token válido em memória
-      await Promise.allSettled([
-        window.AppSyncController.checkCertStatus({ skipSecondary: true }),
-        window.AppSyncController.loadDashboard(),
-        typeof loadSchedulerSettings === 'function' ? loadSchedulerSettings() : Promise.resolve()
-      ]);
-      window.AppUi.updateProgress(0, 0);
-      if (selectEnvironment) selectEnvironment.dispatchEvent(new Event('change'));
+      // Pinta primeiro a rota solicitada e só então carrega seus dados.
+      const initialRoute = activateInitialRoute();
+      await bootDataParallel(initialRoute);
     } catch (err) {
       window.AppUtils.clearAuthSession();
       window.AppUi.setAuthMessage(err.message, 'error');
@@ -37,7 +32,12 @@ if (btnLogout) {
   btnLogout.addEventListener('click', () => {
     window.AppUtils.clearAuthSession();
     window.AppSyncController.stopQuerying();
-    window.AppUi.showLogin();
+    window.AppDataCache?.invalidateAll?.();
+    window._tabCache = {};
+    window._lastHistoryCertId = '';
+    // Um reload curto limpa também cards, certificados e métricas já renderizados,
+    // evitando o flash de dados da sessão anterior no próximo login.
+    window.location.reload();
   });
 }
 

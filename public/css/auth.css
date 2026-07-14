@@ -66,7 +66,8 @@ body.light-mode .auth-brand-panel {
   box-shadow: none;
 }
 
-.auth-brand-panel h1 {
+.auth-brand-panel h1,
+.auth-brand-panel h2 {
   font-family: var(--font-display);
   font-size: clamp(1.45rem, 2.4vw, 1.85rem);
   font-weight: 650;
@@ -156,7 +157,8 @@ body.light-mode .auth-brand-panel {
   flex-shrink: 0;
 }
 
-.auth-brand h1 {
+.auth-brand h1,
+.auth-brand h2 {
   font-family: var(--font-display);
   font-size: 22px;
   font-weight: 650;
@@ -229,7 +231,9 @@ body.light-mode .auth-brand-panel {
 }
 
 .auth-message:empty {
-  display: none;
+  padding-block: 0;
+  border-color: transparent;
+  background: transparent;
 }
 
 .auth-message.error {

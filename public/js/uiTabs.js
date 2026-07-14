@@ -1,6 +1,7 @@
 Object.assign(window.AppUi = window.AppUi || {}, {
 switchTab(activeNav, activeContent, title, subtitle, options = {}) {
     const forceRefresh = Boolean(options.forceRefresh);
+    const skipData = Boolean(options.skipData);
     const now = Date.now();
     // Soft cache de aba: so forca rede se stale ou dirty (UI sempre troca na hora)
     const cacheTtlMs = 120000;
@@ -37,7 +38,7 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
       activeNav.setAttribute('aria-current', 'page');
     }
     if (activeContent) {
-      activeContent.style.display = 'block';
+      activeContent.style.removeProperty('display');
       requestAnimationFrame(() => {
         activeContent.classList.add('active-tab', 'active');
       });
@@ -58,6 +59,9 @@ switchTab(activeNav, activeContent, title, subtitle, options = {}) {
         activeId === 'view-regras-content' ? 'Sistema' : 'NFS-e Ops';
       crumb.textContent = `${section} / ${title || 'NFS-e Ops'}`;
     }
+
+    // Boot/deep-link pode pintar a rota correta antes de carregar dados.
+    if (skipData) return;
 
     // Dados em background (nao bloqueia pintura da aba)
     const schedule = (fn, urgent = false) => {

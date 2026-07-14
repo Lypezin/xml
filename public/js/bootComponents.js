@@ -26,6 +26,8 @@ async function loadAllComponents() {
       const html = window.PANEL_HTML[id];
       if (el && html) el.outerHTML = html;
     });
+    const auth = document.getElementById('auth-screen');
+    if (auth) auth.inert = true;
     return;
   }
 
@@ -48,6 +50,8 @@ async function loadAllComponents() {
       console.error('Falha componente', file, err);
     }
   }));
+  const auth = document.getElementById('auth-screen');
+  if (auth) auth.inert = true;
 }
 
 function showBootError(message) {
@@ -60,10 +64,16 @@ function showBootError(message) {
   const box = document.createElement('div');
   box.id = 'boot-error';
   box.className = 'boot-error-overlay';
+  box.setAttribute('role', 'alertdialog');
+  box.setAttribute('aria-modal', 'true');
+  box.setAttribute('aria-labelledby', 'boot-error-title');
+  box.setAttribute('aria-describedby', 'boot-error-message');
   const panel = document.createElement('div');
   const h2 = document.createElement('h2');
+  h2.id = 'boot-error-title';
   h2.textContent = 'Falha ao iniciar';
   const p = document.createElement('p');
+  p.id = 'boot-error-message';
   p.textContent = String(message || 'Erro desconhecido');
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -74,12 +84,20 @@ function showBootError(message) {
   panel.appendChild(p);
   panel.appendChild(btn);
   box.appendChild(panel);
+  document.getElementById('boot-splash')?.remove();
+  Array.from(document.body.children).forEach((child) => {
+    if (child !== box && child instanceof HTMLElement) child.inert = true;
+  });
   document.body.appendChild(box);
+  requestAnimationFrame(() => btn.focus());
 }
 
 function showAppShell() {
   if (window.authScreen) window.authScreen.style.display = 'none';
+  if (window.authScreen) window.authScreen.inert = true;
   if (window.appLayout) window.appLayout.style.display = 'flex';
+  const skipLink = document.getElementById('skip-link');
+  if (skipLink) skipLink.hidden = false;
 
   // Garante uma unica aba visivel no boot (evita dashboard + XMLs juntos no F5)
   const tabIds = [
@@ -94,7 +112,8 @@ function showAppShell() {
     const isDash = id === 'view-dashboard-content';
     el.classList.toggle('active-tab', isDash);
     el.classList.toggle('active', isDash);
-    el.style.display = isDash ? 'block' : 'none';
+    if (isDash) el.style.removeProperty('display');
+    else el.style.display = 'none';
   });
 
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));

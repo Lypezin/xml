@@ -70,6 +70,7 @@ window.AppDocDrawer = {
     });
 
     this.previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    drawer.inert = false;
     drawer.classList.add('open');
     drawer.setAttribute('aria-hidden', 'false');
     if (backdrop) {
@@ -86,6 +87,7 @@ window.AppDocDrawer = {
     const backdrop = document.getElementById('doc-drawer-backdrop');
     drawer?.classList.remove('open');
     drawer?.setAttribute('aria-hidden', 'true');
+    if (drawer) drawer.inert = true;
     if (backdrop) backdrop.hidden = true;
     document.body.classList.remove('drawer-open-lock');
     const app = document.getElementById('app-layout');

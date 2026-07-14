@@ -1,5 +1,5 @@
 /* Service Worker — cache leve para assets; APIs nunca entram no cache. */
-const CACHE = 'nfse-static-v17';
+const CACHE = 'nfse-static-v18';
 const PRECACHE = [
   '/css/app.bundle.css',
   '/js/app.bundle.js',
@@ -58,7 +58,8 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (!isStaticAsset(url)) return;
 
-  // JS: sempre network-first (auth/boot mudam com frequência)
+  // O bundle JS usa nome fixo. Network-first evita executar JavaScript antigo
+  // com um HTML novo depois de um deploy; o cache continua sendo fallback offline.
   const isJs = url.pathname.endsWith('.js') || url.pathname.startsWith('/js/') || url.pathname === '/app.js';
 
   if (isJs) {
@@ -80,7 +81,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // CSS/assets: stale-while-revalidate real (cache responde sem esperar a rede).
+  // CSS e demais assets: resposta imediata e atualização em background.
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(req);
