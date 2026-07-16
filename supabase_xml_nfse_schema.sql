@@ -883,6 +883,16 @@ declare
 begin
   perform xml_nfse.assert_app_secret(p_secret);
 
+  -- Runs de UI podem ficar abertas se o navegador for fechado ou perder rede.
+  -- Encerra apenas sessoes realmente antigas; varreduras normais continuam intactas.
+  update xml_nfse.sync_runs
+  set status = 'paused',
+      error_message = coalesce(error_message, 'Execucao encerrada automaticamente por inatividade.'),
+      finished_at = now()
+  where finished_at is null
+    and status = 'running'
+    and started_at < now() - interval '2 hours';
+
   insert into xml_nfse.sync_runs (certificate_id, environment, cnpj_consulta, start_nsu)
   values (p_certificate_id, p_environment, coalesce(p_cnpj_consulta, ''), coalesce(p_start_nsu, 0))
   returning id into run_id;

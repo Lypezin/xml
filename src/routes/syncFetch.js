@@ -33,6 +33,7 @@ const {
 
 const router = express.Router();
 const { safeErrorInfo } = require('../utils/security');
+const { protectAscendingStartNsu } = require('../utils/nsuGuard');
 
 let fetchBatchInFlight = false;
 
@@ -48,7 +49,8 @@ router.post('/fetch-batch', async (req, res) => {
   } = req.body;
   const requestEnvironment = normalizeEnvironment(environment);
   const parsedStart = startNsu !== undefined ? parseInt(startNsu, 10) : 0;
-  const requestStartNsu = Number.isFinite(parsedStart) ? parsedStart : 0;
+  let requestStartNsu = Number.isFinite(parsedStart) ? parsedStart : 0;
+  let nsuProtection = null;
   let requestCnpjConsulta = cnpjConsulta || '';
 
   // Sessão de UI: closeRun=false (run aberta do início ao fim).
@@ -89,6 +91,15 @@ router.post('/fetch-batch', async (req, res) => {
       p_environment: requestEnvironment,
       p_cnpj_consulta: requestCnpjConsulta
     });
+    nsuProtection = protectAscendingStartNsu({
+      requestedStartNsu: requestStartNsu,
+      savedLastNsu: existingState?.last_nsu,
+      sortOrder
+    });
+    requestStartNsu = nsuProtection.startNsu;
+    if (nsuProtection.adjusted) {
+      console.warn(`[NSU] Inicio 0 protegido; retomando do NSU salvo ${requestStartNsu}.`);
+    }
     if (existingState?.next_allowed_at) {
       const nextAllowed = new Date(existingState.next_allowed_at).getTime();
       if (Number.isFinite(nextAllowed) && Date.now() < nextAllowed) {
@@ -124,7 +135,13 @@ router.post('/fetch-batch', async (req, res) => {
       closeRun: shouldCloseRun
     });
 
-    return res.json({ success: true, ...result, runId: supabaseRunId });
+    return res.json({
+      success: true,
+      ...result,
+      runId: supabaseRunId,
+      nsuProtected: Boolean(nsuProtection?.adjusted),
+      requestedStartNsu: nsuProtection?.requestedStartNsu ?? requestStartNsu
+    });
 
   } catch (e) {
     return handleSyncError({

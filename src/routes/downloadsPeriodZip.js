@@ -1,5 +1,4 @@
 const express = require('express');
-const archiver = require('archiver');
 const fs = require('fs');
 const path = require('path');
 const { DOWNLOADS_DIR, IS_VERCEL } = require('../config/constants');
@@ -22,6 +21,8 @@ const router = express.Router();
 
 router.post('/download-period-zip', async (req, res) => {
   try {
+    // Evita incluir o custo de inicializacao do ZIP em toda chamada da API.
+    const archiver = require('archiver');
     const {
       certificateId,
       environment = 'producao',

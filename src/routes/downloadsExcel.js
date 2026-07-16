@@ -1,5 +1,4 @@
 const express = require('express');
-const ExcelJS = require('exceljs');
 const { IS_VERCEL } = require('../config/constants');
 const { listAllRemoteDocuments } = require('../services/supabase');
 const {
@@ -36,6 +35,8 @@ function buildExcelFileName(startDate, endDate) {
 
 router.get('/download-excel', async (req, res) => {
   try {
+    // ExcelJS e pesado; carregue somente quando este export for solicitado.
+    const ExcelJS = require('exceljs');
     const {
       certificateId,
       environment = 'producao',

@@ -1,5 +1,4 @@
 const express = require('express');
-const archiver = require('archiver');
 const axios = require('axios');
 const https = require('https');
 const xmlCache = require('../utils/xmlCache');
@@ -132,6 +131,8 @@ router.get('/download-pdf/:chave', async (req, res) => {
 
 router.get('/download-zip', async (req, res) => {
   try {
+    // O modulo de compressao so e necessario neste endpoint.
+    const archiver = require('archiver');
     let payloads = Array.from(xmlCache.values()).map(cached => ({
       fileName: cached.fileName,
       xmlString: cached.xmlString
